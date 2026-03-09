@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/lBtn"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/btnbackgroud"
+        android:paddingStart="17dp"
+        android:paddingTop="7dp"
+        android:text="L"
+        android:textColor="@color/white"
+        android:textSize="25dp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/cheatbtn"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:text="C"
+        android:textColor="@color/white" />
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/forwardbtn"
+        android:paddingLeft="5dp"
+        android:paddingRight="5dp"
+        android:text="@string/forward"
+        android:layout_width="70dp"
+        android:layout_height="20dp"
+        android:layout_alignLeft="@+id/savestatetbtn"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:src="@drawable/baseline_menu_24"
+        android:layout_below="@+id/cheatbtn"
+        android:textColor="@color/white"/>
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/soundbtn"
+        android:layout_alignTop="@+id/forwardbtn"
+        android:layout_width="50dp"
+        android:layout_height="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_toRightOf="@+id/forwardbtn"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:src="@drawable/baseline_volume_up_24"
+        android:textColor="@color/white" />
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/menubtn"
+        android:layout_width="50dp"
+        android:layout_height="20dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:src="@drawable/baseline_menu_24"
+        android:layout_below="@+id/forwardbtn"
+        android:textColor="@color/white" />
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/loadstatebtn"
+        android:background="@drawable/btnbackgroud"
+        android:text="@string/load"
+        android:gravity="center"
+        android:layout_toRightOf="@+id/cheatbtn"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="20dp"
+        android:textColor="@color/white"
+        android:layout_width="50dp"
+        android:layout_height="20dp"/>
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/savestatetbtn"
+        android:layout_width="50dp"
+        android:layout_height="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_toStartOf="@+id/cheatbtn"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:text="@string/save"
+        android:textColor="@color/white" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/rBtn"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="20dp"
+        android:background="@drawable/btnbackgroud"
+        android:paddingStart="17dp"
+        android:paddingTop="7dp"
+        android:text="R"
+        android:textColor="@color/white"
+        android:textSize="25dp"
+        android:textStyle="bold" />
+
+    <include
+        android:id="@+id/dpad"
+        layout="@layout/dpad"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/lBtn"
+        android:layout_marginTop="80dp" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/aBtn"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_alignTop="@+id/dpad"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="20dp"
+        android:background="@drawable/btnbackgroud"
+        android:paddingStart="17dp"
+        android:paddingTop="7dp"
+        android:text="A"
+        android:textColor="@color/white"
+        android:textSize="25dp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/bBtn"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_alignBottom="@+id/dpad"
+        android:layout_marginRight="20dp"
+        android:layout_marginBottom="50dp"
+        android:layout_toLeftOf="@+id/aBtn"
+        android:background="@drawable/btnbackgroud"
+        android:paddingStart="17dp"
+        android:paddingTop="7dp"
+        android:text="B"
+        android:textColor="@color/white"
+        android:textSize="25dp"
+        android:textStyle="bold" />
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/selectBtn"
+        android:layout_below="@+id/dpad"
+        android:layout_width="wrap_content"
+        android:layout_height="35dp"
+        android:layout_marginLeft="55dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/btnbackgroud"
+        android:paddingStart="35dp"
+        android:paddingTop="5dp"
+        android:text="select"
+        android:textColor="@color/white"
+        android:textSize="18dp"
+        android:textStyle="bold" />
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/startBtn"
+        android:layout_below="@+id/dpad"
+        android:layout_width="wrap_content"
+        android:layout_height="35dp"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="55dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/btnbackgroud"
+        android:paddingStart="35dp"
+        android:paddingTop="5dp"
+        android:text="start"
+        android:textColor="@color/white"
+        android:textSize="18dp"
+        android:textStyle="bold" />
+</RelativeLayout>

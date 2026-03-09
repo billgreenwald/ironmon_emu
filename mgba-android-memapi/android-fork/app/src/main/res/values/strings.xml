@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">mGBA Android</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="savestatetitle">Do you want to save state?</string>
+    <string name="loadstatetitle">Do you want to load state?</string>
+    <string name="save_state">Save State</string>
+    <string name="load_state">Load state</string>
+    <string name="exit">Exit</string>
+    <string name="state_saved">State saved</string>
+    <string name="state_loaded">State loaded</string>
+    <string name="state_save_fail">State save fail</string>
+    <string name="state_load_fail">State load fail</string>
+    <string name="switch_editor">Switch Editor</string>
+    <string name="save">Save</string>
+    <string name="load">Load</string>
+    <string name="forward">forward</string>
+    <string name="forwarding">%s times forwarding</string>
+    <string name="search">Search</string>
+    <string name="newsearch">New Search</string>
+    <string name="setcheatvalue">Set value to %1$s</string>
+    <string name="addtocheatlist">Add to cheat list</string>
+    <string name="savecheattolist">Add the cheat address to cheat list</string>
+    <string name="check_added">Current</string>
+    <string name="edit_code">Edit File</string>
+    <string name="assets_cheat">Assets</string>
+</resources>

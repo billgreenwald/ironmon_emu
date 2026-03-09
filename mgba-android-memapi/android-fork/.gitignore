@@ -1,0 +1,24 @@
+# External dependencies cloned by setup.sh — not tracked in repo
+app/src/main/cpp/SDL2/
+app/src/main/cpp/mgba/
+
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+.idea/
+gradlew
+gradlew.bat
+gradle/
+app/debug/

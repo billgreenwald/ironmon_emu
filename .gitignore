@@ -2,11 +2,16 @@
 mgba-android-memapi/build-desktop/
 mgba-android-memapi/upstream/
 
-# Android build
+# Android external dependencies (clone via setup.sh)
+mgba-android-memapi/android-fork/app/src/main/cpp/SDL2/
+mgba-android-memapi/android-fork/app/src/main/cpp/mgba/
+
+# Android build outputs / caches
 *.apk
 *.aab
 .gradle/
 build/
+.cxx/
 local.properties
 
 # IDE
