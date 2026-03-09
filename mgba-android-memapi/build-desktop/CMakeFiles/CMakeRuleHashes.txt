@@ -1,0 +1,2 @@
+# Hashes of file build rules.
+28803d5273165c0739e8eda0b31fb3af CMakeFiles/mgba-version-info
