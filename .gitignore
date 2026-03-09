@@ -1,0 +1,15 @@
+# Build artifacts
+mgba-android-memapi/build-desktop/
+mgba-android-memapi/upstream/
+
+# Android build
+*.apk
+*.aab
+.gradle/
+build/
+local.properties
+
+# IDE
+.idea/
+*.iml
+.DS_Store
