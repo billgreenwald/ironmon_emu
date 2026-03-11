@@ -298,7 +298,7 @@ static void androidShaderRunloop(struct mSDLRenderer* renderer, void* user) {
             // Execute Action Replay DS Logic Engine (Per Frame)
             ARDS_Run(context->core);
             
-            v->setImage(v, VIDEO_LAYER_BACKGROUND, renderer->outputBuffer);
+            v->postFrame(v, renderer->outputBuffer);
         }
         mCoreSyncWaitFrameEnd(&context->impl->sync);
         v->drawFrame(v);

@@ -16,8 +16,8 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import android.widget.RelativeLayout
 import hh.game.mgba_android.R
 import hh.game.mgba_android.database.GB.GBgame
 import hh.game.mgba_android.database.GBA.GBAgame
@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.libsdl.app.SDLActivity
 import org.libsdl.app.SDLUtils
 import org.libsdl.app.SDLUtils.mFullscreenModeActive
 import org.libsdl.app.SDLUtils.onNativeKeyDown
@@ -45,7 +46,18 @@ import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
 
-open class GameActivity : AppCompatActivity() {
+open class GameActivity : SDLActivity() {
+    // SDL library list — override SDLActivity default
+    override val libraries: Array<String>
+        get() = arrayOf("SDL2", "mgba", "mgba_android")
+
+    // Game arguments stored before SDL thread starts so getArguments() is ready
+    private var gameArgPath: String? = null
+    private var gameCheatPath: String? = null
+
+    override fun getArguments(): Array<String> =
+        listOfNotNull(gameArgPath, gameCheatPath).toTypedArray()
+
     private var runFPS = true
     private var setFPS = 60f
     private var isMute = false
@@ -160,36 +172,34 @@ open class GameActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         mFullscreenModeActive = false
-        setContentView(R.layout.activity_game)
-        var gamepath = intent.getStringExtra("gamepath")
+
+        // Resolve intent extras BEFORE super.onCreate() so getArguments() is ready
+        // when the SDL thread starts (SDL libraries load inside super.onCreate()).
+        val gamepath = intent.getStringExtra("gamepath")
         val gameNum = intent.getStringExtra("cheat")
         Log.d("GameActivity", "onCreate: gameNum='$gameNum', gamepath='$gamepath'")
-        
-        // Initial Cheat Load Logic (Unified)
+        gameArgPath = gamepath
+
+        // super.onCreate() loads native libs, creates SDL surface, calls setContentView(mLayout)
+        super.onCreate(savedInstanceState)
+
+        // Cheats can only be processed after native libs are loaded (resetARDSCheats is JNI)
         var cheatRefPath = getExternalFilesDir("cheats")?.absolutePath + "/$gameNum.cheats"
         if (gamepath != null) {
-             val gameDirCheat = File(File(gamepath).parent, "$gameNum.cheats")
-             if (gameDirCheat.exists()) cheatRefPath = gameDirCheat.absolutePath
+            val gameDirCheat = File(File(gamepath).parent, "$gameNum.cheats")
+            if (gameDirCheat.exists()) cheatRefPath = gameDirCheat.absolutePath
         }
+        if (gamepath != null) CheatUtils.generateCheat(this, gameNum, null)
+        gameCheatPath = processCheatsAndGetNativePath(cheatRefPath)
 
-        // Generate default if missing
-        if (gamepath != null)
-             CheatUtils.generateCheat(this, gameNum, null)
+        // Inflate overlay controls (dpad, buttons, FPS text, etc.) on top of SDL surface
+        val overlay = layoutInflater.inflate(R.layout.activity_game, null)
+        mLayout?.addView(overlay, RelativeLayout.LayoutParams(
+            RelativeLayout.LayoutParams.MATCH_PARENT,
+            RelativeLayout.LayoutParams.MATCH_PARENT
+        ))
 
-        var internalCheatFile = processCheatsAndGetNativePath(cheatRefPath)
-        SDLUtils.init(this, findViewById(R.id.gameView))
-            .setLibraries(
-                "SDL2",
-                "mgba",
-                "mgba_android"
-            )
-            .setArguments(
-                gamepath,
-                internalCheatFile,
-//                fragmentShader
-            )
         addGameControler()
 //        GlobalScope.launch {
 //            Gameutils.getFPS().toString()
@@ -353,7 +363,7 @@ open class GameActivity : AppCompatActivity() {
 
             }
         }
-        return handled || SDLUtils.dispatchKeyEvent(event)
+        return handled || super.dispatchKeyEvent(event)
     }
 
     private fun addGameControler() {

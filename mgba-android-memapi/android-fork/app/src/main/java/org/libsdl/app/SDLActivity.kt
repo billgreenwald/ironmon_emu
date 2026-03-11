@@ -84,7 +84,7 @@ open class SDLActivity : AppCompatActivity(), OnSystemUiVisibilityChangeListener
          * It can be overridden by derived classes.
          */
         get() = "SDL_main"
-    protected val libraries: Array<String>
+    protected open val libraries: Array<String>
         /**
          * This method is called by SDL before loading the native shared libraries.
          * It can be overridden to provide names of shared libraries to be loaded.

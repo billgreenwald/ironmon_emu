@@ -5,7 +5,7 @@
 float g_fps = 0.0f;
 
 void mSDLGLDoViewport(int w, int h, struct VideoBackend* v) {
-	v->contextResized(v, w, h, w, h);
+	v->resized(v, w, h);
 	v->clear(v);
 	v->swap(v);
 	v->clear(v);
