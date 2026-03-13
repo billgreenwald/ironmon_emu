@@ -18,7 +18,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import android.widget.RelativeLayout
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import hh.game.mgba_android.R
+import hh.game.mgba_android.tracker.MemoryBridge
+import hh.game.mgba_android.tracker.TrackerPanel
+import hh.game.mgba_android.tracker.TrackerPoller
 import hh.game.mgba_android.database.GB.GBgame
 import hh.game.mgba_android.database.GBA.GBAgame
 import hh.game.mgba_android.fragment.MemorySearchFragment
@@ -184,6 +191,34 @@ open class GameActivity : SDLActivity() {
         // super.onCreate() loads native libs, creates SDL surface, calls setContentView(mLayout)
         super.onCreate(savedInstanceState)
 
+        // ── Tracker: resize SDL surface to 70% width, attach tracker panel at 30% ──
+        val screenWidth = resources.displayMetrics.widthPixels
+        val gameWidth = (screenWidth * 0.7f).toInt()
+
+        mSurface?.layoutParams = RelativeLayout.LayoutParams(
+            gameWidth,
+            RelativeLayout.LayoutParams.MATCH_PARENT,
+        )
+
+        MemoryBridge.reader = { addr, len -> getMemoryRange(addr, len) }
+        TrackerPoller.start(lifecycleScope)
+
+        val trackerView = ComposeView(this).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                val state by TrackerPoller.state.collectAsState()
+                TrackerPanel(state)
+            }
+        }
+        mLayout?.addView(
+            trackerView,
+            RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+            ).apply { leftMargin = gameWidth },
+        )
+        // ── End tracker setup ──────────────────────────────────────────────────
+
         // Cheats can only be processed after native libs are loaded (resetARDSCheats is JNI)
         var cheatRefPath = getExternalFilesDir("cheats")?.absolutePath + "/$gameNum.cheats"
         if (gamepath != null) {
@@ -309,9 +344,10 @@ open class GameActivity : SDLActivity() {
     }
 
     override fun onDestroy() {
+        TrackerPoller.stop()
+        MemoryBridge.reader = null
         super.onDestroy()
         runFPS = false
-//        GlobalScope.cancel()
     }
 
     override fun onPause() {

@@ -43,7 +43,7 @@
         <activity
             android:name=".activity.GameActivity"
             android:exported="false"
-            android:screenOrientation="fullSensor" />
+            android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".activity.MainActivity"
             android:exported="true">

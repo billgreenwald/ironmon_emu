@@ -1,5 +1,6 @@
 package com.ironmon.tracker.memory
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -59,7 +60,8 @@ class MemoryClient(
             ensureConnected()
             sendRequest(address, length)
             receiveResponse(length)
-        } catch (e: IOException) {
+        } catch (e: Exception) {
+            Log.e("MemoryClient", "readBytes(0x${address.toString(16)}, $length) failed: ${e.javaClass.simpleName}: ${e.message}")
             closeQuietly()
             null
         }

@@ -5,7 +5,10 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Required to keep overlay service running while mGBA is in foreground -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Internet is NOT required — all comms are localhost TCP -->
+    <!-- Required on API 34+ for specialUse foreground service type -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Required for localhost TCP socket to mGBA memapi server -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name=".TrackerApplication"
@@ -29,7 +32,11 @@
         <service
             android:name=".overlay.OverlayService"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Draws tracker overlay on top of mGBA emulator" />
+        </service>
 
     </application>
 

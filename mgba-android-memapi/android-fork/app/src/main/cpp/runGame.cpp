@@ -655,7 +655,15 @@ Java_hh_game_mgba_1android_activity_GameActivity_getMemoryRange(JNIEnv *env, job
     jbyte* buf = new jbyte[length];
     
     for (int i = 0; i < length; i++) {
-        uint8_t val = androidrenderer.core->busRead8(androidrenderer.core, (uint32_t)(address + i));
+        uint32_t addr = (uint32_t)(address + i);
+        uint8_t val;
+        // Use rawRead8 for ROM (no bus side-effects / cycle counter mutation)
+        // Use busRead8 for RAM so live values are read correctly
+        if (addr >= 0x08000000u && addr < 0x0E000000u) {
+            val = (uint8_t)androidrenderer.core->rawRead8(androidrenderer.core, addr, -1);
+        } else {
+            val = androidrenderer.core->busRead8(androidrenderer.core, addr);
+        }
         buf[i] = (jbyte)val;
     }
     

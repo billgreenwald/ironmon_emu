@@ -111,7 +111,7 @@ object DataHelper {
         partyBase        = 0x020244ECL,
         baseStatsTable   = 0x081FEC18L,
         levelUpLearnsets = 0x0823B16CL,
-        experienceTables = 0x081E8CEC L,
+        experienceTables = 0x081E8CECL,
     )
 
     val EMERALD = GameAddresses(

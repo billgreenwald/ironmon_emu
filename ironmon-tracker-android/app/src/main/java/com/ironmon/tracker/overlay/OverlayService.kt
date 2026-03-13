@@ -19,14 +19,14 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.ironmon.tracker.R
 import com.ironmon.tracker.data.models.TrackerState
 import com.ironmon.tracker.memory.MemoryClient
 import com.ironmon.tracker.memory.MemoryPoller
@@ -35,7 +35,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -46,14 +45,16 @@ import kotlinx.coroutines.launch
  *   onCreate  → start MemoryPoller, inflate overlay view
  *   onDestroy → stop poller, remove overlay view
  */
-class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
+class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
-    // ── Lifecycle / SavedState plumbing needed for ComposeView ────────────────
-    private val lifecycleRegistry           = LifecycleRegistry(this)
+    // ── Lifecycle / SavedState / ViewModelStore plumbing for ComposeView ──────
+    private val lifecycleRegistry            = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
+    private val _viewModelStore              = ViewModelStore()
     override val lifecycle: Lifecycle        get() = lifecycleRegistry
     override val savedStateRegistry: SavedStateRegistry
         get() = savedStateRegistryController.savedStateRegistry
+    override val viewModelStore: ViewModelStore get() = _viewModelStore
 
     // ── Service internals ─────────────────────────────────────────────────────
     private lateinit var windowManager: WindowManager
@@ -94,6 +95,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         serviceScope.cancel()
         overlayView?.let { windowManager.removeView(it) }
         overlayView = null
+        _viewModelStore.clear()
         super.onDestroy()
     }
 
@@ -123,6 +125,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         val view = ComposeView(this).also { overlayView = it }
         view.setViewTreeLifecycleOwner(this)
         view.setViewTreeSavedStateRegistryOwner(this)
+        view.setViewTreeViewModelStoreOwner(this)
 
         view.setContent {
             val state by memoryPoller.trackerState.collectAsState()

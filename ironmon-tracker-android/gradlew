@@ -1,0 +1,3 @@
+#!/bin/bash
+# Shim: delegate to the local Gradle 8.4 installation.
+exec /home/bill/gradle-8.4/bin/gradle "$@"
