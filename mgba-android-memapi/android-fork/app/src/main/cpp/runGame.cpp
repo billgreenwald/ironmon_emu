@@ -68,6 +68,9 @@ static void _loadState(struct mCoreThread* thread) {
 }
 struct mSDLRenderer androidrenderer;
 struct mCoreThread thread;
+
+// Path of the next ROM to load after the current one stops (set by loadRomJNI, read by mSDLRun)
+static char g_pendingRomPath[512] = {0};
 static struct VideoShader currentShader = {0};
 
 // Multiplayer Support - Global Variables (Removed)
@@ -306,15 +309,32 @@ static void androidShaderRunloop(struct mSDLRenderer* renderer, void* user) {
     }
 }
 
+// Called from Kotlin to load a new ROM in the running emulator without restarting the Activity.
+// Sets g_pendingRomPath and signals the emulation thread to stop; mSDLRun picks up the reload.
+extern "C"
+JNIEXPORT void JNICALL
+Java_hh_game_mgba_1android_activity_GameActivity_loadRomJNI(JNIEnv* env, jobject thiz, jstring pathStr) {
+    const char* path = env->GetStringUTFChars(pathStr, nullptr);
+    strncpy(g_pendingRomPath, path, sizeof(g_pendingRomPath) - 1);
+    g_pendingRomPath[sizeof(g_pendingRomPath) - 1] = '\0';
+    env->ReleaseStringUTFChars(pathStr, path);
+    mCoreThreadEnd(&thread);  // signals SDL runloop to exit; SDL thread handles the actual reload
+}
+
 int mSDLRun(struct mSDLRenderer* renderer, struct mArguments* args) {
+    static char reloadPath[512];
+    const char* romToLoad = args->fname;
+    bool isReload = false;
+
+    while (true) {
     thread = {
             .core = renderer->core
     };
-    if (!mCoreLoadFile(renderer->core, args->fname)) {
+    if (!mCoreLoadFile(renderer->core, romToLoad)) {
         return 1;
     }
     mCoreAutoloadSave(renderer->core);
-    if(args->cheatsFile)
+    if(!isReload && args->cheatsFile)
         mCoreAutoloadCheatsFromFile(renderer->core, args->cheatsFile);
 #ifdef ENABLE_SCRIPTING
     struct mScriptBridge* bridge = mScriptBridgeCreate();
@@ -343,13 +363,15 @@ int mSDLRun(struct mSDLRenderer* renderer, struct mArguments* args) {
 	}
 #endif
 
-    if (args->patch) {
-        struct VFile* patch = VFileOpen(args->patch, O_RDONLY);
-        if (patch) {
-            renderer->core->loadPatch(renderer->core, patch);
+    if (!isReload) {
+        if (args->patch) {
+            struct VFile* patch = VFileOpen(args->patch, O_RDONLY);
+            if (patch) {
+                renderer->core->loadPatch(renderer->core, patch);
+            }
+        } else {
+            mCoreAutoloadPatch(renderer->core);
         }
-    } else {
-        mCoreAutoloadPatch(renderer->core);
     }
 
     renderer->audio.samples = renderer->core->opts.audioBuffers;
@@ -378,7 +400,7 @@ int mSDLRun(struct mSDLRenderer* renderer, struct mArguments* args) {
 //#endif
         // if (mSDLInitAudio(&renderer->audio, &thread)) {
         if (mOboeInit(&thread)) {
-            if (args->savestate) {
+            if (!isReload && args->savestate) {
                 struct VFile* state = VFileOpen(args->savestate, O_RDONLY);
                 if (state) {
                     _state = state;
@@ -415,11 +437,22 @@ int mSDLRun(struct mSDLRenderer* renderer, struct mArguments* args) {
     }
     renderer->core->unloadROM(renderer->core);
 
+    // Check if Kotlin requested a ROM reload via loadRomJNI
+    if (!didFail && g_pendingRomPath[0] != '\0') {
+        strncpy(reloadPath, g_pendingRomPath, sizeof(reloadPath) - 1);
+        reloadPath[sizeof(reloadPath) - 1] = '\0';
+        g_pendingRomPath[0] = '\0';
+        romToLoad = reloadPath;
+        isReload = true;
+        continue;
+    }
+
 #ifdef ENABLE_SCRIPTING
     mScriptBridgeDestroy(bridge);
 #endif
 
     return didFail;
+    } // end while(true) reload loop
 }
 
 
@@ -624,6 +657,7 @@ Java_hh_game_mgba_1android_activity_GameActivity_writeMem(JNIEnv *env, jobject t
 }
 
 #include "swappy/swappyGL.h"
+#include "swappy/swappyGL_extra.h"
 
 extern float g_fps;
 

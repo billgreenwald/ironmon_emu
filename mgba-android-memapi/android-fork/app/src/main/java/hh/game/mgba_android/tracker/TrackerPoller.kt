@@ -1,15 +1,18 @@
 package hh.game.mgba_android.tracker
 
+import android.content.Context
 import hh.game.mgba_android.tracker.data.DataHelper
 import hh.game.mgba_android.tracker.data.GameAddresses
 import hh.game.mgba_android.tracker.data.GameSettings
 import hh.game.mgba_android.tracker.data.PokemonDecoder
 import hh.game.mgba_android.tracker.data.RouteReader
+import hh.game.mgba_android.tracker.data.StatsReader
 import hh.game.mgba_android.tracker.models.BattleState
 import hh.game.mgba_android.tracker.models.EnemyData
 import hh.game.mgba_android.tracker.models.GameVersion
 import hh.game.mgba_android.tracker.models.TrackerState
 import hh.game.mgba_android.tracker.models.Weather
+import hh.game.mgba_android.tracker.persistence.RunRepository
 import hh.game.mgba_android.tracker.tables.AbilityTable
 import hh.game.mgba_android.tracker.tables.MoveNames
 import hh.game.mgba_android.tracker.tables.SpeciesNames
@@ -31,9 +34,21 @@ object TrackerPoller {
     private var revealedEnemyMoves = mutableSetOf<Int>()
     private var lastBattleActive = false
 
+    // Game over state — @Volatile so the main-thread click and Default-dispatcher poll agree
+    @Volatile private var isGameOver = false
+
+    // Run persistence
+    private var appContext: Context? = null
+    private var lastGameCode: String = ""
+    @Volatile private var runAttempts: Int = 0
+
+    fun resetGameOver() { isGameOver = false }
+    fun debugForceGameOver() { isGameOver = true }
+
     private var pollJob: Job? = null
 
-    fun start(scope: CoroutineScope) {
+    fun start(context: Context, scope: CoroutineScope) {
+        appContext = context.applicationContext
         pollJob?.cancel()
         pollJob = scope.launch(Dispatchers.Default) {
             while (isActive) {
@@ -65,6 +80,14 @@ object TrackerPoller {
         val addresses = DataHelper.addressesFor(game, romVersion, gameCode)
             ?: return TrackerState.NoGameLoaded
 
+        // ── Run persistence: load attempt count when game code changes ─────────
+        if (gameCode != lastGameCode) {
+            lastGameCode = gameCode
+            runAttempts = appContext?.let { ctx ->
+                RunRepository.load(ctx, gameCode).stats.attempts
+            } ?: 0
+        }
+
         // ── Party ─────────────────────────────────────────────────────────────
         val partyCount = MemoryBridge.readU8(addresses.partyCount)
             ?: return TrackerState.Disconnected
@@ -91,12 +114,35 @@ object TrackerPoller {
         }
 
         // ── Battle ────────────────────────────────────────────────────────────
+        // Capture pre-poll battle state so we can detect the active→ended transition below.
+        val wasBattleActive = lastBattleActive
         val battle = pollBattle(game, addresses)
+
+        // ── Game over detection ───────────────────────────────────────────────
+        // Matches Lua tracker LeadPokemonFaints condition (most common Ironmon rule):
+        // trigger when battle just ended and the lead Pokemon has 0 HP.
+        if (wasBattleActive && !battle.isActive && !isGameOver) {
+            val lead = party.firstOrNull()
+            if (lead != null && !lead.isAlive) {
+                isGameOver = true
+                runAttempts++
+                appContext?.let { ctx ->
+                    val data = RunRepository.load(ctx, gameCode)
+                    data.stats.attempts = runAttempts
+                    RunRepository.save(ctx, gameCode, data)
+                }
+            }
+        }
+        // Auto-reset if party count drops to 0 (new game started / ROM reset)
+        if (count == 0) isGameOver = false
 
         // ── Route ─────────────────────────────────────────────────────────────
         val route = RouteReader.read(game, addresses)
 
-        return TrackerState.Active(game = game, romVersion = romVersion, party = party, battle = battle, currentRoute = route)
+        // ── Game stats (steps / battles / center visits) ─────────────────────
+        val stats = StatsReader.read(addresses)
+
+        return TrackerState.Active(game = game, romVersion = romVersion, party = party, battle = battle, currentRoute = route, stats = stats, isGameOver = isGameOver, runAttempts = runAttempts)
     }
 
     private fun pollBattle(game: GameVersion, addresses: GameAddresses): BattleState {
@@ -111,9 +157,10 @@ object TrackerPoller {
 
         if (!isActive) return BattleState.NONE
 
-        // Battle type flags: bit 0 = wild battle
+        // Battle type flags: BATTLE_TYPE_TRAINER = (1 << 3) = 0x08
+        // Wild if bit 3 is NOT set — matches Lua tracker: isWildEncounter = getbits(flags, 3, 1) == 0
         val typeFlags = MemoryBridge.readBytes(addresses.battleTypeFlags, 4)
-        val isWild = typeFlags != null && (typeFlags[0].toInt() and 0x01) != 0
+        val isWild = typeFlags != null && (typeFlags[0].toInt() and 0x08) == 0
 
         // ── Enemy gBattleMons slot (slot index 1) ─────────────────────────────
         val enemyMonAddr = addresses.battleMons + DataHelper.BATTLE_MON_SIZE // slot 1

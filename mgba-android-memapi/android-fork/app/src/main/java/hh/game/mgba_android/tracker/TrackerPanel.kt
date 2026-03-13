@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import hh.game.mgba_android.tracker.data.GameStats
 import hh.game.mgba_android.tracker.models.*
 import hh.game.mgba_android.tracker.tables.*
 import hh.game.mgba_android.tracker.tables.MoveDescTable
@@ -59,7 +60,7 @@ private fun typeColor(typeId: Int) = TYPE_COLORS[typeId] ?: Color(0xFF888888)
 
 // ── Main entry point ─────────────────────────────────────────────────────────
 @Composable
-fun TrackerPanel(state: TrackerState) {
+fun TrackerPanel(state: TrackerState, onQuickload: (() -> Unit)? = null) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -68,7 +69,7 @@ fun TrackerPanel(state: TrackerState) {
         when (state) {
             is TrackerState.Disconnected -> StatusText("Loading…")
             is TrackerState.NoGameLoaded -> StatusText("No supported game loaded")
-            is TrackerState.Active       -> ActivePanel(state)
+            is TrackerState.Active       -> ActivePanel(state, onQuickload)
         }
     }
 }
@@ -83,12 +84,38 @@ private fun StatusText(msg: String) {
 
 // ── Active panel ──────────────────────────────────────────────────────────────
 @Composable
-private fun ActivePanel(state: TrackerState.Active) {
+private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) {
     // Carousel page: 0=Main, 1=Stats, 2=Defenses. Auto-show battle view when active.
     var page by remember { mutableStateOf(0) }
 
     // Header
-    PanelHeader(state)
+    PanelHeader(state, onQuickload)
+
+    // Game over banner — shown when lead Pokemon fainted ending a battle
+    if (state.isGameOver) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFB00020))
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text("GAME OVER", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier
+                    .background(Color(0xFF7B0020), RoundedCornerShape(4.dp))
+                    .clickable {
+                        TrackerPoller.resetGameOver()
+                        onQuickload?.invoke()
+                    }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("Run ${state.runAttempts + 1} →", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
 
     // Route name
     state.currentRoute?.let {
@@ -110,7 +137,7 @@ private fun ActivePanel(state: TrackerState.Active) {
             Spacer(Modifier.height(2.dp))
 
             when (page) {
-                0 -> MainView(lead, state.battle)
+                0 -> MainView(lead, state.battle, state.stats)
                 1 -> StatsView(lead)
                 2 -> DefensesView(lead)
             }
@@ -127,7 +154,7 @@ private fun ActivePanel(state: TrackerState.Active) {
 }
 
 @Composable
-private fun PanelHeader(state: TrackerState.Active) {
+private fun PanelHeader(state: TrackerState.Active, onQuickload: (() -> Unit)?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -144,6 +171,23 @@ private fun PanelHeader(state: TrackerState.Active) {
             text = "${state.game.displayName.removePrefix("Pokémon ")} v1.${state.romVersion}",
             color = TextSecondary, fontSize = 9.sp,
         )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = "Run ${state.runAttempts + 1}",
+            color = AccentRed, fontSize = 9.sp, fontWeight = FontWeight.Bold,
+        )
+        if (onQuickload != null) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .background(AccentRed, RoundedCornerShape(4.dp))
+                    .clickable { onQuickload() }
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("Next Run →", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
@@ -177,7 +221,7 @@ private fun CarouselTabs(current: Int, onSelect: (Int) -> Unit) {
 
 // ── Page 0: Main view ─────────────────────────────────────────────────────────
 @Composable
-private fun MainView(pokemon: PokemonData, battle: BattleState) {
+private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null) {
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showAbilitySheet by remember { mutableStateOf(false) }
 
@@ -236,6 +280,19 @@ private fun MainView(pokemon: PokemonData, battle: BattleState) {
             text = "Nature: ${nature.name}${if (natureMod.isNotEmpty()) " ($natureMod)" else ""}",
             color = TextSecondary, fontSize = 9.sp,
         )
+
+        // Game stats row (steps / battles / center visits)
+        stats?.let { gs ->
+            Spacer(Modifier.height(3.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("%,d steps".format(gs.steps), color = TextSecondary, fontSize = 8.sp)
+                Text("${gs.totalBattles} battles", color = TextSecondary, fontSize = 8.sp)
+                Text("${gs.pokemonCenterVisits} centers", color = TextSecondary, fontSize = 8.sp)
+            }
+        }
 
         Spacer(Modifier.height(3.dp))
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)

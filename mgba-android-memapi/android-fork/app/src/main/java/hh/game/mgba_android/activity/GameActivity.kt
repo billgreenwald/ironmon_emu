@@ -28,6 +28,7 @@ import hh.game.mgba_android.R
 import hh.game.mgba_android.tracker.MemoryBridge
 import hh.game.mgba_android.tracker.TrackerPanel
 import hh.game.mgba_android.tracker.TrackerPoller
+import hh.game.mgba_android.tracker.quickload.QuickloadManager
 import hh.game.mgba_android.database.GB.GBgame
 import hh.game.mgba_android.database.GBA.GBAgame
 import hh.game.mgba_android.fragment.MemorySearchFragment
@@ -59,6 +60,10 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     // SDL library list — override SDLActivity default
     override val libraries: Array<String>
         get() = arrayOf("SDL2", "mgba", "mgba_android")
+
+    // Reload ROM in the running emulator core without restarting the Activity.
+    // Sets g_pendingRomPath in C++ and signals the emulation thread to stop; SDL thread reloads.
+    private external fun loadRomJNI(path: String)
 
     // Game arguments stored before SDL thread starts so getArguments() is ready
     private var gameArgPath: String? = null
@@ -189,6 +194,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         val gameNum = intent.getStringExtra("cheat")
         Log.d("GameActivity", "onCreate: gameNum='$gameNum', gamepath='$gamepath'")
         gameArgPath = gamepath
+        if (gamepath != null) QuickloadManager.register(applicationContext, gamepath)
 
         // super.onCreate() loads native libs, creates SDL surface, calls setContentView(mLayout)
         super.onCreate(savedInstanceState)
@@ -209,7 +215,33 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val state by TrackerPoller.state.collectAsState()
-                TrackerPanel(state)
+                TrackerPanel(
+                    state = state,
+                    onQuickload = if (QuickloadManager.canQuickload()) {
+                        {
+                            Log.d("Quickload", "button tapped, family=${QuickloadManager.currentFamily}")
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                val nextPath = QuickloadManager.advanceToNext(applicationContext)
+                                Log.d("Quickload", "nextPath=$nextPath")
+                                if (nextPath != null) {
+                                    withContext(Dispatchers.Main) {
+                                        Log.d("Quickload", "launching new GameActivity, killing process")
+                                        val next = Intent(this@GameActivity, GameActivity::class.java).apply {
+                                            putExtra("gamepath", nextPath)
+                                            val cheat = this@GameActivity.intent.getStringExtra("cheat")
+                                            if (cheat != null) putExtra("cheat", cheat)
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                        }
+                                        startActivity(next)
+                                        android.os.Process.killProcess(android.os.Process.myPid())
+                                    }
+                                } else {
+                                    Log.d("Quickload", "nextPath null — no next ROM found")
+                                }
+                            }
+                        }
+                    } else null,
+                )
             }
         }
         mLayout?.addView(
@@ -374,6 +406,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         (getSystemService(INPUT_SERVICE) as InputManager).unregisterInputDeviceListener(this)
         TrackerPoller.stop()
         MemoryBridge.reader = null
+        QuickloadManager.unregister()
         super.onDestroy()
         runFPS = false
     }
