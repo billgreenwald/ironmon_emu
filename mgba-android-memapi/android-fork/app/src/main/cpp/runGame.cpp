@@ -631,9 +631,9 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_initSwappy(JNIEnv *env, jobject thiz) {
     SwappyGL_init(env, thiz);
-    SwappyGL_setSwapIntervalNS(16666667L); // 60 FPS
-    // SwappyGL_setAutoSwapInterval(true);
-    // SwappyGL_setAutoPipelineMode(true);
+    SwappyGL_setSwapIntervalNS(16666667L); // 60 FPS target
+    SwappyGL_setAutoSwapInterval(true);   // adjust interval to display refresh rate
+    SwappyGL_setAutoPipelineMode(true);   // pipeline frames to reduce latency
 }
 
 extern "C"
