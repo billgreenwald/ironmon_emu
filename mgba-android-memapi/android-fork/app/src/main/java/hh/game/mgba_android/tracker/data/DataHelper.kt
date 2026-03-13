@@ -17,11 +17,16 @@ data class GameAddresses(
     val sideStatuses: Long,
     val sideTimers: Long,
     val battleOutcome: Long,
+    val battleResults: Long,       // gBattleResults struct (IWRAM)
     // Map/location
     val gMapHeader: Long,        // read mapLayoutId at gMapHeader + 0x12
     // SaveBlock1 (for stats)
     val saveBlock1Ptr: Long,
     val gameStatsOffset: Int,    // byte offset within SaveBlock1 to game stats array
+    // SaveBlock2 (for XOR key used to decrypt game stats)
+    // saveBlock2Ptr == 0L means no encryption (Ruby/Sapphire per Lua tracker)
+    val saveBlock2Ptr: Long,
+    val encryptionKeyOffset: Int, // offset within SaveBlock2 for the 32-bit XOR key
 )
 
 object DataHelper {
@@ -90,6 +95,9 @@ object DataHelper {
     const val BMON_MOVE4:      Int = 0x12
     const val BMON_STATUS:     Int = 0x28  // status1 (approximate; used for display only)
 
+    // ── gBattleResults offsets (from Lua tracker Program.Addresses) ──────────
+    const val BATTLE_RESULTS_ENEMY_MOVE_OFFSET: Int = 0x24  // offsetBattleResultsEnemyMoveId
+
     // ── Map header offset ────────────────────────────────────────────────────
     const val MAP_HEADER_LAYOUT_ID_OFFSET: Int = 0x12  // u16 mapLayoutId
 
@@ -99,23 +107,27 @@ object DataHelper {
     // =========================================================================
 
     // FireRed English v1.0 (BPRE, version byte 0)
+    // Addresses from Lua tracker: Pokemon FireRed v1.0.json
     private val FIRE_RED_V10 = GameAddresses(
-        partyCount        = 0x02024029L,
-        partyBase         = 0x02024284L,
-        baseStatsTable    = 0x08254784L,
-        levelUpLearnsets  = 0x0825D794L,
-        experienceTables  = 0x08253AE4L,
-        enemyParty        = 0x0202402CL,
-        battleTypeFlags   = 0x02022B4CL,
-        battleMons        = 0x02023BE4L,
-        battlersCount     = 0x02023BCCL,
-        battleWeather     = 0x02023F1CL,
-        sideStatuses      = 0x02023DDEL,
-        sideTimers        = 0x02023DE4L,
-        battleOutcome     = 0x02023E8AL,
-        gMapHeader        = 0x02036DFCL,
-        saveBlock1Ptr     = 0x03005008L,
-        gameStatsOffset   = 0x1200,
+        partyCount          = 0x02024029L,
+        partyBase           = 0x02024284L,
+        baseStatsTable      = 0x08254784L,
+        levelUpLearnsets    = 0x0825D794L,
+        experienceTables    = 0x08253AE4L,
+        enemyParty          = 0x0202402CL,
+        battleTypeFlags     = 0x02022B4CL,
+        battleMons          = 0x02023BE4L,
+        battlersCount       = 0x02023BCCL,
+        battleWeather       = 0x02023F1CL,
+        sideStatuses        = 0x02023DDEL,
+        sideTimers          = 0x02023DE4L,
+        battleOutcome       = 0x02023E8AL,
+        battleResults       = 0x3004F90L,   // gBattleResults (FR/LG all variants)
+        gMapHeader          = 0x02036DFCL,
+        saveBlock1Ptr       = 0x03005008L,
+        gameStatsOffset     = 0x1200,
+        saveBlock2Ptr       = 0x0300500CL,  // gSaveBlock2ptr (English FR/LG)
+        encryptionKeyOffset = 0xF20,        // EncryptionKeyOffset (all FR/LG variants)
     )
 
     // FireRed English v1.1 (BPRE, version byte 1)
@@ -144,23 +156,29 @@ object DataHelper {
     )
 
     // Ruby v1.0
+    // Addresses from Lua tracker: Pokemon Ruby v1.0.json
+    // NOTE: Ruby/Sapphire battle addresses are unverified placeholders (out of scope).
+    // saveBlock2Ptr = 0L signals no encryption (Ruby/Sapphire per Lua tracker game==1 check).
     private val RUBY_V10 = GameAddresses(
-        partyCount        = 0x03004350L,
-        partyBase         = 0x020244ECL,
-        baseStatsTable    = 0x081FEC18L,
-        levelUpLearnsets  = 0x0823B16CL,
-        experienceTables  = 0x081E8CE4L,
-        enemyParty        = 0x020244ECL,
-        battleTypeFlags   = 0x03004360L,
-        battleMons        = 0x03004360L,
-        battlersCount     = 0x03004398L,
-        battleWeather     = 0x020238C8L,
-        sideStatuses      = 0x02023718L,
-        sideTimers        = 0x0202371EL,
-        battleOutcome     = 0x03004360L,
-        gMapHeader        = 0x0202E828L,
-        saveBlock1Ptr     = 0x03005D8CL,
-        gameStatsOffset   = 0x1540,
+        partyCount          = 0x03004350L,
+        partyBase           = 0x020244ECL,
+        baseStatsTable      = 0x081FEC18L,
+        levelUpLearnsets    = 0x0823B16CL,
+        experienceTables    = 0x081E8CE4L,
+        enemyParty          = 0x020244ECL,
+        battleTypeFlags     = 0x03004360L,
+        battleMons          = 0x03004360L,
+        battlersCount       = 0x03004398L,
+        battleWeather       = 0x020238C8L,
+        sideStatuses        = 0x02023718L,
+        sideTimers          = 0x0202371EL,
+        battleOutcome       = 0x03004360L,
+        battleResults       = 0x30042E0L,   // gBattleResults (Ruby/Sapphire all variants)
+        gMapHeader          = 0x0202E828L,
+        saveBlock1Ptr       = 0x03005D8CL,
+        gameStatsOffset     = 0x1540,
+        saveBlock2Ptr       = 0L,           // No encryption for Ruby/Sapphire
+        encryptionKeyOffset = 0,
     )
 
     // Ruby v1.1 / v1.2 share same base stats address
@@ -181,23 +199,27 @@ object DataHelper {
     )
 
     // Emerald (single version)
+    // Addresses from Lua tracker: Pokemon Emerald.json
     val EMERALD = GameAddresses(
-        partyCount        = 0x020244E9L,
-        partyBase         = 0x020244ECL,
-        baseStatsTable    = 0x083203CCL,
-        levelUpLearnsets  = 0x0832677CL,
-        experienceTables  = 0x082E82C4L,
-        enemyParty        = 0x020244ECL,
-        battleTypeFlags   = 0x02022FECL,
-        battleMons        = 0x02024084L,
-        battlersCount     = 0x02024074L,
-        battleWeather     = 0x020243CCL,
-        sideStatuses      = 0x0202428EL,
-        sideTimers        = 0x02024294L,
-        battleOutcome     = 0x020241FCL,
-        gMapHeader        = 0x02037318L,
-        saveBlock1Ptr     = 0x03005D8CL,
-        gameStatsOffset   = 0x159C,
+        partyCount          = 0x020244E9L,
+        partyBase           = 0x020244ECL,
+        baseStatsTable      = 0x083203CCL,
+        levelUpLearnsets    = 0x0832677CL,
+        experienceTables    = 0x082E82C4L,
+        enemyParty          = 0x020244ECL,
+        battleTypeFlags     = 0x02022FECL,
+        battleMons          = 0x02024084L,
+        battlersCount       = 0x02024074L,
+        battleWeather       = 0x020243CCL,
+        sideStatuses        = 0x0202428EL,
+        sideTimers          = 0x02024294L,
+        battleOutcome       = 0x0202433AL, // gBattleOutcome from Emerald.json (was wrong)
+        battleResults       = 0x3005D10L,  // gBattleResults from Emerald.json
+        gMapHeader          = 0x02037318L,
+        saveBlock1Ptr       = 0x03005D8CL,
+        gameStatsOffset     = 0x159C,
+        saveBlock2Ptr       = 0x03005D90L, // gSaveBlock2ptr from Emerald.json
+        encryptionKeyOffset = 0xAC,        // EncryptionKeyOffset from Emerald.json
     )
 
     /**
@@ -206,11 +228,12 @@ object DataHelper {
      */
     fun addressesFor(game: GameVersion, romVersion: Int = 0, gameCode: String = ""): GameAddresses? = when (game) {
         GameVersion.FIRE_RED -> when {
-            gameCode == "BPRS" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824FF4CL) // Spanish
-            gameCode == "BPRI" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824D864L) // Italian
-            gameCode == "BPRF" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824EBD4L) // French
-            gameCode == "BPRD" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824EBD4L) // German (approx)
-            gameCode == "BPRJ" -> FIRE_RED_V10.copy(baseStatsTable = 0x0821118CL) // Japanese
+            // Non-English FR use gSaveBlock2ptr = 0x03004F5C (per Lua tracker JSONs)
+            gameCode == "BPRS" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824FF4CL, saveBlock2Ptr = 0x03004F5CL) // Spanish
+            gameCode == "BPRI" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824D864L, saveBlock2Ptr = 0x03004F5CL) // Italian
+            gameCode == "BPRF" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824EBD4L, saveBlock2Ptr = 0x03004F5CL) // French
+            gameCode == "BPRD" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824EBD4L, saveBlock2Ptr = 0x03004F5CL) // German (approx)
+            gameCode == "BPRJ" -> FIRE_RED_V10.copy(baseStatsTable = 0x0821118CL, saveBlock2Ptr = 0x0300504CL) // Japanese
             romVersion >= 1 -> FIRE_RED_V11
             else -> FIRE_RED_V10
         }

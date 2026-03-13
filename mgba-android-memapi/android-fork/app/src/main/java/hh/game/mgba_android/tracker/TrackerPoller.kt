@@ -30,8 +30,10 @@ object TrackerPoller {
     private val _state = MutableStateFlow<TrackerState>(TrackerState.Disconnected)
     val state: StateFlow<TrackerState> = _state
 
-    // Track revealed enemy moves across ticks (reset on battle end)
-    private var revealedEnemyMoves = mutableSetOf<Int>()
+    // Revealed enemy moves: key = speciesId * 1000L + level, persists across battles within a run
+    private val revealedMovesByKey = mutableMapOf<Long, MutableList<Int>>()
+    private var lastEnemyMoveId: Int = 0     // last value of gBattleResults+0x24
+    private var battleJustStarted: Boolean = false
     private var lastBattleActive = false
 
     // Game over state — @Volatile so the main-thread click and Default-dispatcher poll agree
@@ -42,7 +44,11 @@ object TrackerPoller {
     private var lastGameCode: String = ""
     @Volatile private var runAttempts: Int = 0
 
-    fun resetGameOver() { isGameOver = false }
+    fun resetGameOver() {
+        isGameOver = false
+        revealedMovesByKey.clear()
+        lastEnemyMoveId = 0
+    }
     fun debugForceGameOver() { isGameOver = true }
 
     fun setRunAttempts(n: Int) {
@@ -71,6 +77,8 @@ object TrackerPoller {
         pollJob?.cancel()
         pollJob = null
         _state.value = TrackerState.Disconnected
+        revealedMovesByKey.clear()
+        lastEnemyMoveId = 0
     }
 
     private fun poll(): TrackerState {
@@ -143,7 +151,11 @@ object TrackerPoller {
             }
         }
         // Auto-reset if party count drops to 0 (new game started / ROM reset)
-        if (count == 0) isGameOver = false
+        if (count == 0) {
+            isGameOver = false
+            revealedMovesByKey.clear()
+            lastEnemyMoveId = 0
+        }
 
         // ── Route ─────────────────────────────────────────────────────────────
         val route = RouteReader.read(game, addresses)
@@ -160,8 +172,9 @@ object TrackerPoller {
         val battleOutcome = MemoryBridge.readU8(addresses.battleOutcome) ?: return BattleState.NONE
         val isActive = battlersCount > 0 && battleOutcome == 0
 
-        // Reset revealed moves on battle end
-        if (!isActive && lastBattleActive) revealedEnemyMoves.clear()
+        // Detect battle transitions
+        if (!isActive && lastBattleActive) lastEnemyMoveId = 0  // reset per-battle snapshot on end
+        if (isActive && !lastBattleActive) battleJustStarted = true  // new battle — snapshot without recording
         lastBattleActive = isActive
 
         if (!isActive) return BattleState.NONE
@@ -178,16 +191,30 @@ object TrackerPoller {
         val enemy: EnemyData? = if (enemyMon != null) {
             val speciesId = enemyMon.u16(DataHelper.BMON_SPECIES)
             if (speciesId in 1..386) {
-                // Read enemy move reveals
-                for (i in 0..3) {
-                    val mId = enemyMon.u16(DataHelper.BMON_MOVE1 + i * 2)
-                    // We reveal moves from the enemy's party struct (fully known in the battle engine)
-                    // For "as-revealed" tracking, only add when we read the actual battle mon
-                    if (mId != 0) revealedEnemyMoves.add(mId)
-                }
-
                 // Enemy party struct — for level and HP (party offsets are reliable)
                 val enemyRaw = MemoryBridge.readBytes(addresses.enemyParty, DataHelper.POKEMON_STRUCT_SIZE)
+
+                val level = if (enemyRaw != null) enemyRaw[DataHelper.OFF_LEVEL].toInt() and 0xFF else 0
+
+                // ── Move revelation via gBattleResults (matches Lua tracker logic) ──────
+                // Read gBattleResults + 0x24 = offsetBattleResultsEnemyMoveId
+                val key = speciesId * 1000L + level
+                val currentEnemyMoveId = MemoryBridge.readU16(
+                    addresses.battleResults + DataHelper.BATTLE_RESULTS_ENEMY_MOVE_OFFSET
+                ) ?: 0
+
+                if (battleJustStarted) {
+                    // Snapshot without recording — value may be leftover from previous battle
+                    lastEnemyMoveId = currentEnemyMoveId
+                    battleJustStarted = false
+                } else if (currentEnemyMoveId != 0 && currentEnemyMoveId != lastEnemyMoveId) {
+                    // Enemy used a new move — reveal it (max 4, matching Lua 5th-move suppression)
+                    val revealed = revealedMovesByKey.getOrPut(key) { mutableListOf() }
+                    if (revealed.size < 4 && currentEnemyMoveId !in revealed) {
+                        revealed.add(currentEnemyMoveId)
+                    }
+                    lastEnemyMoveId = currentEnemyMoveId
+                }
 
                 var baseHp = 0; var baseAtk = 0; var baseDef = 0
                 var baseSpd = 0; var baseSpAtk = 0; var baseSpDef = 0
@@ -211,8 +238,6 @@ object TrackerPoller {
                     ability2Id = baseStats[DataHelper.BASE_STATS_ABILITY2].toInt() and 0xFF
                 }
 
-                // Level and HP from party struct (reliable offsets)
-                val level = if (enemyRaw != null) enemyRaw[DataHelper.OFF_LEVEL].toInt() and 0xFF else 0
                 val currentHp = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_CURRENT_HP) else 0
                 val maxHpRaw = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_MAX_HP) else 0
 
@@ -230,7 +255,7 @@ object TrackerPoller {
                     baseSpd         = baseSpd,
                     baseSpAtk       = baseSpAtk,
                     baseSpDef       = baseSpDef,
-                    revealedMoveIds = revealedEnemyMoves.toList(),
+                    revealedMoveIds = revealedMovesByKey[key]?.toList() ?: emptyList(),
                     status          = enemyMon[DataHelper.BMON_STATUS].toInt() and 0xFF,
                     currentHp       = currentHp,
                     maxHp           = maxHpRaw,
