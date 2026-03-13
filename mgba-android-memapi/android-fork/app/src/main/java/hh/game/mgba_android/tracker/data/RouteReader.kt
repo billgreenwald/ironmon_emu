@@ -14,8 +14,9 @@ object RouteReader {
             addresses.gMapHeader + DataHelper.MAP_HEADER_LAYOUT_ID_OFFSET
         ) ?: return null
         if (mapLayoutId == 0) return null
-        val isEmerald = game == GameVersion.EMERALD
-        val name = RouteNames.get(mapLayoutId, isEmerald)
+        // Hoenn games (Ruby/Sapphire/Emerald) share the same route layout ID space
+        val isHoenn = game == GameVersion.RUBY || game == GameVersion.SAPPHIRE || game == GameVersion.EMERALD
+        val name = RouteNames.get(mapLayoutId, isHoenn)
         return RouteInfo(mapLayoutId, name)
     }
 }
