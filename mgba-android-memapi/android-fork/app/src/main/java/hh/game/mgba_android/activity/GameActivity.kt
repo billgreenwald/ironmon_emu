@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
+import android.hardware.input.InputManager
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -53,7 +55,7 @@ import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
 
-open class GameActivity : SDLActivity() {
+open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     // SDL library list — override SDLActivity default
     override val libraries: Array<String>
         get() = arrayOf("SDL2", "mgba", "mgba_android")
@@ -236,6 +238,9 @@ open class GameActivity : SDLActivity() {
         ))
 
         addGameControler()
+        (getSystemService(INPUT_SERVICE) as InputManager)
+            .registerInputDeviceListener(this, null)
+        updateOnscreenControls()
 //        GlobalScope.launch {
 //            Gameutils.getFPS().toString()
 //        }
@@ -343,7 +348,30 @@ open class GameActivity : SDLActivity() {
         }
     }
 
+    // ── Gamepad detection ──────────────────────────────────────────────────────
+    private fun isGamepad(deviceId: Int): Boolean {
+        val device = InputDevice.getDevice(deviceId) ?: return false
+        val src = device.sources
+        return (src and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||
+               (src and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
+    }
+
+    private fun hasGamepadConnected(): Boolean =
+        InputDevice.getDeviceIds().any { isGamepad(it) }
+
+    private fun updateOnscreenControls() {
+        val visible = if (hasGamepadConnected()) View.INVISIBLE else View.VISIBLE
+        findViewById<View>(R.id.padboardInclude)?.visibility = visible
+        findViewById<View>(R.id.tools_btn)?.visibility = visible
+    }
+
+    override fun onInputDeviceAdded(deviceId: Int) { updateOnscreenControls() }
+    override fun onInputDeviceRemoved(deviceId: Int) { updateOnscreenControls() }
+    override fun onInputDeviceChanged(deviceId: Int) { updateOnscreenControls() }
+    // ── End gamepad detection ──────────────────────────────────────────────────
+
     override fun onDestroy() {
+        (getSystemService(INPUT_SERVICE) as InputManager).unregisterInputDeviceListener(this)
         TrackerPoller.stop()
         MemoryBridge.reader = null
         super.onDestroy()
@@ -707,10 +735,9 @@ open class GameActivity : SDLActivity() {
         ev?.let {
             getDirectionPressed(ev).let {
                 if (it == 0) {
-                    lastDirect.forEach {
-                        onNativeKeyUp(it)
-                        lastDirect.remove(it)
-                    }
+                    val toRelease = ArrayList(lastDirect)
+                    lastDirect.clear()
+                    toRelease.forEach { onNativeKeyUp(it) }
                     handled = true
                 } else {
                     var gbaKey = getKey(it)
