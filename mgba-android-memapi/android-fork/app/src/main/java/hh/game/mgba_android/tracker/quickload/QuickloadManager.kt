@@ -84,6 +84,12 @@ object QuickloadManager {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getInt(familyKey(prefix), 1)
 
+    /** Manually override the current ROM number (e.g. from settings screen). */
+    fun setCurrentNumber(context: Context, number: Int) {
+        currentFamily = currentFamily?.copy(number = number)
+        currentFamily?.let { saveLastNumber(context, it.prefix, number) }
+    }
+
     private fun saveLastNumber(context: Context, prefix: String, number: Int) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit().putInt(familyKey(prefix), number).apply()

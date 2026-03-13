@@ -45,6 +45,15 @@ object TrackerPoller {
     fun resetGameOver() { isGameOver = false }
     fun debugForceGameOver() { isGameOver = true }
 
+    fun setRunAttempts(n: Int) {
+        runAttempts = n
+        val ctx = appContext ?: return
+        if (lastGameCode.isEmpty()) return
+        val data = RunRepository.load(ctx, lastGameCode)
+        data.stats.attempts = n
+        RunRepository.save(ctx, lastGameCode, data)
+    }
+
     private var pollJob: Job? = null
 
     fun start(context: Context, scope: CoroutineScope) {
