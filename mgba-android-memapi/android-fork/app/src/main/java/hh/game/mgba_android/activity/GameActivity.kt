@@ -203,7 +203,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         )
 
         MemoryBridge.reader = { addr, len -> getMemoryRange(addr, len) }
-        TrackerPoller.start(lifecycleScope)
+        TrackerPoller.start(applicationContext, lifecycleScope)
 
         val trackerView = ComposeView(this).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
@@ -740,6 +740,10 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                     toRelease.forEach { onNativeKeyUp(it) }
                     handled = true
                 } else {
+                    // Release any previously held directions that differ from the new one
+                    val toRelease = lastDirect.filter { held -> held != it }
+                    lastDirect.removeAll(toRelease.toSet())
+                    toRelease.forEach { held -> onNativeKeyUp(held) }
                     var gbaKey = getKey(it)
                     if (gbaKey != GBAKeys.GBA_KEY_NONE.key) {
                         onNativeKeyDown(gbaKey)
