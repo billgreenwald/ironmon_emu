@@ -45,11 +45,11 @@ When a Bluetooth or USB gamepad is connected, the on-screen touch controls autom
 
 ## ROM Families
 
-The home screen groups your ROMs into **families** rather than listing every file individually. A family is a set of ROMs that share the same base game code — for example, all your KaizoFR patches appear together under one "KaizoFR" entry. The card shows how many ROMs are in the family and which run you were on last.
+The home screen groups your ROMs into **families** rather than listing every file individually. A family is a set of ROMs that were batch generated together (or in later batches) with the ironmon randomizer.  Families are detected by name, and then sequenced by number (i.e. all "FireRed1" "FireRed2" ... will be grouped into a single family called "FireRed". The card shows how many ROMs are in the family and which run you were on last, and when you pick it will automatically start your last played rom.  Quickload is auto tracked per family.
 
 <p align="center">
   <img src="rom%20family%20grouping.png" alt="ROM Family Grouping" width="300"/>
-  <br/><em>ROM families grouped on the home screen</em>
+  <br/><em>ROM families grouped on the home screen, in this case ROMs were named "KaizoFR#"</em>
 </p>
 
 **To pick a specific ROM from a family**, long-press the family card. A list of all ROMs in that family will appear so you can choose the exact file to load.
