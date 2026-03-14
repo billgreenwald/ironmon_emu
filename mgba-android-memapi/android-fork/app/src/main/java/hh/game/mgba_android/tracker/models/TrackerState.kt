@@ -1,6 +1,7 @@
 package hh.game.mgba_android.tracker.models
 
 import hh.game.mgba_android.tracker.data.GameStats
+import hh.game.mgba_android.tracker.data.HealInfo
 import hh.game.mgba_android.tracker.data.RouteInfo
 
 sealed class TrackerState {
@@ -19,6 +20,7 @@ sealed class TrackerState {
         val battle: BattleState = BattleState.NONE,
         val currentRoute: RouteInfo? = null,
         val stats: GameStats? = null,
+        val healInfo: HealInfo? = null,
         val isGameOver: Boolean = false,
         val runAttempts: Int = 0,
     ) : TrackerState() {

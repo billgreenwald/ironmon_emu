@@ -27,6 +27,12 @@ data class GameAddresses(
     // saveBlock2Ptr == 0L means no encryption (Ruby/Sapphire per Lua tracker)
     val saveBlock2Ptr: Long,
     val encryptionKeyOffset: Int, // offset within SaveBlock2 for the 32-bit XOR key
+    // Bag pockets — SaveBlock1-relative offsets + slot counts (from Lua tracker GameSettings)
+    // Each slot = 4 bytes: u16 itemId + u16 quantity (quantity XOR-encrypted with 16-bit key for FR/LG/Emerald)
+    val bagPocket_Items_offset: Int,
+    val bagPocket_Items_size: Int,
+    val bagPocket_Berries_offset: Int,
+    val bagPocket_Berries_size: Int,
 )
 
 object DataHelper {
@@ -128,6 +134,11 @@ object DataHelper {
         gameStatsOffset     = 0x1200,
         saveBlock2Ptr       = 0x0300500CL,  // gSaveBlock2ptr (English FR/LG)
         encryptionKeyOffset = 0xF20,        // EncryptionKeyOffset (all FR/LG variants)
+        // Bag offsets from Lua tracker: Pokemon FireRed v1.0.json (same for all FR/LG)
+        bagPocket_Items_offset  = 0x310,
+        bagPocket_Items_size    = 0x2A,     // 42 slots
+        bagPocket_Berries_offset = 0x54C,
+        bagPocket_Berries_size  = 0x2B,     // 43 slots
     )
 
     // FireRed English v1.1 (BPRE, version byte 1)
@@ -179,6 +190,11 @@ object DataHelper {
         gameStatsOffset     = 0x1540,
         saveBlock2Ptr       = 0L,           // No encryption for Ruby/Sapphire
         encryptionKeyOffset = 0,
+        // Bag offsets from Lua tracker: Pokemon Ruby v1.0.json
+        bagPocket_Items_offset  = 0x560,
+        bagPocket_Items_size    = 0x14,     // 20 slots
+        bagPocket_Berries_offset = 0x740,
+        bagPocket_Berries_size  = 0x2E,     // 46 slots
     )
 
     // Ruby v1.1 / v1.2 share same base stats address
@@ -220,6 +236,11 @@ object DataHelper {
         gameStatsOffset     = 0x159C,
         saveBlock2Ptr       = 0x03005D90L, // gSaveBlock2ptr from Emerald.json
         encryptionKeyOffset = 0xAC,        // EncryptionKeyOffset from Emerald.json
+        // Bag offsets from Lua tracker: Pokemon Emerald.json
+        bagPocket_Items_offset  = 0x560,
+        bagPocket_Items_size    = 0x1E,     // 30 slots
+        bagPocket_Berries_offset = 0x790,
+        bagPocket_Berries_size  = 0x2E,     // 46 slots
     )
 
     /**

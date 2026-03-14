@@ -1,14 +1,18 @@
 package hh.game.mgba_android.tracker
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,9 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skydoves.landscapist.glide.GlideImage
 import hh.game.mgba_android.tracker.data.GameStats
+import hh.game.mgba_android.tracker.data.HealInfo
 import hh.game.mgba_android.tracker.models.*
 import hh.game.mgba_android.tracker.tables.*
 import hh.game.mgba_android.tracker.tables.MoveDescTable
+import kotlinx.coroutines.launch
 
 // ── Color palette ────────────────────────────────────────────────────────────
 private val PanelBg       = Color(0xFF0F1621)
@@ -101,8 +107,13 @@ private fun StatusText(msg: String) {
 }
 
 // ── Active panel ──────────────────────────────────────────────────────────────
+// Stat markings key: Pair(speciesId, statKey) → state 0–3
+// Matches Lua Constants.STAT_STATES: 0=blank, 1="+", 2="--", 3="="
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) {
+    val statMarkings: SnapshotStateMap<Pair<Int, String>, Int> = remember { mutableStateMapOf() }
+
     PanelHeader(state, onQuickload)
 
     // Game over banner
@@ -139,21 +150,78 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-    ) {
-        state.leadPokemon?.let { lead ->
-            MainView(lead, state.battle, state.stats)
-        } ?: run {
-            StatusText("Party empty")
+    if (state.battle.isActive) {
+        // Two-tab pager: MY MON | OPPONENT
+        val pagerState = rememberPagerState(pageCount = { 2 })
+        val scope = rememberCoroutineScope()
+
+        // Auto-navigate to OPPONENT tab when battle starts
+        LaunchedEffect(Unit) {
+            pagerState.animateScrollToPage(1)
         }
 
-        // Battle panel
-        if (state.battle.isActive) {
-            Spacer(Modifier.height(4.dp))
-            BattlePanel(state.battle)
+        TabRow(
+            selectedTabIndex = pagerState.currentPage,
+            containerColor = HeaderBg,
+            contentColor = TextPrimary,
+        ) {
+            Tab(
+                selected = pagerState.currentPage == 0,
+                onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+            ) {
+                Text(
+                    "MY MON",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+            Tab(
+                selected = pagerState.currentPage == 1,
+                onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+            ) {
+                Text(
+                    "OPPONENT",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+        }
+
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            when (page) {
+                0 -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    state.leadPokemon?.let { lead ->
+                        MainView(lead, state.battle, state.stats, state.healInfo)
+                    } ?: StatusText("Party empty")
+                }
+                else -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    EnemyView(state.battle, statMarkings)
+                }
+            }
+        }
+    } else {
+        // Outside battle: just the player card, full height
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        ) {
+            state.leadPokemon?.let { lead ->
+                MainView(lead, state.battle, state.stats, state.healInfo)
+            } ?: StatusText("Party empty")
         }
     }
 }
@@ -203,7 +271,7 @@ private fun PanelHeader(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 @Composable
-private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null) {
+private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, healInfo: HealInfo? = null) {
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showAbilitySheet by remember { mutableStateOf(false) }
     var showDefenseSheet by remember { mutableStateOf(false) }
@@ -257,6 +325,13 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
                 }
                 Spacer(Modifier.height(2.dp))
                 HpBar(pokemon)
+                // Heals in bag — matches Lua TrackerScreen "Heals:" display (%.0f%% HP (N))
+                if (healInfo != null && healInfo.healCount > 0) {
+                    Text(
+                        text = "Heals: %.0f%% HP (%d)".format(healInfo.healPercent, healInfo.healCount),
+                        color = TextSecondary, fontSize = 11.sp,
+                    )
+                }
             }
         }
 
@@ -317,6 +392,237 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     }
     if (showDefenseSheet) {
         TypeDefenseSheet(pokemon.type1, pokemon.type2, onDismiss = { showDefenseSheet = false })
+    }
+}
+
+// ── Enemy view (OPPONENT tab) ─────────────────────────────────────────────────
+// Stat marking states match Lua Constants.STAT_STATES:
+//   0=blank, 1="+" (green), 2="--" (red), 3="=" (gray)
+// Cycle: (state + 1) % 4  (matches Lua: statState = (statState + 1) % 4)
+@Composable
+private fun EnemyView(
+    battle: BattleState,
+    statMarkings: SnapshotStateMap<Pair<Int, String>, Int>,
+) {
+    val enemy = battle.enemy
+    if (enemy == null) {
+        StatusText("No enemy data")
+        return
+    }
+
+    var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
+    var showDefenseSheet by remember { mutableStateOf(false) }
+
+    // Stat keys matching Lua tracker (Constants.lua STAT_STATES)
+    val statKeys = listOf("atk", "def", "spa", "spd", "spe", "acc", "eva")
+    val statLabels = listOf("Atk", "Def", "SpA", "SpD", "Spe", "Acc", "Eva")
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(CardBg, RoundedCornerShape(6.dp))
+            .padding(8.dp),
+    ) {
+        // Header row: sprite + name/level/types/HP (mirrors MainView layout exactly)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+        ) {
+            GlideImage(
+                imageModel = { "file:///android_asset/sprites/${enemy.speciesId}.gif" },
+                modifier = Modifier.size(80.dp),
+                failure = {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("#${enemy.speciesId}", color = TextSecondary, fontSize = 12.sp)
+                    }
+                },
+            )
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = enemy.name,
+                        color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    Text("Lv.${enemy.level}", color = TextSecondary, fontSize = 16.sp)
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    modifier = Modifier.clickable { showDefenseSheet = true },
+                ) {
+                    TypeChip(enemy.type1)
+                    if (enemy.type2 != enemy.type1) TypeChip(enemy.type2)
+                }
+                Spacer(Modifier.height(2.dp))
+                HpBar(enemy.hpPercent, enemy.currentHp, enemy.maxHp)
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        // Battle type + weather
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = if (battle.isWild) "WILD" else "TRAINER",
+                color = AccentRed, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+            )
+            if (battle.weather != Weather.NONE) {
+                Spacer(Modifier.width(6.dp))
+                Text(battle.weather.displayName, color = AccentBlue, fontSize = 14.sp)
+            }
+        }
+
+        // Side conditions
+        if (battle.playerReflect > 0 || battle.playerLightScreen > 0 ||
+            battle.enemySpikes > 0 || battle.playerSafeguard > 0) {
+            Spacer(Modifier.height(2.dp))
+            if (battle.playerReflect > 0)     Text("Reflect (${battle.playerReflect}t)", color = TextSecondary, fontSize = 12.sp)
+            if (battle.playerLightScreen > 0) Text("Light Screen (${battle.playerLightScreen}t)", color = TextSecondary, fontSize = 12.sp)
+            if (battle.enemySpikes > 0)       Text("Spikes ×${battle.enemySpikes}", color = TextSecondary, fontSize = 12.sp)
+            if (battle.playerSafeguard > 0)   Text("Safeguard (${battle.playerSafeguard}t)", color = TextSecondary, fontSize = 12.sp)
+        }
+
+        // Revealed moves
+        if (enemy.revealedMoveIds.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Divider(color = Color(0xFF303050), thickness = 0.5.dp)
+            Spacer(Modifier.height(4.dp))
+            Text("Revealed Moves:", color = TextSecondary, fontSize = 13.sp)
+            Spacer(Modifier.height(2.dp))
+            enemy.revealedMoveIds.forEach { moveId ->
+                val stats = MoveStatsTable.get(moveId)
+                val moveTypeId = stats.type
+                val movePower  = stats.power
+                val moveAcc    = stats.accuracy
+                val movePp     = stats.pp
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showMoveSheet = MoveData(
+                                moveId   = moveId,
+                                moveName = MoveNames.get(moveId),
+                                pp       = movePp,
+                                maxPp    = movePp,
+                                power    = movePower,
+                                accuracy = moveAcc,
+                                moveType = moveTypeId,
+                            )
+                        }
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .background(typeColor(moveTypeId), CircleShape)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(MoveNames.get(moveId), color = TextPrimary, fontSize = 14.sp)
+                }
+            }
+        }
+
+        // ── Stat markings ─────────────────────────────────────────────────────
+        // Matches Lua Constants.STAT_STATES; persists per species within session
+        Spacer(Modifier.height(4.dp))
+        Divider(color = Color(0xFF303050), thickness = 0.5.dp)
+        Spacer(Modifier.height(4.dp))
+        Text("Stat Markings:", color = TextSecondary, fontSize = 13.sp)
+        Spacer(Modifier.height(4.dp))
+
+        // Row 1: Atk | Def | SpA
+        Row(modifier = Modifier.fillMaxWidth()) {
+            for (i in 0..2) {
+                val key = statKeys[i]
+                val label = statLabels[i]
+                val markKey = enemy.speciesId to key
+                StatMarkingCell(
+                    label = label,
+                    state = statMarkings[markKey] ?: 0,
+                    onTap = {
+                        val cur = statMarkings[markKey] ?: 0
+                        statMarkings[markKey] = (cur + 1) % 4
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        // Row 2: SpD | Spe | Acc
+        Row(modifier = Modifier.fillMaxWidth()) {
+            for (i in 3..5) {
+                val key = statKeys[i]
+                val label = statLabels[i]
+                val markKey = enemy.speciesId to key
+                StatMarkingCell(
+                    label = label,
+                    state = statMarkings[markKey] ?: 0,
+                    onTap = {
+                        val cur = statMarkings[markKey] ?: 0
+                        statMarkings[markKey] = (cur + 1) % 4
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        // Row 3: Eva (left-aligned, 1/3 width)
+        Row(modifier = Modifier.fillMaxWidth()) {
+            val key = statKeys[6]
+            val label = statLabels[6]
+            val markKey = enemy.speciesId to key
+            StatMarkingCell(
+                label = label,
+                state = statMarkings[markKey] ?: 0,
+                onTap = {
+                    val cur = statMarkings[markKey] ?: 0
+                    statMarkings[markKey] = (cur + 1) % 4
+                },
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.weight(2f))
+        }
+    }
+
+    Spacer(Modifier.height(4.dp))
+
+    showMoveSheet?.let { move ->
+        MoveDetailSheet(move, onDismiss = { showMoveSheet = null })
+    }
+    if (showDefenseSheet) {
+        TypeDefenseSheet(enemy.type1, enemy.type2, onDismiss = { showDefenseSheet = false })
+    }
+}
+
+// ── Stat marking cell ─────────────────────────────────────────────────────────
+// 4 states matching Lua Constants.STAT_STATES:
+//   0=blank (gray), 1="+" (green), 2="--" (red), 3="=" (gray)
+@Composable
+private fun StatMarkingCell(label: String, state: Int, onTap: () -> Unit, modifier: Modifier = Modifier) {
+    val (text, color) = when (state) {
+        1    -> "+"  to Color(0xFF4CAF50)  // boosted — green
+        2    -> "--" to Color(0xFFFF6B6B)  // dropped — red
+        3    -> "="  to TextSecondary      // neutral — gray
+        else -> " "  to TextSecondary      // blank
+    }
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(label, color = TextSecondary, fontSize = 11.sp)
+        Box(
+            modifier = Modifier
+                .background(Color(0xFF2A3550), RoundedCornerShape(4.dp))
+                .clickable { onTap() }
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .defaultMinSize(minWidth = 32.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(text, color = color, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }
 
@@ -434,68 +740,6 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, onClick: () -> Uni
             text = "${move.pp}", color = TextSecondary, fontSize = 14.sp,
             modifier = Modifier.width(28.dp),
         )
-    }
-}
-
-// ── Battle panel ──────────────────────────────────────────────────────────────
-@Composable
-private fun BattlePanel(battle: BattleState) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1A0E20), RoundedCornerShape(6.dp))
-            .padding(8.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = if (battle.isWild) "WILD" else "TRAINER",
-                color = AccentRed, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-            )
-            if (battle.weather != Weather.NONE) {
-                Spacer(Modifier.width(6.dp))
-                Text(battle.weather.displayName, color = AccentBlue, fontSize = 14.sp)
-            }
-        }
-
-        battle.enemy?.let { enemy ->
-            Spacer(Modifier.height(3.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "${enemy.name} Lv.${enemy.level}",
-                    color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    TypeChip(enemy.type1)
-                    if (enemy.type2 != enemy.type1) TypeChip(enemy.type2)
-                }
-            }
-            HpBar(enemy.hpPercent, enemy.currentHp, enemy.maxHp)
-            Spacer(Modifier.height(1.dp))
-            Text("BST: ${enemy.bst}", color = TextSecondary, fontSize = 12.sp)
-            if (enemy.revealedMoveIds.isNotEmpty()) {
-                Spacer(Modifier.height(2.dp))
-                Text("Moves:", color = TextSecondary, fontSize = 12.sp)
-                enemy.revealedMoveIds.forEach { moveId ->
-                    Text(
-                        "  • ${MoveNames.get(moveId)}",
-                        color = TextSecondary, fontSize = 12.sp,
-                    )
-                }
-            }
-        }
-
-        // Side conditions
-        if (battle.playerReflect > 0 || battle.playerLightScreen > 0 ||
-            battle.enemySpikes > 0 || battle.playerSafeguard > 0) {
-            Spacer(Modifier.height(3.dp))
-            Divider(color = Color(0xFF303050), thickness = 0.5.dp)
-            Spacer(Modifier.height(2.dp))
-            if (battle.playerReflect > 0)     Text("Reflect (${battle.playerReflect}t)", color = TextSecondary, fontSize = 12.sp)
-            if (battle.playerLightScreen > 0) Text("Light Screen (${battle.playerLightScreen}t)", color = TextSecondary, fontSize = 12.sp)
-            if (battle.enemySpikes > 0)       Text("Spikes ×${battle.enemySpikes}", color = TextSecondary, fontSize = 12.sp)
-            if (battle.playerSafeguard > 0)   Text("Safeguard (${battle.playerSafeguard}t)", color = TextSecondary, fontSize = 12.sp)
-        }
     }
 }
 

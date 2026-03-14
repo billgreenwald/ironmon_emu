@@ -1,6 +1,7 @@
 package hh.game.mgba_android.tracker
 
 import android.content.Context
+import hh.game.mgba_android.tracker.data.BagReader
 import hh.game.mgba_android.tracker.data.DataHelper
 import hh.game.mgba_android.tracker.data.GameAddresses
 import hh.game.mgba_android.tracker.data.GameSettings
@@ -165,7 +166,12 @@ object TrackerPoller {
         // ── Game stats (steps / battles / center visits) ─────────────────────
         val stats = StatsReader.read(addresses)
 
-        return TrackerState.Active(game = game, romVersion = romVersion, romTitle = romTitle, party = party, battle = battle, currentRoute = route, stats = stats, isGameOver = isGameOver, runAttempts = runAttempts)
+        // ── Healing items (matches Lua Program.updateBagItems + recalcLeadPokemonHealingInfo) ──
+        val healInfo = party.firstOrNull()?.let { lead ->
+            BagReader.read(addresses, lead.maxHp)
+        }
+
+        return TrackerState.Active(game = game, romVersion = romVersion, romTitle = romTitle, party = party, battle = battle, currentRoute = route, stats = stats, healInfo = healInfo, isGameOver = isGameOver, runAttempts = runAttempts)
     }
 
     private fun pollBattle(game: GameVersion, addresses: GameAddresses): BattleState {
