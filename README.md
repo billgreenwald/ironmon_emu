@@ -84,19 +84,17 @@ IronMon Emu is distributed as an APK for sideloading. It is not on the Play Stor
 
 ### Steps
 
-1. **Download** the latest `IronMonEmu.apk` from the [Releases](../../releases) page on this GitHub repo.
+1. **Download** the latest `IronMonEmu.apk` from the [Releases](../../releases) page on this GitHub repo from your phone.
 
-2. **Transfer** the APK to your Android device (AirDrop, Google Drive, USB cable, etc.).
-
-3. **Enable sideloading** on your device:
+2. **Enable sideloading** on your device:
    - On Android 8+: when you open the APK, Android will prompt you to allow installs from that source (your browser or Files app). Tap **Allow**.
    - On older Android: go to **Settings → Security → Unknown sources** and enable it.
 
-4. **Open the APK** from your Files app and tap **Install**.
+3. **Open the APK** from your Files app and tap **Install**.
 
-5. **Grant storage permission** on first launch so the app can scan for ROMs.
+4. **Grant storage permission** on first launch so the app can scan for ROMs.
 
-6. Tap the **folder icon** in the top bar, select the directory where your ROMs live, and you're ready to go.
+5. Tap the **folder icon** in the top bar, select the directory where your ROMs live, and you're ready to go.  ROMs can be nested within this folder if you want further filesystem organization, the app will automatically scan within.
 
 ### Requirements
 
@@ -108,3 +106,14 @@ IronMon Emu is distributed as an APK for sideloading. It is not on the Play Stor
 
 - Save states and battery saves are stored in the app's private storage and persist across updates.
 - If Android warns that the file may be harmful, this is a standard warning shown for all sideloaded APKs — tap **Install anyway**.
+
+## FAQ
+
+- Will you make an ios version
+  - I dont have an iphone, and I havent dealt with jailbreaking ios devices in a decade, and since I'm not releasing an app with Nintedo assets into a real store, there is no plan.  Feel free to put a PR in
+- Something doesnt work
+  - Make an issue on github, and ill get to it!
+- Did you use AI to make this?
+  - You betchya, its all vibe coded.  If you are against the concept of using AI in any way, you should avoid this app.
+- Can we donate in some way?
+  - No.  I have some other apps that will be coming to the app store (ios and android) that you could buy so you get use out of it too, but otherwise no plans.
