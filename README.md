@@ -3,7 +3,7 @@
 A GBA emulator for Android with a built-in [IronMon Tracker](https://github.com/besteon/Ironmon-Tracker) — no PC, no setup, no second screen required.
 
 <p align="center">
-  <img src="top%20screenshot.png" alt="IronMon Emu" width="600"/>
+  <img src="screenshots/top%20screenshot.png" alt="IronMon Emu" width="600"/>
 </p>
 
 ---
@@ -19,12 +19,12 @@ The tracker panel has three tabs:
 - **ROUTE** — Shows the current route and all Pokémon that can be encountered in it, so you can plan ahead without leaving the app.
 
 <p align="center">
-  <img src="opponent%20view.png" alt="Opponent View" width="600"/>
+  <img src="screenshots/opponent%20view.png" alt="Opponent View" width="600"/>
   <br/><em>Opponent tab showing enemy stats and revealed moves mid-battle</em>
 </p>
 
 <p align="center">
-  <img src="route%20view.png" alt="Route View" width="600"/>
+  <img src="screenshots/route%20view.png" alt="Route View" width="600"/>
   <br/><em>Route tab showing current location and possible encounters</em>
 </p>
 
@@ -37,7 +37,7 @@ The header bar always shows your current game, version, and run number. A **Next
 When a Bluetooth or USB gamepad is connected, the on-screen touch controls automatically hide so they don't cover the game. Disconnect the controller and they reappear instantly.
 
 <p align="center">
-  <img src="gamepad%20detection.png" alt="Gamepad Detection" width="600"/>
+  <img src="screenshots/gamepad%20detection.png" alt="Gamepad Detection" width="600"/>
   <br/><em>On-screen controls hidden when a gamepad is connected</em>
 </p>
 
@@ -48,7 +48,7 @@ When a Bluetooth or USB gamepad is connected, the on-screen touch controls autom
 The home screen groups your ROMs into **families** rather than listing every file individually. A family is a set of ROMs that were batch generated together (or in later batches) with the ironmon randomizer.  Families are detected by name, and then sequenced by number (i.e. all "FireRed1" "FireRed2" ... will be grouped into a single family called "FireRed". The card shows how many ROMs are in the family and which run you were on last, and when you pick it will automatically start your last played rom.  Quickload is auto tracked per family.
 
 <p align="center">
-  <img src="rom%20family%20grouping.png" alt="ROM Family Grouping" width="300"/>
+  <img src="screenshots/rom%20family%20grouping.png" alt="ROM Family Grouping" width="300"/>
   <br/><em>ROM families grouped on the home screen, in this case ROMs were named "KaizoFR#"</em>
 </p>
 
@@ -72,7 +72,7 @@ Most elements in the tracker panel are interactive — tap them to get a detail 
 | **Heals** | Full bag status, PP heal %, status heals |
 
 <p align="center">
-  <img src="pop%20up%20info.png" alt="Pop-up Info" width="600"/>
+  <img src="screenshots/pop%20up%20info.png" alt="Pop-up Info" width="600"/>
   <br/><em>Tapping a move name shows its full detail sheet</em>
 </p>
 
