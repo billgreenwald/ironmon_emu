@@ -93,6 +93,8 @@ object TrackerPoller {
         // Read ROM version byte (0=v1.0, 1=v1.1, 2=v1.2) and 4-char game code string
         val romVersion = GameSettings.readVersionByte { addr, len -> MemoryBridge.readBytes(addr, len) }
         val gameCode = String(codeBytes.take(4).toByteArray(), Charsets.ISO_8859_1)
+        val romTitle = MemoryBridge.readBytes(0x080000A0L, 12)
+            ?.let { String(it, Charsets.ISO_8859_1).trimEnd('\u0000', ' ') } ?: ""
 
         val addresses = DataHelper.addressesFor(game, romVersion, gameCode)
             ?: return TrackerState.NoGameLoaded
@@ -163,7 +165,7 @@ object TrackerPoller {
         // ── Game stats (steps / battles / center visits) ─────────────────────
         val stats = StatsReader.read(addresses)
 
-        return TrackerState.Active(game = game, romVersion = romVersion, party = party, battle = battle, currentRoute = route, stats = stats, isGameOver = isGameOver, runAttempts = runAttempts)
+        return TrackerState.Active(game = game, romVersion = romVersion, romTitle = romTitle, party = party, battle = battle, currentRoute = route, stats = stats, isGameOver = isGameOver, runAttempts = runAttempts)
     }
 
     private fun pollBattle(game: GameVersion, addresses: GameAddresses): BattleState {

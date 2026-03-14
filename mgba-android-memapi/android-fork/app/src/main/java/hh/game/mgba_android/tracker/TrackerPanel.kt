@@ -1,6 +1,5 @@
 package hh.game.mgba_android.tracker
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,22 +17,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.skydoves.landscapist.glide.GlideImage
 import hh.game.mgba_android.tracker.data.GameStats
 import hh.game.mgba_android.tracker.models.*
 import hh.game.mgba_android.tracker.tables.*
 import hh.game.mgba_android.tracker.tables.MoveDescTable
 
 // ── Color palette ────────────────────────────────────────────────────────────
-private val PanelBg      = Color(0xFF0F1621)
-private val HeaderBg     = Color(0xFF16213E)
-private val CardBg       = Color(0xFF1A2540)
-private val AccentRed    = Color(0xFFE94560)
-private val AccentBlue   = Color(0xFF4090FF)
-private val TextPrimary  = Color(0xFFEEEEEE)
-private val TextSecondary= Color(0xFFAAAAAA)
-private val HpHigh       = Color(0xFF4CAF50)
-private val HpMid        = Color(0xFFFFEB3B)
-private val HpLow        = Color(0xFFF44336)
+private val PanelBg       = Color(0xFF0F1621)
+private val HeaderBg      = Color(0xFF16213E)
+private val CardBg        = Color(0xFF1A2540)
+private val AccentRed     = Color(0xFFE94560)
+private val AccentBlue    = Color(0xFF4090FF)
+private val TextPrimary   = Color(0xFFEEEEEE)
+private val TextSecondary = Color(0xFFAAAAAA)
+private val HpHigh        = Color(0xFF4CAF50)
+private val HpMid         = Color(0xFFFFEB3B)
+private val HpLow         = Color(0xFFF44336)
 
 // ── Type chip colors ──────────────────────────────────────────────────────────
 private val TYPE_COLORS = mapOf(
@@ -58,6 +58,24 @@ private val TYPE_COLORS = mapOf(
 
 private fun typeColor(typeId: Int) = TYPE_COLORS[typeId] ?: Color(0xFF888888)
 
+// ── Move category (Gen III: type-based, matching MoveData.lua lines 103–119) ─
+private val PHYSICAL_TYPES = setOf(0, 1, 2, 3, 4, 5, 6, 7, 8)
+private val SPECIAL_TYPES  = setOf(11, 12, 13, 14, 15, 16, 17, 18)
+
+private fun moveCategory(typeId: Int, power: Int): String = when {
+    power == 0               -> "—"
+    typeId in PHYSICAL_TYPES -> "P"
+    typeId in SPECIAL_TYPES  -> "S"
+    else                     -> "—"
+}
+
+private fun moveCategoryColor(typeId: Int, power: Int): Color = when {
+    power == 0               -> TextSecondary
+    typeId in PHYSICAL_TYPES -> Color(0xFFF08030)  // orange
+    typeId in SPECIAL_TYPES  -> Color(0xFF6890F0)  // blue
+    else                     -> TextSecondary
+}
+
 // ── Main entry point ─────────────────────────────────────────────────────────
 @Composable
 fun TrackerPanel(state: TrackerState, onQuickload: (() -> Unit)? = null) {
@@ -77,7 +95,7 @@ fun TrackerPanel(state: TrackerState, onQuickload: (() -> Unit)? = null) {
 @Composable
 private fun StatusText(msg: String) {
     Text(
-        text = msg, color = TextSecondary, fontSize = 11.sp,
+        text = msg, color = TextSecondary, fontSize = 14.sp,
         modifier = Modifier.padding(12.dp),
     )
 }
@@ -85,13 +103,9 @@ private fun StatusText(msg: String) {
 // ── Active panel ──────────────────────────────────────────────────────────────
 @Composable
 private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) {
-    // Carousel page: 0=Main, 1=Stats, 2=Defenses. Auto-show battle view when active.
-    var page by remember { mutableStateOf(0) }
-
-    // Header
     PanelHeader(state, onQuickload)
 
-    // Game over banner — shown when lead Pokemon fainted ending a battle
+    // Game over banner
     if (state.isGameOver) {
         Row(
             modifier = Modifier
@@ -101,7 +115,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("GAME OVER", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text("GAME OVER", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Box(
                 modifier = Modifier
                     .background(Color(0xFF7B0020), RoundedCornerShape(4.dp))
@@ -112,7 +126,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("Run ${state.runAttempts + 1} →", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("Run ${state.runAttempts + 1} →", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -120,7 +134,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
     // Route name
     state.currentRoute?.let {
         Text(
-            text = it.name, color = AccentBlue, fontSize = 9.sp,
+            text = it.name, color = AccentBlue, fontSize = 14.sp,
             modifier = Modifier.padding(horizontal = 10.dp),
         )
     }
@@ -130,17 +144,8 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        // Lead Pokémon carousel
         state.leadPokemon?.let { lead ->
-            // Carousel tab indicator
-            CarouselTabs(page) { page = it }
-            Spacer(Modifier.height(2.dp))
-
-            when (page) {
-                0 -> MainView(lead, state.battle, state.stats)
-                1 -> StatsView(lead)
-                2 -> DefensesView(lead)
-            }
+            MainView(lead, state.battle, state.stats)
         } ?: run {
             StatusText("Party empty")
         }
@@ -162,10 +167,15 @@ private fun PanelHeader(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
             .padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = "IRONMON", color = AccentRed, fontSize = 10.sp,
-            fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
-        )
+        Column {
+            Text(
+                text = "IRONMON", color = AccentRed, fontSize = 10.sp,
+                fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
+            )
+            if (state.romTitle.isNotEmpty()) {
+                Text(text = state.romTitle, color = TextSecondary, fontSize = 8.sp)
+            }
+        }
         Spacer(Modifier.weight(1f))
         Text(
             text = "${state.game.displayName.removePrefix("Pokémon ")} v1.${state.romVersion}",
@@ -191,39 +201,12 @@ private fun PanelHeader(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
     }
 }
 
-@Composable
-private fun CarouselTabs(current: Int, onSelect: (Int) -> Unit) {
-    val labels = listOf("Main", "Stats", "Def")
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        labels.forEachIndexed { i, label ->
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (i == current) AccentBlue else CardBg,
-                        RoundedCornerShape(4.dp),
-                    )
-                    .clickable { onSelect(i) }
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-            ) {
-                Text(
-                    text = label, color = TextPrimary, fontSize = 9.sp,
-                    fontWeight = if (i == current) FontWeight.Bold else FontWeight.Normal,
-                )
-            }
-        }
-    }
-}
-
-// ── Page 0: Main view ─────────────────────────────────────────────────────────
+// ── Main view ─────────────────────────────────────────────────────────────────
 @Composable
 private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null) {
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showAbilitySheet by remember { mutableStateOf(false) }
+    var showDefenseSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -231,82 +214,98 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
             .background(CardBg, RoundedCornerShape(6.dp))
             .padding(8.dp),
     ) {
-        // Name row
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = buildString {
-                    append(pokemon.speciesName)
-                    when (pokemon.gender) {
-                        Gender.MALE -> append(" ♂")
-                        Gender.FEMALE -> append(" ♀")
-                        else -> {}
+        // Header row: sprite + name/types/HP
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+        ) {
+            GlideImage(
+                imageModel = { "file:///android_asset/sprites/${pokemon.speciesId}.gif" },
+                modifier = Modifier.size(80.dp),
+                failure = {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("#${pokemon.speciesId}", color = TextSecondary, fontSize = 12.sp)
                     }
-                    if (pokemon.isShiny) append(" ✦")
-                    if (pokemon.hasPokerus) append(" ✚")
                 },
-                color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
             )
-            Text("Lv.${pokemon.level}", color = TextSecondary, fontSize = 10.sp)
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = buildString {
+                            append(pokemon.speciesName)
+                            when (pokemon.gender) {
+                                Gender.MALE   -> append(" ♂")
+                                Gender.FEMALE -> append(" ♀")
+                                else          -> {}
+                            }
+                            if (pokemon.isShiny) append(" ✦")
+                            if (pokemon.hasPokerus) append(" ✚")
+                        },
+                        color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    Text("Lv.${pokemon.level}", color = TextSecondary, fontSize = 16.sp)
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    modifier = Modifier.clickable { showDefenseSheet = true },
+                ) {
+                    TypeChip(pokemon.type1)
+                    if (pokemon.type2 != pokemon.type1) TypeChip(pokemon.type2)
+                }
+                Spacer(Modifier.height(2.dp))
+                HpBar(pokemon)
+            }
         }
 
-        // Types
-        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            TypeChip(pokemon.type1)
-            if (pokemon.type2 != pokemon.type1) TypeChip(pokemon.type2)
-        }
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(4.dp))
 
-        // HP bar
-        HpBar(pokemon)
-        Spacer(Modifier.height(2.dp))
-
-        // Ability
         val abilityName = AbilityTable.name(pokemon.abilityId)
         Text(
             text = "Ability: $abilityName",
-            color = AccentBlue, fontSize = 9.sp,
+            color = TextPrimary, fontSize = 14.sp,
             modifier = Modifier.clickable { showAbilitySheet = true },
         )
 
-        // Held item
-        val itemName = if (pokemon.heldItemId > 0) ItemTable.get(pokemon.heldItemId) else "None"
-        Text(text = "Item: $itemName", color = TextSecondary, fontSize = 9.sp)
-
-        // Nature
         val nature = NatureTable.get(pokemon.nature)
         val natureMod = NatureTable.modifier(pokemon.nature)
         Text(
             text = "Nature: ${nature.name}${if (natureMod.isNotEmpty()) " ($natureMod)" else ""}",
-            color = TextSecondary, fontSize = 9.sp,
+            color = TextSecondary, fontSize = 12.sp,
         )
 
-        // Game stats row (steps / battles / center visits)
+        val itemName = if (pokemon.heldItemId > 0) ItemTable.get(pokemon.heldItemId) else "None"
+        Text(text = "Item: $itemName", color = TextSecondary, fontSize = 12.sp)
+
         stats?.let { gs ->
             Spacer(Modifier.height(3.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("%,d steps".format(gs.steps), color = TextSecondary, fontSize = 8.sp)
-                Text("${gs.totalBattles} battles", color = TextSecondary, fontSize = 8.sp)
-                Text("${gs.pokemonCenterVisits} centers", color = TextSecondary, fontSize = 8.sp)
+                Text("%,d steps".format(gs.steps), color = TextSecondary, fontSize = 12.sp)
+                Text("${gs.totalBattles} battles", color = TextSecondary, fontSize = 12.sp)
+                Text("${gs.pokemonCenterVisits} centers", color = TextSecondary, fontSize = 12.sp)
             }
         }
 
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(4.dp))
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(4.dp))
 
-        // Moves with effectiveness badges
-        pokemon.moves.forEach { move ->
-            MoveRow(move, battle, modifier = Modifier.clickable { showMoveSheet = move })
-        }
+        StatsTable(pokemon)
+
+        Spacer(Modifier.height(4.dp))
+        Divider(color = Color(0xFF303050), thickness = 0.5.dp)
+        Spacer(Modifier.height(4.dp))
+
+        MoveTable(pokemon.moves, battle, onClick = { showMoveSheet = it })
     }
 
     Spacer(Modifier.height(4.dp))
 
-    // Sheets
     showMoveSheet?.let { move ->
         MoveDetailSheet(move, onDismiss = { showMoveSheet = null })
     }
@@ -316,178 +315,125 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
             onDismiss = { showAbilitySheet = false },
         )
     }
+    if (showDefenseSheet) {
+        TypeDefenseSheet(pokemon.type1, pokemon.type2, onDismiss = { showDefenseSheet = false })
+    }
+}
+
+// ── Stats table (2 rows × 3 cols, inline in MainView) ────────────────────────
+@Composable
+private fun StatsTable(pokemon: PokemonData) {
+    val nature = NatureTable.get(pokemon.nature)
+    // Row 1: HP | Atk | Def
+    Row(modifier = Modifier.fillMaxWidth()) {
+        StatCell("HP",  pokemon.maxHp,   nature, statIdx = -1, Modifier.weight(1f))
+        StatCell("Atk", pokemon.attack,  nature, statIdx = 0,  Modifier.weight(1f))
+        StatCell("Def", pokemon.defense, nature, statIdx = 1,  Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(4.dp))
+    // Row 2: SpA | SpD | Spd
+    Row(modifier = Modifier.fillMaxWidth()) {
+        StatCell("SpA", pokemon.spAtk, nature, statIdx = 2, Modifier.weight(1f))
+        StatCell("SpD", pokemon.spDef, nature, statIdx = 3, Modifier.weight(1f))
+        StatCell("Spe", pokemon.speed, nature, statIdx = 4, Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(4.dp))
+    Row {
+        Text("BST", color = TextSecondary, fontSize = 12.sp)
+        Spacer(Modifier.width(4.dp))
+        Text("${pokemon.bst}", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    }
 }
 
 @Composable
-private fun MoveRow(move: MoveData, battle: BattleState, modifier: Modifier = Modifier) {
+private fun StatCell(label: String, value: Int, nature: NatureInfo, statIdx: Int, modifier: Modifier) {
+    val valueColor = when {
+        statIdx >= 0 && statIdx == nature.boostedStat -> Color(0xFF4CAF50)  // green = boosted
+        statIdx >= 0 && statIdx == nature.reducedStat -> Color(0xFFFF6B6B)  // red = reduced
+        else                                          -> TextPrimary
+    }
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label,   color = TextSecondary, fontSize = 11.sp)
+        Text("$value", color = valueColor,   fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+// ── Move table ────────────────────────────────────────────────────────────────
+@Composable
+private fun MoveTable(moves: List<MoveData>, battle: BattleState, onClick: (MoveData) -> Unit) {
+    // Column header
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text("Cat", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(22.dp))
+        Text("Move", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+        Text("Pwr", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(34.dp))
+        Text("Eff", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(28.dp))
+        Text("PP",  color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(28.dp))
+    }
+    Spacer(Modifier.height(2.dp))
+    moves.forEach { move ->
+        MoveTableRow(move, battle, onClick = { onClick(move) })
+    }
+}
+
+@Composable
+private fun MoveTableRow(move: MoveData, battle: BattleState, onClick: () -> Unit) {
     val effectiveness = battle.enemy?.let { enemy ->
         TypeChart.effectiveness(move.moveType, enemy.type1, enemy.type2)
     }
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 1.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier
-                .size(6.dp)
-                .background(typeColor(move.moveType), CircleShape)
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(
-            text = move.moveName, color = TextPrimary, fontSize = 9.sp,
-            modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
-        if (move.power > 0) {
-            Text("${move.power}", color = TextSecondary, fontSize = 8.sp)
-            Spacer(Modifier.width(2.dp))
-        }
-        Text("(${move.pp})", color = TextSecondary, fontSize = 8.sp)
-        effectiveness?.let { eff ->
-            if (eff != 1.0f) {
-                Spacer(Modifier.width(3.dp))
-                val effText = when {
-                    eff == 0.0f -> "0×"
-                    eff < 1.0f  -> "½×"
-                    eff >= 4.0f -> "4×"
-                    else        -> "2×"
-                }
-                val effColor = when {
-                    eff == 0.0f -> Color(0xFF888888)
-                    eff < 1.0f  -> Color(0xFFFF6B35)
-                    else        -> Color(0xFF4CAF50)
-                }
-                Text(effText, color = effColor, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
+    val cat      = moveCategory(move.moveType, move.power)
+    val catColor = moveCategoryColor(move.moveType, move.power)
 
-// ── Page 1: Stats view ────────────────────────────────────────────────────────
-@Composable
-private fun StatsView(pokemon: PokemonData) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(CardBg, RoundedCornerShape(6.dp))
-            .padding(8.dp),
-    ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Text("Current Stats", color = TextSecondary, fontSize = 9.sp, modifier = Modifier.weight(1f))
-            Text("BST: ${pokemon.bst}", color = TextSecondary, fontSize = 9.sp)
-        }
-        Spacer(Modifier.height(3.dp))
-
-        StatBar("HP",  pokemon.maxHp,   Color(0xFFFF5555), pokemon.nature, -1)
-        StatBar("Atk", pokemon.attack,  Color(0xFFF08030), pokemon.nature, 0, 0)
-        StatBar("Def", pokemon.defense, Color(0xFFF8D030), pokemon.nature, 0, 1)
-        StatBar("SpA", pokemon.spAtk,   Color(0xFF6890F0), pokemon.nature, 0, 2)
-        StatBar("SpD", pokemon.spDef,   Color(0xFF78C850), pokemon.nature, 0, 3)
-        StatBar("Spd", pokemon.speed,   Color(0xFFF85888), pokemon.nature, 0, 4)
-
-        Spacer(Modifier.height(4.dp))
-        // EXP bar
-        val expPct = ExperienceTable.xpProgress(pokemon.expGroup, pokemon.level, pokemon.experience.toLong())
-        Text("EXP", color = TextSecondary, fontSize = 8.sp)
-        LinearProgressIndicator(
-            progress = expPct,
-            color = Color(0xFF8080FF),
-            trackColor = Color(0xFF303050),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp)),
-        )
-    }
-    Spacer(Modifier.height(4.dp))
-}
-
-@Composable
-private fun StatBar(label: String, value: Int, barColor: Color, nature: Int, statIndex: Int, boostedStatIndex: Int = -1) {
-    val natureMod = if (boostedStatIndex >= 0) {
-        val info = NatureTable.get(nature)
-        when (boostedStatIndex) {
-            info.boostedStat -> 1.1f
-            info.reducedStat -> 0.9f
-            else -> 1.0f
-        }
-    } else 1.0f
-
-    val displayColor = when {
-        natureMod > 1.0f -> Color(0xFFFF6B6B)
-        natureMod < 1.0f -> Color(0xFF6B9FFF)
-        else -> barColor
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
+            .clickable { onClick() }
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, color = TextSecondary, fontSize = 8.sp, modifier = Modifier.width(28.dp))
+        // Category
         Text(
-            "$value", color = displayColor, fontSize = 8.sp,
-            modifier = Modifier.width(28.dp), fontWeight = FontWeight.Bold,
+            text = cat, color = catColor, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.width(22.dp),
         )
-        val frac = (value / 500f).coerceIn(0f, 1f)
-        LinearProgressIndicator(
-            progress = frac, color = displayColor, trackColor = Color(0xFF303050),
-            modifier = Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(2.dp)),
-        )
-    }
-    Spacer(Modifier.height(1.dp))
-}
-
-// ── Page 2: Type defenses view ────────────────────────────────────────────────
-@Composable
-private fun DefensesView(pokemon: PokemonData) {
-    var showSheet by remember { mutableStateOf(false) }
-
-    val chart = TypeChart.defenseChart(pokemon.type1, pokemon.type2)
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardBg, RoundedCornerShape(6.dp))
-            .padding(8.dp)
-            .clickable { showSheet = true },
-    ) {
-        Text("Type Defenses (tap for full chart)", color = TextSecondary, fontSize = 9.sp)
-        Spacer(Modifier.height(4.dp))
-
-        // Group by multiplier
-        val immune   = chart.filter { it.value == 0.0f }
-        val quarter  = chart.filter { it.value == 0.25f }
-        val half     = chart.filter { it.value == 0.5f }
-        val double   = chart.filter { it.value == 2.0f }
-        val quad     = chart.filter { it.value >= 4.0f }
-
-        if (immune.isNotEmpty()) DefenseRow("0×", Color(0xFF888888), immune.keys)
-        if (quarter.isNotEmpty()) DefenseRow("¼×", Color(0xFFADD8E6), quarter.keys)
-        if (half.isNotEmpty()) DefenseRow("½×", Color(0xFF87CEEB), half.keys)
-        if (double.isNotEmpty()) DefenseRow("2×", Color(0xFFFF8C00), double.keys)
-        if (quad.isNotEmpty()) DefenseRow("4×", Color(0xFFFF4500), quad.keys)
-    }
-
-    if (showSheet) {
-        TypeDefenseSheet(pokemon.type1, pokemon.type2, onDismiss = { showSheet = false })
-    }
-    Spacer(Modifier.height(4.dp))
-}
-
-@Composable
-private fun DefenseRow(label: String, labelColor: Color, types: Set<Int>) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, color = labelColor, fontSize = 9.sp, modifier = Modifier.width(22.dp),
-            fontWeight = FontWeight.Bold)
-        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            types.forEach { typeId ->
-                TypeChip(typeId, small = true)
-            }
+        // Type dot + name
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .background(typeColor(move.moveType), CircleShape)
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = move.moveName, color = TextPrimary, fontSize = 14.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
         }
+        // Power
+        Text(
+            text = if (move.power > 0) "${move.power}" else "—",
+            color = TextSecondary, fontSize = 14.sp,
+            modifier = Modifier.width(34.dp),
+        )
+        // Effectiveness arrows
+        val (effText, effColor) = when (effectiveness) {
+            null  -> "" to TextSecondary
+            0.0f  -> "✕"  to Color(0xFF888888)
+            0.25f -> "▼▼" to Color(0xFFFF4444)
+            0.5f  -> "▼"  to Color(0xFFFF8866)
+            1.0f  -> ""   to TextSecondary
+            2.0f  -> "▲"  to Color(0xFF66CC44)
+            4.0f  -> "▲▲" to Color(0xFF00DD44)
+            else  -> ""   to TextSecondary
+        }
+        Text(
+            text = effText, color = effColor, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.width(28.dp),
+        )
+        // PP
+        Text(
+            text = "${move.pp}", color = TextSecondary, fontSize = 14.sp,
+            modifier = Modifier.width(28.dp),
+        )
     }
 }
 
@@ -503,11 +449,11 @@ private fun BattlePanel(battle: BattleState) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = if (battle.isWild) "WILD" else "TRAINER",
-                color = AccentRed, fontSize = 9.sp, fontWeight = FontWeight.Bold,
+                color = AccentRed, fontSize = 14.sp, fontWeight = FontWeight.Bold,
             )
             if (battle.weather != Weather.NONE) {
                 Spacer(Modifier.width(6.dp))
-                Text(battle.weather.displayName, color = AccentBlue, fontSize = 9.sp)
+                Text(battle.weather.displayName, color = AccentBlue, fontSize = 14.sp)
             }
         }
 
@@ -516,7 +462,7 @@ private fun BattlePanel(battle: BattleState) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "${enemy.name} Lv.${enemy.level}",
-                    color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -526,14 +472,14 @@ private fun BattlePanel(battle: BattleState) {
             }
             HpBar(enemy.hpPercent, enemy.currentHp, enemy.maxHp)
             Spacer(Modifier.height(1.dp))
-            Text("BST: ${enemy.bst}", color = TextSecondary, fontSize = 8.sp)
+            Text("BST: ${enemy.bst}", color = TextSecondary, fontSize = 12.sp)
             if (enemy.revealedMoveIds.isNotEmpty()) {
                 Spacer(Modifier.height(2.dp))
-                Text("Moves:", color = TextSecondary, fontSize = 8.sp)
+                Text("Moves:", color = TextSecondary, fontSize = 12.sp)
                 enemy.revealedMoveIds.forEach { moveId ->
                     Text(
-                        "  • ${hh.game.mgba_android.tracker.tables.MoveNames.get(moveId)}",
-                        color = TextSecondary, fontSize = 8.sp,
+                        "  • ${MoveNames.get(moveId)}",
+                        color = TextSecondary, fontSize = 12.sp,
                     )
                 }
             }
@@ -545,10 +491,10 @@ private fun BattlePanel(battle: BattleState) {
             Spacer(Modifier.height(3.dp))
             Divider(color = Color(0xFF303050), thickness = 0.5.dp)
             Spacer(Modifier.height(2.dp))
-            if (battle.playerReflect > 0)      Text("Reflect (${battle.playerReflect}t)", color = TextSecondary, fontSize = 8.sp)
-            if (battle.playerLightScreen > 0)  Text("Light Screen (${battle.playerLightScreen}t)", color = TextSecondary, fontSize = 8.sp)
-            if (battle.enemySpikes > 0)        Text("Spikes ×${battle.enemySpikes}", color = TextSecondary, fontSize = 8.sp)
-            if (battle.playerSafeguard > 0)    Text("Safeguard (${battle.playerSafeguard}t)", color = TextSecondary, fontSize = 8.sp)
+            if (battle.playerReflect > 0)     Text("Reflect (${battle.playerReflect}t)", color = TextSecondary, fontSize = 12.sp)
+            if (battle.playerLightScreen > 0) Text("Light Screen (${battle.playerLightScreen}t)", color = TextSecondary, fontSize = 12.sp)
+            if (battle.enemySpikes > 0)       Text("Spikes ×${battle.enemySpikes}", color = TextSecondary, fontSize = 12.sp)
+            if (battle.playerSafeguard > 0)   Text("Safeguard (${battle.playerSafeguard}t)", color = TextSecondary, fontSize = 12.sp)
         }
     }
 }
@@ -567,10 +513,10 @@ private fun HpBar(pct: Float, current: Int, max: Int) {
     ) {
         LinearProgressIndicator(
             progress = pct, color = hpColor(pct), trackColor = Color(0xFF303050),
-            modifier = Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(2.dp)),
+            modifier = Modifier.weight(1f).height(3.dp).clip(RoundedCornerShape(2.dp)),
         )
         Spacer(Modifier.width(4.dp))
-        Text("$current/$max", color = TextSecondary, fontSize = 8.sp)
+        Text("$current/$max", color = TextSecondary, fontSize = 12.sp)
     }
 }
 
@@ -580,12 +526,12 @@ private fun TypeChip(typeId: Int, small: Boolean = false) {
     Box(
         modifier = Modifier
             .background(typeColor(typeId).copy(alpha = 0.85f), RoundedCornerShape(3.dp))
-            .padding(horizontal = if (small) 3.dp else 5.dp, vertical = if (small) 1.dp else 2.dp),
+            .padding(horizontal = if (small) 4.dp else 6.dp, vertical = if (small) 1.dp else 2.dp),
     ) {
         Text(
             text = name,
             color = Color.White,
-            fontSize = if (small) 7.sp else 8.sp,
+            fontSize = if (small) 11.sp else 14.sp,
             fontWeight = FontWeight.SemiBold,
         )
     }
