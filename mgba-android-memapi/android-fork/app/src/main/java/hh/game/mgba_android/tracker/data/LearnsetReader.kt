@@ -4,10 +4,11 @@ import hh.game.mgba_android.tracker.MemoryBridge
 import hh.game.mgba_android.tracker.tables.MoveNames
 
 data class LearnsetInfo(
-    val learnedCount: Int,    // moves with level <= current level
-    val totalCount: Int,      // total moves in learnset
-    val nextMoveLevel: Int,   // 0 if all moves already learned
-    val nextMoveName: String, // "" if none remaining
+    val learnedCount: Int,       // moves with level <= current level
+    val totalCount: Int,         // total moves in learnset
+    val nextMoveLevel: Int,      // 0 if all moves already learned
+    val nextMoveName: String,    // "" if none remaining
+    val allMoveLevels: List<Int> = emptyList(), // levels of all learnset entries, in order
 ) {
     val allLearned: Boolean get() = nextMoveLevel == 0
     val isNextSoon: Boolean get() = !allLearned  // caller can compare nextMoveLevel to current+1
@@ -51,6 +52,7 @@ object LearnsetReader {
         var nextMoveLevel = 0
         var nextMoveName  = ""
         var foundNext     = false
+        val allMoveLevels = mutableListOf<Int>()
 
         for (i in 0 until MAX_MOVES) {
             val wordBytes = MemoryBridge.readBytes(learnsetPtr + i.toLong() * 2L, 2) ?: break
@@ -60,6 +62,7 @@ object LearnsetReader {
             val moveId = word and 0x1FF
             val level  = (word ushr 9) and 0x7F
             totalCount++
+            allMoveLevels.add(level)
 
             if (level <= currentLevel) {
                 learnedCount++
@@ -70,6 +73,6 @@ object LearnsetReader {
             }
         }
 
-        return LearnsetInfo(learnedCount, totalCount, nextMoveLevel, nextMoveName)
+        return LearnsetInfo(learnedCount, totalCount, nextMoveLevel, nextMoveName, allMoveLevels)
     }
 }

@@ -1,6 +1,8 @@
 package hh.game.mgba_android.tracker
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -263,6 +265,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showAbilitySheet by remember { mutableStateOf(false) }
     var showDefenseSheet by remember { mutableStateOf(false) }
+    var showLearnsetSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -356,7 +359,8 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         Text(text = "Item: $itemName", color = TextSecondary, fontSize = 12.sp)
 
         // Learnset row + BST + evo level (Lua: "Moves X/Y (nextLevel)")
-        LearnsetRow(learnset, pokemon.level, pokemon.bst, EvolutionLevel.get(pokemon.speciesId))
+        LearnsetRow(learnset, pokemon.level, pokemon.bst, EvolutionLevel.get(pokemon.speciesId),
+            onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null)
 
         Spacer(Modifier.height(4.dp))
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
@@ -384,6 +388,9 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     }
     if (showDefenseSheet) {
         TypeDefenseSheet(pokemon.type1, pokemon.type2, onDismiss = { showDefenseSheet = false })
+    }
+    if (showLearnsetSheet && learnset != null) {
+        LearnsetSheet(learnset, pokemon.level, onDismiss = { showLearnsetSheet = false })
     }
 }
 
@@ -508,6 +515,7 @@ private fun EnemyView(
 
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showDefenseSheet by remember { mutableStateOf(false) }
+    var showLearnsetSheet by remember { mutableStateOf(false) }
 
     // Stat keys matching Lua tracker (Constants.lua STAT_STATES)
     val statKeys = listOf("atk", "def", "spa", "spd", "spe", "acc", "eva")
@@ -555,7 +563,8 @@ private fun EnemyView(
                 HpBar(enemy.hpPercent, enemy.currentHp, enemy.maxHp)
                 Spacer(Modifier.height(2.dp))
                 // Learnset row + BST + evo level inline (Lua: "Moves X/Y (nextLevel)")
-                LearnsetRow(learnset, enemy.level, enemy.bst, EvolutionLevel.get(enemy.speciesId))
+                LearnsetRow(learnset, enemy.level, enemy.bst, EvolutionLevel.get(enemy.speciesId),
+                    onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null)
             }
         }
 
@@ -676,6 +685,9 @@ private fun EnemyView(
     }
     if (showDefenseSheet) {
         TypeDefenseSheet(enemy.type1, enemy.type2, onDismiss = { showDefenseSheet = false })
+    }
+    if (showLearnsetSheet && learnset != null) {
+        LearnsetSheet(learnset, enemy.level, onDismiss = { showLearnsetSheet = false })
     }
 }
 
@@ -867,10 +879,10 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, isStab: Boolean = 
 }
 
 // ── Learnset row (Lua: "Moves X/Y (nextLevel)") ──────────────────────────────
-// Shows learned/total counts + next move name/level, evo level, BST right-aligned.
+// Shows learned/total counts + next move level (tappable), evo level, BST right-aligned.
 // Next move level turns yellow when 1 level away; evo level turns yellow when ≤2 away.
 @Composable
-private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, evoLevel: Int = 0) {
+private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, evoLevel: Int = 0, onLearnsetTap: (() -> Unit)? = null) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -884,11 +896,15 @@ private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, ev
                 Spacer(Modifier.width(4.dp))
                 val nextSoon = learnset.nextMoveLevel <= currentLevel + 1
                 val levelColor = if (nextSoon) Color(0xFFFFEB3B) else TextSecondary
+                val tapMod = if (onLearnsetTap != null)
+                    Modifier.weight(1f).clickable { onLearnsetTap() }
+                else
+                    Modifier.weight(1f)
                 Text(
                     text = "(Lv.${learnset.nextMoveLevel})",
                     color = levelColor, fontSize = 12.sp,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    modifier = tapMod,
                 )
             } else {
                 Spacer(Modifier.weight(1f))
@@ -950,6 +966,38 @@ private fun hpColor(pct: Float): Color = when {
     pct > 0.5f -> HpHigh
     pct > 0.2f -> HpMid
     else        -> HpLow
+}
+
+// ── Learnset sheet ────────────────────────────────────────────────────────────
+// Shows all level-up move levels. Past levels grayed, next level yellow, future white.
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun LearnsetSheet(learnset: LearnsetInfo, currentLevel: Int, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Level-up Moves", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(10.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                learnset.allMoveLevels.forEach { lvl ->
+                    val color = when {
+                        lvl <= currentLevel -> TextSecondary
+                        lvl == learnset.nextMoveLevel -> Color(0xFFFFEB3B)
+                        else -> TextPrimary
+                    }
+                    Text(
+                        text = "Lv.$lvl",
+                        color = color,
+                        fontSize = 13.sp,
+                        fontWeight = if (lvl == learnset.nextMoveLevel) FontWeight.Bold else FontWeight.Normal,
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
 }
 
 // ── Move detail sheet ─────────────────────────────────────────────────────────
