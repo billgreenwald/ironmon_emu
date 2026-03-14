@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -45,13 +46,21 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -106,12 +115,16 @@ class GameListMaterialActivity : ComponentActivity() {
         KeyEvent.KEYCODE_BUTTON_A      -> "A"
         KeyEvent.KEYCODE_BUTTON_B      -> "B"
         KeyEvent.KEYCODE_BUTTON_L1     -> "L"
-        KeyEvent.KEYCODE_BUTTON_L2     -> "R"
+        KeyEvent.KEYCODE_BUTTON_R1     -> "R"
         KeyEvent.KEYCODE_BUTTON_SELECT -> "select"
         KeyEvent.KEYCODE_BUTTON_START  -> "start"
         KeyEvent.KEYCODE_DPAD_UP       -> "up"
         KeyEvent.KEYCODE_DPAD_DOWN     -> "down"
         KeyEvent.KEYCODE_DPAD_LEFT     -> "left"
+        KeyEvent.KEYCODE_BUTTON_X      -> "X"
+        KeyEvent.KEYCODE_BUTTON_Y      -> "Y"
+        KeyEvent.KEYCODE_BUTTON_L2     -> "L2"
+        KeyEvent.KEYCODE_BUTTON_R2     -> "R2"
         KeyEvent.KEYCODE_DPAD_RIGHT    -> "right"
         else -> null
     }
@@ -349,20 +362,27 @@ fun FamilyRow(group: RomFamilyGroup, onClick: () -> Unit, onLongClick: () -> Uni
 @Composable
 fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val activity = context as? GameListMaterialActivity
     var defaultFps by remember { mutableStateOf(EmulatorPreferences.getDefaultFps(context)) }
     var secondaryFps by remember { mutableStateOf(EmulatorPreferences.getSecondaryFps(context)) }
     var speedButton by remember { mutableStateOf(EmulatorPreferences.getSpeedButton(context)) }
     var showFps by remember { mutableStateOf(EmulatorPreferences.getShowFps(context)) }
     var isCapturing by remember { mutableStateOf(false) }
 
+    // Compose AlertDialog creates its own window — the activity's dispatchKeyEvent never fires
+    // while the dialog is open. We must capture gamepad key events here directly.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(isCapturing) {
+        if (isCapturing) focusRequester.requestFocus()
+    }
+
     val labelColor = Color(0xFF111111)
     val unselectedColor = Color(0xFF444444)
     val selectedColor = Color(0xFF4090FF)
 
-    // Split all button options into two rows so they don't overflow the dialog width
+    // Split all button options into rows so they don't overflow the dialog width
     val btnRow1 = listOf("none", "A", "B", "L", "R")
     val btnRow2 = listOf("start", "select", "up", "down", "left", "right")
+    val btnRow3 = listOf("X", "Y", "L2", "R2")
 
     @Composable
     fun BtnChip(btn: String) {
@@ -371,7 +391,6 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
             onClick = {
                 speedButton = btn
                 isCapturing = false
-                activity?.captureNextKey = null
             },
             border = if (selected) BorderStroke(1.dp, selectedColor) else null,
         ) { Text(btn.replaceFirstChar { it.uppercase() }, color = if (selected) selectedColor else unselectedColor, fontSize = 12.sp) }
@@ -379,11 +398,42 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = {
-            activity?.captureNextKey = null
             onDismiss()
         },
         title = { Text("Emulator Settings", color = labelColor) },
         text = {
+            Box(
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusable()
+                    .onKeyEvent { event: ComposeKeyEvent ->
+                        if (isCapturing && event.type == KeyEventType.KeyDown) {
+                            val name = when (event.nativeKeyEvent.keyCode) {
+                                android.view.KeyEvent.KEYCODE_BUTTON_A      -> "A"
+                                android.view.KeyEvent.KEYCODE_BUTTON_B      -> "B"
+                                android.view.KeyEvent.KEYCODE_BUTTON_L1     -> "L"
+                                android.view.KeyEvent.KEYCODE_BUTTON_R1     -> "R"
+                                android.view.KeyEvent.KEYCODE_BUTTON_SELECT -> "select"
+                                android.view.KeyEvent.KEYCODE_BUTTON_START  -> "start"
+                                android.view.KeyEvent.KEYCODE_DPAD_UP       -> "up"
+                                android.view.KeyEvent.KEYCODE_DPAD_DOWN     -> "down"
+                                android.view.KeyEvent.KEYCODE_DPAD_LEFT     -> "left"
+                                android.view.KeyEvent.KEYCODE_DPAD_RIGHT    -> "right"
+                                android.view.KeyEvent.KEYCODE_BUTTON_X      -> "X"
+                                android.view.KeyEvent.KEYCODE_BUTTON_Y      -> "Y"
+                                android.view.KeyEvent.KEYCODE_BUTTON_L2     -> "L2"
+                                android.view.KeyEvent.KEYCODE_BUTTON_R2     -> "R2"
+                                else -> null
+                            }
+                            if (name != null) {
+                                speedButton = name
+                                isCapturing = false
+                                return@onKeyEvent true
+                            }
+                        }
+                        false
+                    }
+            ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // Show FPS toggle
                 Row(
@@ -417,6 +467,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                 Text("Trigger Button", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { btnRow1.forEach { BtnChip(it) } }
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { btnRow2.forEach { BtnChip(it) } }
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { btnRow3.forEach { BtnChip(it) } }
                 if (isCapturing) {
                     Text(
                         "Press any button on your gamepad…",
@@ -426,30 +477,21 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     )
                 } else {
                     TextButton(
-                        onClick = {
-                            isCapturing = true
-                            activity?.captureNextKey = { name ->
-                                speedButton = name
-                                isCapturing = false
-                            }
-                        },
+                        onClick = { isCapturing = true },
                         border = BorderStroke(1.dp, Color(0xFF888888)),
                     ) { Text("Capture from gamepad", color = unselectedColor, fontSize = 12.sp) }
                 }
             }
+            } // end Box
         },
         confirmButton = {
             TextButton(onClick = {
-                activity?.captureNextKey = null
                 EmulatorPreferences.save(context, defaultFps, secondaryFps, speedButton, showFps)
                 onDismiss()
             }) { Text("Save") }
         },
         dismissButton = {
-            TextButton(onClick = {
-                activity?.captureNextKey = null
-                onDismiss()
-            }) { Text("Cancel") }
+            TextButton(onClick = { onDismiss() }) { Text("Cancel") }
         },
     )
 }

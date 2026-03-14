@@ -13,6 +13,11 @@ enum class GBAKeys(val key: Int) {
     GBA_KEY_DOWN(KeyEvent.KEYCODE_DPAD_DOWN),
     GBA_KEY_LEFT(KeyEvent.KEYCODE_DPAD_LEFT),
     GBA_KEY_RIGHT(KeyEvent.KEYCODE_DPAD_RIGHT),
+    // Non-GBA controller buttons — unique IDs so speed detection works; no GBA button is sent
+    GBA_KEY_BTN_X(KeyEvent.KEYCODE_BUTTON_X),
+    GBA_KEY_BTN_Y(KeyEvent.KEYCODE_BUTTON_Y),
+    GBA_KEY_L2(KeyEvent.KEYCODE_BUTTON_L2),
+    GBA_KEY_R2(KeyEvent.KEYCODE_BUTTON_R2),
     GBA_KEY_NONE(-1)
 }
 
@@ -28,6 +33,10 @@ fun getKey(text: String): Int =
         "down" -> GBAKeys.GBA_KEY_DOWN.key
         "left" -> GBAKeys.GBA_KEY_LEFT.key
         "right" -> GBAKeys.GBA_KEY_RIGHT.key
+        "X" -> GBAKeys.GBA_KEY_BTN_X.key
+        "Y" -> GBAKeys.GBA_KEY_BTN_Y.key
+        "L2" -> GBAKeys.GBA_KEY_L2.key
+        "R2" -> GBAKeys.GBA_KEY_R2.key
         else -> GBAKeys.GBA_KEY_NONE.key
     })
 
@@ -36,12 +45,16 @@ fun getKey(key: Int): Int =
         KeyEvent.KEYCODE_BUTTON_A -> GBAKeys.GBA_KEY_A
         KeyEvent.KEYCODE_BUTTON_B -> GBAKeys.GBA_KEY_B
         KeyEvent.KEYCODE_BUTTON_L1 -> GBAKeys.GBA_KEY_L
-        KeyEvent.KEYCODE_BUTTON_L2 -> GBAKeys.GBA_KEY_R
+        KeyEvent.KEYCODE_BUTTON_R1 -> GBAKeys.GBA_KEY_R
         KeyEvent.KEYCODE_BUTTON_SELECT -> GBAKeys.GBA_KEY_SELECT
         KeyEvent.KEYCODE_BUTTON_START -> GBAKeys.GBA_KEY_START
         KeyEvent.KEYCODE_DPAD_UP -> GBAKeys.GBA_KEY_UP
         KeyEvent.KEYCODE_DPAD_DOWN -> GBAKeys.GBA_KEY_DOWN
         KeyEvent.KEYCODE_DPAD_LEFT -> GBAKeys.GBA_KEY_LEFT
         KeyEvent.KEYCODE_DPAD_RIGHT -> GBAKeys.GBA_KEY_RIGHT
+        KeyEvent.KEYCODE_BUTTON_X -> GBAKeys.GBA_KEY_BTN_X
+        KeyEvent.KEYCODE_BUTTON_Y -> GBAKeys.GBA_KEY_BTN_Y
+        KeyEvent.KEYCODE_BUTTON_L2 -> GBAKeys.GBA_KEY_L2
+        KeyEvent.KEYCODE_BUTTON_R2 -> GBAKeys.GBA_KEY_R2
         else -> GBAKeys.GBA_KEY_NONE
     }.key
