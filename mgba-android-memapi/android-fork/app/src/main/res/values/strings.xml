@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">mGBA Android</string>
+    <string name="app_name">IronMon Emu</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="savestatetitle">Do you want to save state?</string>

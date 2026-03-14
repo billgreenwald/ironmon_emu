@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">mGBA Android</string>
+    <string name="app_name">IronMon Emu</string>
     <string name="ok">确定</string>
     <string name="cancel">取消</string>
     <string name="savestatetitle">你想快速存档吗？</string>
