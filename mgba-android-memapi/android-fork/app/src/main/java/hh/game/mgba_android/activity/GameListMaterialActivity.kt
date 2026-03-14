@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResult
@@ -40,7 +41,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +70,7 @@ import hh.game.mgba_android.activity.ui.theme.Mgba_AndroidTheme
 import hh.game.mgba_android.tracker.quickload.QuickloadManager
 import hh.game.mgba_android.tracker.quickload.RomFamilyGroup
 import hh.game.mgba_android.tracker.quickload.RomFamilyUtils
+import hh.game.mgba_android.utils.EmulatorPreferences
 
 
 class GameListMaterialActivity : ComponentActivity() {
@@ -81,6 +85,36 @@ class GameListMaterialActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { _: ActivityResult ->
             checkPermission()
         }
+
+    // Set by SpeedSettingsDialog when capture mode is active; cleared after first mapped button press.
+    internal var captureNextKey: ((String) -> Unit)? = null
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val capture = captureNextKey
+        if (capture != null && event.action == KeyEvent.ACTION_DOWN) {
+            val name = gbaKeyNameFromCode(event.keyCode)
+            if (name != null) {
+                captureNextKey = null
+                capture(name)
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun gbaKeyNameFromCode(keyCode: Int): String? = when (keyCode) {
+        KeyEvent.KEYCODE_BUTTON_A      -> "A"
+        KeyEvent.KEYCODE_BUTTON_B      -> "B"
+        KeyEvent.KEYCODE_BUTTON_L1     -> "L"
+        KeyEvent.KEYCODE_BUTTON_L2     -> "R"
+        KeyEvent.KEYCODE_BUTTON_SELECT -> "select"
+        KeyEvent.KEYCODE_BUTTON_START  -> "start"
+        KeyEvent.KEYCODE_DPAD_UP       -> "up"
+        KeyEvent.KEYCODE_DPAD_DOWN     -> "down"
+        KeyEvent.KEYCODE_DPAD_LEFT     -> "left"
+        KeyEvent.KEYCODE_DPAD_RIGHT    -> "right"
+        else -> null
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -133,10 +167,16 @@ class GameListMaterialActivity : ComponentActivity() {
         fun render() {
             setContent {
                 Mgba_AndroidTheme {
+                    var showSpeedSettings by remember { mutableStateOf(false) }
                     Column {
                         FamilyTopBar(
                             isScanning = latestScanning,
-                            onRescan = { viewModel.rescanFamilies(this@GameListMaterialActivity, documentfile) }
+                            onRescan = { viewModel.rescanFamilies(this@GameListMaterialActivity, documentfile) },
+                            onFolderPick = {
+                                setupStorageFolder()
+                                storageHelper.openFolderPicker()
+                            },
+                            onSettings = { showSpeedSettings = true },
                         )
                         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                             if (latestFamilies.isEmpty() && !latestScanning) {
@@ -145,6 +185,9 @@ class GameListMaterialActivity : ComponentActivity() {
                                 FamilyList(latestFamilies)
                             }
                         }
+                    }
+                    if (showSpeedSettings) {
+                        SpeedSettingsDialog(onDismiss = { showSpeedSettings = false })
                     }
                 }
             }
@@ -191,9 +234,15 @@ private fun FamilyLoadingScreen() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FamilyTopBar(isScanning: Boolean = false, onRescan: () -> Unit = {}) {
+fun FamilyTopBar(
+    isScanning: Boolean = false,
+    onRescan: () -> Unit = {},
+    onFolderPick: () -> Unit = {},
+    onSettings: () -> Unit = {},
+) {
     TopAppBar(
-        title = { Text(LocalContext.current.getString(R.string.app_name)) },
+        title = { Text(LocalContext.current.getString(R.string.app_name), color = Color.White) },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF1A2540)),
         actions = {
             if (isScanning) {
                 CircularProgressIndicator(
@@ -204,6 +253,12 @@ fun FamilyTopBar(isScanning: Boolean = false, onRescan: () -> Unit = {}) {
                 IconButton(onClick = onRescan) {
                     Text("⟳", fontSize = 18.sp, color = Color.White)
                 }
+            }
+            IconButton(onClick = onFolderPick) {
+                Text("📁", fontSize = 16.sp)
+            }
+            IconButton(onClick = onSettings) {
+                Text("⚙", fontSize = 18.sp, color = Color.White)
             }
         }
     )
@@ -289,6 +344,114 @@ fun FamilyRow(group: RomFamilyGroup, onClick: () -> Unit, onLongClick: () -> Uni
             )
         }
     }
+}
+
+@Composable
+fun SpeedSettingsDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val activity = context as? GameListMaterialActivity
+    var defaultFps by remember { mutableStateOf(EmulatorPreferences.getDefaultFps(context)) }
+    var secondaryFps by remember { mutableStateOf(EmulatorPreferences.getSecondaryFps(context)) }
+    var speedButton by remember { mutableStateOf(EmulatorPreferences.getSpeedButton(context)) }
+    var showFps by remember { mutableStateOf(EmulatorPreferences.getShowFps(context)) }
+    var isCapturing by remember { mutableStateOf(false) }
+
+    val labelColor = Color(0xFF111111)
+    val unselectedColor = Color(0xFF444444)
+    val selectedColor = Color(0xFF4090FF)
+
+    // Split all button options into two rows so they don't overflow the dialog width
+    val btnRow1 = listOf("none", "A", "B", "L", "R")
+    val btnRow2 = listOf("start", "select", "up", "down", "left", "right")
+
+    @Composable
+    fun BtnChip(btn: String) {
+        val selected = speedButton == btn
+        TextButton(
+            onClick = {
+                speedButton = btn
+                isCapturing = false
+                activity?.captureNextKey = null
+            },
+            border = if (selected) BorderStroke(1.dp, selectedColor) else null,
+        ) { Text(btn.replaceFirstChar { it.uppercase() }, color = if (selected) selectedColor else unselectedColor, fontSize = 12.sp) }
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            activity?.captureNextKey = null
+            onDismiss()
+        },
+        title = { Text("Emulator Settings", color = labelColor) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Show FPS toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("Show FPS", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                    Switch(checked = showFps, onCheckedChange = { showFps = it })
+                }
+                Text("Default Speed", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    EmulatorPreferences.speedOptions.forEach { (mult, fps) ->
+                        val selected = defaultFps == fps
+                        TextButton(
+                            onClick = { defaultFps = fps },
+                            border = if (selected) BorderStroke(1.dp, selectedColor) else null,
+                        ) { Text("${mult}x", color = if (selected) selectedColor else unselectedColor) }
+                    }
+                }
+                Text("Hold-Button Speed", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    EmulatorPreferences.speedOptions.forEach { (mult, fps) ->
+                        val selected = secondaryFps == fps
+                        TextButton(
+                            onClick = { secondaryFps = fps },
+                            border = if (selected) BorderStroke(1.dp, selectedColor) else null,
+                        ) { Text("${mult}x", color = if (selected) selectedColor else unselectedColor) }
+                    }
+                }
+                Text("Trigger Button", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { btnRow1.forEach { BtnChip(it) } }
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { btnRow2.forEach { BtnChip(it) } }
+                if (isCapturing) {
+                    Text(
+                        "Press any button on your gamepad…",
+                        color = Color(0xFFCC8800),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                } else {
+                    TextButton(
+                        onClick = {
+                            isCapturing = true
+                            activity?.captureNextKey = { name ->
+                                speedButton = name
+                                isCapturing = false
+                            }
+                        },
+                        border = BorderStroke(1.dp, Color(0xFF888888)),
+                    ) { Text("Capture from gamepad", color = unselectedColor, fontSize = 12.sp) }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                activity?.captureNextKey = null
+                EmulatorPreferences.save(context, defaultFps, secondaryFps, speedButton, showFps)
+                onDismiss()
+            }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = {
+                activity?.captureNextKey = null
+                onDismiss()
+            }) { Text("Cancel") }
+        },
+    )
 }
 
 @Composable

@@ -19,27 +19,35 @@
         android:src="@drawable/baseline_arrow_circle_up_24"
         android:layout_alignLeft="@+id/centerPoint"
         android:layout_width="50dp"
-        android:layout_height="50dp"/>
+        android:layout_height="50dp"
+        android:background="@drawable/btnbackgroud"
+        android:tint="#303030"/>
     <ImageView
         android:id="@+id/downBtn"
         android:layout_below="@+id/centerPoint"
         android:layout_alignLeft="@+id/centerPoint"
         android:src="@drawable/baseline_arrow_circle_down_24"
         android:layout_width="50dp"
-        android:layout_height="50dp"/>
+        android:layout_height="50dp"
+        android:background="@drawable/btnbackgroud"
+        android:tint="#303030"/>
     <ImageView
         android:id="@+id/leftBtn"
         android:layout_alignParentLeft="true"
         android:layout_alignTop="@id/centerPoint"
         android:src="@drawable/baseline_arrow_circle_left_24"
         android:layout_width="50dp"
-        android:layout_height="50dp"/>
+        android:layout_height="50dp"
+        android:background="@drawable/btnbackgroud"
+        android:tint="#303030"/>
     <ImageView
         android:id="@+id/rightBtn"
         android:layout_toRightOf="@+id/centerPoint"
         android:layout_alignTop="@+id/centerPoint"
         android:src="@drawable/baseline_arrow_circle_right_24"
         android:layout_width="50dp"
-        android:layout_height="50dp"/>
+        android:layout_height="50dp"
+        android:background="@drawable/btnbackgroud"
+        android:tint="#303030"/>
 </RelativeLayout>
 </RelativeLayout>

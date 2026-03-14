@@ -2,6 +2,7 @@ package hh.game.mgba_android.activity
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
@@ -10,11 +11,13 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import hh.game.mgba_android.utils.EmulatorPreferences
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -43,8 +46,10 @@ import hh.game.mgba_android.utils.Gametype
 import hh.game.mgba_android.utils.controllerUtil.getDirectionPressed
 import hh.game.mgba_android.utils.controllerUtil.lastDirect
 import hh.game.mgba_android.utils.getKey
+import hh.game.mgba_android.tracker.models.TrackerState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.libsdl.app.SDLActivity
@@ -75,6 +80,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var runFPS = true
     private var setFPS = 60f
     private var isMute = false
+    private var defaultFps = 60f
+    private var secondaryFps = 60f
+    private var speedButtonKey = GBAKeys.GBA_KEY_NONE.key
     private var templateResult = ArrayList<Pair<Int, Int>>()
     val startForResult =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
@@ -186,6 +194,19 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Pin to highest refresh rate so Swappy has a stable cadence (fixes tearing on LTPO displays)
+        @Suppress("DEPRECATION")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val modes = windowManager.defaultDisplay.supportedModes
+            val best = modes.maxByOrNull { it.refreshRate }
+            if (best != null) {
+                window.attributes = window.attributes.apply {
+                    preferredDisplayModeId = best.modeId
+                }
+            }
+        }
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
         mFullscreenModeActive = false
 
         // Resolve intent extras BEFORE super.onCreate() so getArguments() is ready
@@ -277,28 +298,97 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 //            Gameutils.getFPS().toString()
 //        }
         initSwappy()
-        
+
+        // Load speed preferences — apply default FPS only after emulator core is live
+        defaultFps = EmulatorPreferences.getDefaultFps(this)
+        secondaryFps = EmulatorPreferences.getSecondaryFps(this)
+        speedButtonKey = getKey(EmulatorPreferences.getSpeedButton(this))
+        setFPS = defaultFps
+        if (defaultFps != 60f) {
+            lifecycleScope.launch {
+                TrackerPoller.state.first { it is TrackerState.Active }
+                Forward(defaultFps)
+            }
+        }
+
         // Copy shaders from assets to files dir
         // Always copy to ensure we have the latest shaders (e.g. after app update)
         val shaderDir = File(filesDir, "shaders")
         copyAssets("shaders", shaderDir.absolutePath)
         
-        // Load xBRZ shader
         // Initialize Tools Button
         findViewById<View>(R.id.tools_btn).setOnClickListener {
-            val options = arrayOf("Shaders", "Memory Tools")
+            val options = arrayOf("Shaders", "Memory Tools", "Save State", "Load State", "Cheats", "Sound")
             AlertDialog.Builder(this)
                 .setTitle("Tools")
                 .setItems(options) { _, which ->
                     when (which) {
                         0 -> showShaderMenu()
                         1 -> openHexEditor()
+                        2 -> {
+                            PauseGame()
+                            PopDialogFragment(getString(R.string.savestatetitle))
+                                .also {
+                                    it.setOnDialogClickListener(object : OnDialogClickListener {
+                                        override fun onPostive() {
+                                            Toast.makeText(this@GameActivity,
+                                                if (QuickSaveState()) getString(R.string.state_saved)
+                                                else getString(R.string.state_save_fail),
+                                                Toast.LENGTH_SHORT).show()
+                                            ResumeGame()
+                                        }
+                                        override fun onNegative() { ResumeGame() }
+                                        override fun onDismiss() { ResumeGame() }
+                                    })
+                                }
+                                .show(supportFragmentManager, "savestate")
+                        }
+                        3 -> {
+                            PauseGame()
+                            PopDialogFragment(getString(R.string.loadstatetitle))
+                                .also {
+                                    it.setOnDialogClickListener(object : OnDialogClickListener {
+                                        override fun onPostive() {
+                                            Toast.makeText(this@GameActivity,
+                                                if (QuickLoadState()) getString(R.string.state_loaded)
+                                                else getString(R.string.state_load_fail),
+                                                Toast.LENGTH_SHORT).show()
+                                            ResumeGame()
+                                        }
+                                        override fun onNegative() { ResumeGame() }
+                                        override fun onDismiss() { ResumeGame() }
+                                    })
+                                }
+                                .show(supportFragmentManager, "loadstate")
+                        }
+                        4 -> {
+                            startForResult.launch(Intent(this, CheatsActivity::class.java).also {
+                                it.putExtra("gamepath", gamepath)
+                                when (intent.getStringExtra("gametype")) {
+                                    "GBA" -> intent.getParcelableExtra<hh.game.mgba_android.database.GBA.GBAgame>("gamedetail").let { game ->
+                                        it.putExtra("gamedetail", game as hh.game.mgba_android.database.GBA.GBAgame)
+                                        it.putExtra("gametype", hh.game.mgba_android.utils.Gametype.GBA.name)
+                                        it.putExtra("cheat", game?.GameNum)
+                                    }
+                                    else -> intent.getParcelableExtra<hh.game.mgba_android.database.GB.GBgame>("gamedetail").let { game ->
+                                        it.putExtra("gamedetail", game as hh.game.mgba_android.database.GB.GBgame)
+                                        it.putExtra("gametype", hh.game.mgba_android.utils.Gametype.GB.name)
+                                    }
+                                }
+                            })
+                        }
+                        5 -> {
+                            Mute(!isMute)
+                            isMute = !isMute
+                            Toast.makeText(this, if (isMute) "Sound Off" else "Sound On", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
                 .show()
         }
 
         val fpsText = findViewById<TextView>(R.id.fps_text)
+        fpsText.visibility = if (EmulatorPreferences.getShowFps(this)) View.VISIBLE else View.GONE
         lifecycleScope.launch(Dispatchers.Main) {
             while (runFPS) {
                 fpsText.text = "FPS: %.1f".format(getFPS())
@@ -450,11 +540,13 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     onNativeKeyDown(gbaKey)
+                    if (gbaKey == speedButtonKey && secondaryFps != defaultFps) Forward(secondaryFps)
                     handled = true
                 }
 
                 KeyEvent.ACTION_UP -> {
                     onNativeKeyUp(gbaKey)
+                    if (gbaKey == speedButtonKey && secondaryFps != defaultFps) Forward(defaultFps)
                     handled = true
                 }
 
@@ -464,243 +556,6 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     }
 
     private fun addGameControler() {
-        val gameNum = intent.getStringExtra("cheat")
-        findViewById<TextView>(R.id.cheatbtn).setOnClickListener {
-            startForResult.launch(Intent(this, CheatsActivity::class.java).also {
-                // Pass gamepath so CheatsActivity knows where to look
-                it.putExtra("gamepath", intent.getStringExtra("gamepath"))
-
-                when (intent.getStringExtra("gametype")) {
-                    "GBA" ->
-                        intent.getParcelableExtra<GBAgame>("gamedetail").let { game ->
-                            it.putExtra(
-                                "gamedetail",
-                                (game as GBAgame)
-                            )
-                            it.putExtra("gametype", Gametype.GBA.name)
-                            it.putExtra("cheat", game.GameNum)
-                        }
-
-                    "GBC" ->
-                        intent.getParcelableExtra<GBgame>("gamedetail").let { game ->
-                            it.putExtra(
-                                "gamedetail",
-                                (game as GBgame)
-                            )
-                            it.putExtra("gametype", Gametype.GB.name)
-                        }
-
-                    else ->
-                        intent.getParcelableExtra<GBgame>("gamedetail").let { game ->
-                            it.putExtra(
-                                "gamedetail",
-                                (game as GBgame)
-                            )
-                            it.putExtra("gametype", Gametype.GB.name)
-                        }
-                }
-
-            })
-        }
-
-        findViewById<TextView>(R.id.savestatetbtn).setOnClickListener {
-            PauseGame()
-            PopDialogFragment(getString(R.string.savestatetitle))
-                .also {
-                    it.setOnDialogClickListener(object : OnDialogClickListener {
-                        override fun onPostive() {
-                            var isSaved = QuickSaveState()
-                            Toast.makeText(
-                                this@GameActivity,
-                                if (isSaved) {
-                                    getString(R.string.state_saved)
-                                } else
-                                    getString(R.string.state_save_fail),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            ResumeGame()
-                        }
-
-                        override fun onNegative() {
-                            ResumeGame()
-                        }
-
-                        override fun onDismiss() {
-                            ResumeGame()
-                        }
-                    })
-                }
-                .show(supportFragmentManager, "loadstate")
-        }
-        findViewById<TextView>(R.id.loadstatebtn).setOnClickListener {
-            PauseGame()
-            PopDialogFragment(getString(R.string.loadstatetitle))
-                .also {
-                    it.setOnDialogClickListener(object : OnDialogClickListener {
-                        override fun onPostive() {
-                            Toast.makeText(
-                                this@GameActivity,
-                                if (QuickLoadState())
-                                    getString(R.string.state_loaded)
-                                else getString(R.string.state_load_fail), Toast.LENGTH_SHORT
-                            ).show()
-                            ResumeGame()
-                        }
-
-                        override fun onNegative() {
-                            ResumeGame()
-                        }
-
-                        override fun onDismiss() {
-                            ResumeGame()
-                        }
-                    })
-                }
-                .show(supportFragmentManager, "loadstate")
-        }
-        findViewById<ImageView>(R.id.menubtn).setOnClickListener {
-            PauseGame()
-            MemorySearchFragment(templateResult).also {
-                it.setOnMemSearchListener(object : OnMemSearchListener {
-                    override fun onSearch(value: Int) {
-                        searchMemory(value)
-                        it.updateMemAddressList(templateResult)
-                    }
-
-                    override fun onNewSearch(value: Int) {
-                        searchMemory(value, true)
-                        it.updateMemAddressList(templateResult)
-                    }
-
-                    override fun onExit() {
-                        it.dismiss()
-                        ResumeGame()
-                    }
-                })
-                it.setOnAddressClickListener(object : OnAddressClickListener {
-                    override fun onClick(address: Pair<Int, Int>) {
-                        val editText = EditText(this@GameActivity)
-                        val savetocheattitle = EditText(this@GameActivity)
-                        val savetocheatvalue = EditText(this@GameActivity)
-                        val layout = LinearLayout(this@GameActivity).also {
-                            it.orientation = LinearLayout.VERTICAL
-                            it.addView(savetocheattitle)
-                            it.addView(savetocheatvalue)
-                        }
-                        val builder: AlertDialog.Builder = AlertDialog.Builder(this@GameActivity)
-                        builder.setTitle(
-                            getString(
-                                R.string.setcheatvalue,
-                                address.first.toString(16).padStart(8, '0')
-                            )
-                        )
-                            .setView(editText)
-                            .setNegativeButton(getString(R.string.cancel),
-                                { dialog, which -> dialog.dismiss() })
-                        builder.setPositiveButton(getString(R.string.ok),
-                            { dialog, which ->
-                                if (editText.text.toString().isNotBlank())
-                                    writeMem(address.first, editText.text.toString().toInt())
-                            })
-                        builder.setNeutralButton(getString(R.string.addtocheatlist)) { dialog, which ->
-                            var builder2 = AlertDialog.Builder(this@GameActivity)
-                            builder2.setTitle(
-                                getString(R.string.savecheattolist)
-                            )
-                                .setView(layout)
-                                .setNegativeButton(getString(R.string.cancel),
-                                    { dialog, which -> dialog.dismiss() })
-                            builder2.setPositiveButton(getString(R.string.ok),
-                                { dialog, which ->
-                                    if (!savetocheattitle.text.toString().equals("")
-                                        &&
-                                        !savetocheatvalue.text.toString().equals("")
-                                    ) {
-                                        var internalCheatFile =
-                                            getExternalFilesDir("cheats")?.absolutePath + "/$gameNum.cht"
-                                        File(internalCheatFile).let {
-                                            if (!it.exists()) {
-                                                it.createNewFile()
-                                            }
-                                            BufferedWriter(FileWriter(it, true)).also {
-                                                it.write("# ${savetocheattitle.text.toString()}")
-                                                it.newLine()
-                                                var cheataddress = address.first.toString(16)
-                                                    .padStart(
-                                                        8,
-                                                        '0'
-                                                    ) + ":" + savetocheatvalue.text.toString().toIntOrNull(16)
-                                                it.write(cheataddress)
-                                                it.close()
-                                            }
-                                        }
-
-                                    }
-                                })
-                            builder2.show()
-                        }
-                        builder.show()
-                    }
-                })
-            }.show(supportFragmentManager, "search")
-//          getMemoryBlock().forEach {
-//              Log.d("Thememory::",it.toString())
-//              it.valuearray.forEach {
-//                  if(it.first.toString(16).equals("2000250")) {
-//                      Log.d(
-//                          "Memory:::",
-//                          "address:${it.first.toString(16)} value:${it.second.toString(16)}"
-//                      )
-//                  }
-////                  if(it==9999){
-////                      Log.d("getvalue:::",it.toString())
-////                  }
-//              }
-//          }
-
-//            ResumeGame()
-//            PauseGame()
-//            GameMenuFragment().also {
-//                it.setOndismissListener(object : OnMenuListener {
-//                    override fun onDismiss() {
-//                        ResumeGame()
-//                    }
-//
-//                    override fun onSaveState() {
-//                    }
-//
-//                    override fun onLoadState() {
-//                    }
-//
-//                    override fun onExit() {
-//                        System.exit(0)
-//                    }
-//                })
-//            }.show(supportFragmentManager, "menu")
-        }
-
-        findViewById<TextView>(R.id.forwardbtn).setOnClickListener {
-            setFPS = when (setFPS) {
-                60f -> setForward(it as TextView, 2)
-                60f * 2 -> setForward(it as TextView, 4)
-                else -> {
-                    (it as TextView).text = getString(R.string.forward)
-                    60f
-                }
-            }
-            Forward(setFPS)
-        }
-        findViewById<ImageView>(R.id.soundbtn).setOnClickListener {
-            Mute(!isMute)
-            isMute = !isMute
-            when (isMute) {
-                false -> (it as ImageView).setImageDrawable(getDrawable(R.drawable.baseline_volume_up_24))
-                true -> (it as ImageView).setImageDrawable(getDrawable(R.drawable.baseline_volume_off_24))
-            }
-//            PauseGame()
-//            CheatUtils.memorySearch(999900)
-//            ResumeGame()
-        }
         findViewById<ImageView>(R.id.rBtn).setGBAKeyListener()
         findViewById<ImageView>(R.id.lBtn).setGBAKeyListener()
         findViewById<ImageView>(R.id.aBtn).setGBAKeyListener()
@@ -808,10 +663,12 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     onNativeKeyDown(keyText)
+                    if (keyText == speedButtonKey && secondaryFps != defaultFps) Forward(secondaryFps)
                 }
 
                 MotionEvent.ACTION_UP -> {
                     onNativeKeyUp(keyText)
+                    if (keyText == speedButtonKey && secondaryFps != defaultFps) Forward(defaultFps)
                 }
             }
             true

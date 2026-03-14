@@ -3,171 +3,121 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- L: top-left -->
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/lBtn"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_marginLeft="20dp"
-        android:layout_marginTop="20dp"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="16dp"
         android:background="@drawable/btnbackgroud"
-        android:paddingStart="17dp"
-        android:paddingTop="7dp"
+        android:gravity="center"
         android:text="L"
-        android:textColor="@color/white"
-        android:textSize="25dp"
+        android:textColor="#303030"
+        android:textSize="22sp"
         android:textStyle="bold" />
 
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/cheatbtn"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:layout_centerHorizontal="true"
-        android:background="@drawable/btnbackgroud"
-        android:gravity="center"
-        android:text="C"
-        android:textColor="@color/white" />
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/forwardbtn"
-        android:paddingLeft="5dp"
-        android:paddingRight="5dp"
-        android:text="@string/forward"
-        android:layout_width="70dp"
-        android:layout_height="20dp"
-        android:layout_alignLeft="@+id/savestatetbtn"
-        android:layout_marginTop="20dp"
-        android:background="@drawable/btnbackgroud"
-        android:gravity="center"
-        android:src="@drawable/baseline_menu_24"
-        android:layout_below="@+id/cheatbtn"
-        android:textColor="@color/white"/>
-
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/soundbtn"
-        android:layout_alignTop="@+id/forwardbtn"
-        android:layout_width="50dp"
-        android:layout_height="20dp"
-        android:layout_marginLeft="20dp"
-        android:layout_toRightOf="@+id/forwardbtn"
-        android:background="@drawable/btnbackgroud"
-        android:gravity="center"
-        android:src="@drawable/baseline_volume_up_24"
-        android:textColor="@color/white" />
-
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/menubtn"
-        android:layout_width="50dp"
-        android:layout_height="20dp"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:background="@drawable/btnbackgroud"
-        android:gravity="center"
-        android:src="@drawable/baseline_menu_24"
-        android:layout_below="@+id/forwardbtn"
-        android:textColor="@color/white" />
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/loadstatebtn"
-        android:background="@drawable/btnbackgroud"
-        android:text="@string/load"
-        android:gravity="center"
-        android:layout_toRightOf="@+id/cheatbtn"
-        android:layout_marginLeft="20dp"
-        android:layout_marginTop="20dp"
-        android:textColor="@color/white"
-        android:layout_width="50dp"
-        android:layout_height="20dp"/>
-
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/savestatetbtn"
-        android:layout_width="50dp"
-        android:layout_height="20dp"
-        android:layout_marginTop="20dp"
-        android:layout_marginRight="20dp"
-        android:layout_toStartOf="@+id/cheatbtn"
-        android:background="@drawable/btnbackgroud"
-        android:gravity="center"
-        android:text="@string/save"
-        android:textColor="@color/white" />
-
+    <!-- R: top-right -->
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/rBtn"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
-        android:layout_marginTop="20dp"
-        android:layout_marginRight="20dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginRight="16dp"
         android:background="@drawable/btnbackgroud"
-        android:paddingStart="17dp"
-        android:paddingTop="7dp"
+        android:gravity="center"
         android:text="R"
-        android:textColor="@color/white"
-        android:textSize="25dp"
+        android:textColor="#303030"
+        android:textSize="22sp"
         android:textStyle="bold" />
 
+    <!-- Invisible center anchor for Select/Start alignment -->
+    <View
+        android:id="@+id/centerAnchor"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="24dp" />
+
+    <!-- SELECT: top-center-left -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/selectBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_alignTop="@+id/centerAnchor"
+        android:layout_toLeftOf="@+id/centerAnchor"
+        android:layout_marginRight="8dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:text="select"
+        android:textColor="#303030"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <!-- START: top-center-right -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/startBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_alignTop="@+id/centerAnchor"
+        android:layout_toRightOf="@+id/centerAnchor"
+        android:layout_marginLeft="8dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:text="start"
+        android:textColor="#303030"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <!-- D-pad: bottom-left -->
     <include
         android:id="@+id/dpad"
         layout="@layout/dpad"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/lBtn"
-        android:layout_marginTop="80dp" />
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_marginLeft="16dp"
+        android:layout_marginBottom="16dp" />
 
+    <!-- A: bottom-right -->
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/aBtn"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_alignTop="@+id/dpad"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
+        android:layout_marginBottom="20dp"
         android:layout_marginRight="20dp"
         android:background="@drawable/btnbackgroud"
-        android:paddingStart="17dp"
-        android:paddingTop="7dp"
+        android:gravity="center"
         android:text="A"
-        android:textColor="@color/white"
-        android:textSize="25dp"
+        android:textColor="#303030"
+        android:textSize="22sp"
         android:textStyle="bold" />
 
+    <!-- B: bottom, left of A -->
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/bBtn"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_alignBottom="@+id/dpad"
-        android:layout_marginRight="20dp"
-        android:layout_marginBottom="50dp"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_alignBottom="@+id/aBtn"
         android:layout_toLeftOf="@+id/aBtn"
+        android:layout_marginRight="10dp"
         android:background="@drawable/btnbackgroud"
-        android:paddingStart="17dp"
-        android:paddingTop="7dp"
+        android:gravity="center"
         android:text="B"
-        android:textColor="@color/white"
-        android:textSize="25dp"
+        android:textColor="#303030"
+        android:textSize="22sp"
         android:textStyle="bold" />
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/selectBtn"
-        android:layout_below="@+id/dpad"
-        android:layout_width="wrap_content"
-        android:layout_height="35dp"
-        android:layout_marginLeft="55dp"
-        android:layout_marginTop="10dp"
-        android:background="@drawable/btnbackgroud"
-        android:paddingStart="35dp"
-        android:paddingTop="5dp"
-        android:text="select"
-        android:textColor="@color/white"
-        android:textSize="18dp"
-        android:textStyle="bold" />
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/startBtn"
-        android:layout_below="@+id/dpad"
-        android:layout_width="wrap_content"
-        android:layout_height="35dp"
-        android:layout_alignParentRight="true"
-        android:layout_marginRight="55dp"
-        android:layout_marginTop="10dp"
-        android:background="@drawable/btnbackgroud"
-        android:paddingStart="35dp"
-        android:paddingTop="5dp"
-        android:text="start"
-        android:textColor="@color/white"
-        android:textSize="18dp"
-        android:textStyle="bold" />
+
 </RelativeLayout>

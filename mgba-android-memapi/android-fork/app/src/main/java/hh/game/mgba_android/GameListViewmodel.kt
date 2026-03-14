@@ -50,16 +50,27 @@ class GameListViewmodel : ViewModel() {
         }
     }
 
+    private fun collectRomFiles(dir: DocumentFile, context: Context): List<Pair<String, String>> {
+        val result = mutableListOf<Pair<String, String>>()
+        for (child in dir.listFiles() ?: return result) {
+            if (child.isDirectory) {
+                result += collectRomFiles(child, context)
+            } else {
+                val name = child.name ?: continue
+                if (!name.endsWith(".gba", ignoreCase = true) &&
+                    !name.endsWith(".gb", ignoreCase = true)) continue
+                val path = child.getAbsolutePath(context) ?: continue
+                result += Pair(name, path)
+            }
+        }
+        return result
+    }
+
     private suspend fun scanAndSave(context: Context, documentfile: DocumentFile?) {
         documentfile ?: return
         val groups = withContext(Dispatchers.IO) {
-            val files = documentfile.listFiles() ?: return@withContext emptyList()
-            files
-                .mapNotNull { file ->
-                    val name = file.name ?: return@mapNotNull null
-                    if (!name.endsWith(".gba", ignoreCase = true) &&
-                        !name.endsWith(".gb", ignoreCase = true)) return@mapNotNull null
-                    val path = file.getAbsolutePath(context) ?: return@mapNotNull null
+            collectRomFiles(documentfile, context)
+                .mapNotNull { (name, path) ->
                     RomFamilyUtils.parseFamily(name, path).takeIf { it.number != null }
                 }
                 .groupBy { Pair(it.prefix, it.extension) }
