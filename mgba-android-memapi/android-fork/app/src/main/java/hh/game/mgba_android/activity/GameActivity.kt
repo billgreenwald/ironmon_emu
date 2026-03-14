@@ -10,6 +10,8 @@ import android.hardware.input.InputManager
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.Surface
+import android.view.SurfaceHolder
 import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
@@ -194,17 +196,6 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Pin to highest refresh rate so Swappy has a stable cadence (fixes tearing on LTPO displays)
-        @Suppress("DEPRECATION")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val modes = windowManager.defaultDisplay.supportedModes
-            val best = modes.maxByOrNull { it.refreshRate }
-            if (best != null) {
-                window.attributes = window.attributes.apply {
-                    preferredDisplayModeId = best.modeId
-                }
-            }
-        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         mFullscreenModeActive = false
@@ -228,6 +219,22 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             gameWidth,
             RelativeLayout.LayoutParams.MATCH_PARENT,
         )
+
+        // Tell SurfaceFlinger the content rate is fixed 59.7275fps (GBA) so it locks the
+        // display to a 60Hz multiple and only swaps buffers at those boundaries — eliminates
+        // persistent tearing on LTPO displays (Pixel 7 Pro 120Hz).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            mSurface?.holder?.addCallback(object : SurfaceHolder.Callback {
+                override fun surfaceCreated(holder: SurfaceHolder) {
+                    holder.surface.setFrameRate(
+                        59.7275f,
+                        Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE
+                    )
+                }
+                override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+                override fun surfaceDestroyed(holder: SurfaceHolder) {}
+            })
+        }
 
         MemoryBridge.reader = { addr, len -> getMemoryRange(addr, len) }
         TrackerPoller.start(applicationContext, lifecycleScope)

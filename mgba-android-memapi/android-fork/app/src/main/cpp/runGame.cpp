@@ -665,8 +665,8 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_initSwappy(JNIEnv *env, jobject thiz) {
     SwappyGL_init(env, thiz);
-    SwappyGL_setSwapIntervalNS(16666667L); // 60 FPS target
-    SwappyGL_setAutoSwapInterval(true);   // adjust interval to display refresh rate
+    SwappyGL_setSwapIntervalNS(16742707L); // 59.7275 fps (actual GBA framerate)
+    SwappyGL_setAutoSwapInterval(false);  // fixed interval — GBA is always 59.7275fps
     SwappyGL_setAutoPipelineMode(true);   // pipeline frames to reduce latency
 }
 
@@ -680,8 +680,11 @@ Java_hh_game_mgba_1android_activity_GameActivity_writeMem8(JNIEnv *env, jobject 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_getMemoryRange(JNIEnv *env, jobject thiz, jint address, jint length) {
-    if (!thread.core) return NULL;
-    
+    // Guard against reads before ROM is loaded: thread.core can be set before the ROM
+    // memory regions are mapped, causing GBALoad8 to dereference an unmapped ROM buffer.
+    if (!thread.core || !androidrenderer.core) return NULL;
+    if (!mCoreThreadIsActive(&thread)) return NULL;
+
     // Ensure we don't read too much
     if (length <= 0 || length > 1024 * 1024) return NULL; // Cap at 1MB
 
