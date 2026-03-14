@@ -3,11 +3,13 @@ package hh.game.mgba_android.tracker.tables
 /**
  * Gen III type effectiveness chart.
  *
- * Type IDs as stored in ROM (pokefirered/pokeemerald source):
+ * Type IDs as stored in ROM (pokefirered/pokeemerald source, confirmed against game data):
  *  0=Normal,   1=Fighting, 2=Flying,   3=Poison,  4=Ground,
  *  5=Rock,     6=Bug,      7=Ghost,    8=Steel,   9=??? (unused)
  *  10=Fire,    11=Water,   12=Grass,   13=Electric,
- *  14=Ice,     15=Psychic, 16=Dragon,  17=Dark
+ *  14=Psychic, 15=Ice,     16=Dragon,  17=Dark
+ *
+ * Note: 14=Psychic and 15=Ice (NOT swapped). Verified against live game data.
  */
 object TypeChart {
 
@@ -16,7 +18,7 @@ object TypeChart {
         3  to "Poison",   4  to "Ground",   5  to "Rock",
         6  to "Bug",      7  to "Ghost",    8  to "Steel",
         10 to "Fire",     11 to "Water",    12 to "Grass",
-        13 to "Electric", 14 to "Ice",      15 to "Psychic",
+        13 to "Electric", 14 to "Psychic",  15 to "Ice",
         16 to "Dragon",   17 to "Dark",
     )
 
@@ -43,10 +45,10 @@ object TypeChart {
     private val TABLE: Map<Int, Map<Int, Float>> = mapOf(
         // Normal
         0 to mapOf(5 to 0.5f, 8 to 0.5f, 7 to 0.0f),
-        // Fighting
+        // Fighting — 2x vs Normal, Rock, Steel, Ice(15), Dark; 0.5x vs Flying, Poison, Bug, Psychic(14)
         1 to mapOf(
-            0 to 2.0f, 5 to 2.0f, 8 to 2.0f, 14 to 2.0f, 17 to 2.0f,
-            2 to 0.5f, 3 to 0.5f, 6 to 0.5f, 15 to 0.5f,
+            0 to 2.0f, 5 to 2.0f, 8 to 2.0f, 15 to 2.0f, 17 to 2.0f,
+            2 to 0.5f, 3 to 0.5f, 6 to 0.5f, 14 to 0.5f,
             7 to 0.0f,
         ),
         // Flying
@@ -66,30 +68,30 @@ object TypeChart {
             6 to 0.5f, 12 to 0.5f,
             2 to 0.0f,
         ),
-        // Rock
+        // Rock — 2x vs Flying, Bug, Fire, Ice(15)
         5 to mapOf(
-            2 to 2.0f, 6 to 2.0f, 10 to 2.0f, 14 to 2.0f,
+            2 to 2.0f, 6 to 2.0f, 10 to 2.0f, 15 to 2.0f,
             1 to 0.5f, 4 to 0.5f, 8 to 0.5f,
         ),
-        // Bug
+        // Bug — 2x vs Grass, Psychic(14), Dark
         6 to mapOf(
-            12 to 2.0f, 15 to 2.0f, 17 to 2.0f,
+            12 to 2.0f, 14 to 2.0f, 17 to 2.0f,
             1 to 0.5f, 2 to 0.5f, 7 to 0.5f, 8 to 0.5f, 10 to 0.5f,
         ),
-        // Ghost
+        // Ghost — 2x vs Ghost, Psychic(14)
         7 to mapOf(
-            7 to 2.0f, 15 to 2.0f,
+            7 to 2.0f, 14 to 2.0f,
             17 to 0.5f, 8 to 0.5f,
             0 to 0.0f,
         ),
-        // Steel
+        // Steel — 2x vs Ice(15), Rock
         8 to mapOf(
-            14 to 2.0f, 5 to 2.0f,
+            15 to 2.0f, 5 to 2.0f,
             8 to 0.5f, 10 to 0.5f, 11 to 0.5f, 13 to 0.5f,
         ),
-        // Fire
+        // Fire — 2x vs Bug, Steel, Grass, Ice(15)
         10 to mapOf(
-            6 to 2.0f, 8 to 2.0f, 12 to 2.0f, 14 to 2.0f,
+            6 to 2.0f, 8 to 2.0f, 12 to 2.0f, 15 to 2.0f,
             5 to 0.5f, 10 to 0.5f, 11 to 0.5f, 16 to 0.5f,
         ),
         // Water
@@ -109,25 +111,25 @@ object TypeChart {
             12 to 0.5f, 13 to 0.5f, 16 to 0.5f,
             4 to 0.0f,
         ),
-        // Ice
+        // Psychic (14) — 2x vs Fighting, Poison; 0.5x vs Steel, Psychic; 0x vs Dark
         14 to mapOf(
-            2 to 2.0f, 4 to 2.0f, 12 to 2.0f, 16 to 2.0f,
-            8 to 0.5f, 11 to 0.5f, 14 to 0.5f,
-        ),
-        // Psychic
-        15 to mapOf(
             1 to 2.0f, 3 to 2.0f,
-            8 to 0.5f, 15 to 0.5f,
+            8 to 0.5f, 14 to 0.5f,
             17 to 0.0f,
+        ),
+        // Ice (15) — 2x vs Flying, Ground, Grass, Dragon; 0.5x vs Steel, Water, Ice
+        15 to mapOf(
+            2 to 2.0f, 4 to 2.0f, 12 to 2.0f, 16 to 2.0f,
+            8 to 0.5f, 11 to 0.5f, 15 to 0.5f,
         ),
         // Dragon
         16 to mapOf(
             16 to 2.0f,
             8 to 0.5f,
         ),
-        // Dark
+        // Dark — 2x vs Ghost, Psychic(14)
         17 to mapOf(
-            7 to 2.0f, 15 to 2.0f,
+            7 to 2.0f, 14 to 2.0f,
             1 to 0.5f, 17 to 0.5f,
         ),
     )

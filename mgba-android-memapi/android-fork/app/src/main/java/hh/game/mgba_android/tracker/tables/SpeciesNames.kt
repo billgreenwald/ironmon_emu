@@ -400,8 +400,39 @@ object SpeciesNames {
         "Deoxys",        // 386
     )
 
-    fun get(id: Int): String = when {
-        id in NAMES.indices -> NAMES[id]
-        else                -> "#$id"
+    /**
+     * Returns the display name for a Gen III internal species ID.
+     *
+     * IDs 1–251 (Kanto/Johto): internal ID == National Dex number — direct lookup.
+     * IDs 277–411 (Hoenn): internal ordering differs from National Dex.
+     *   Remapping mirrors PokemonData.lua `idInternalToNat` in the Lua tracker.
+     * IDs 252–276: unused slots in ROM — returned as "#id".
+     */
+    fun get(internalId: Int): String {
+        val nationalId = INTERNAL_TO_NATIONAL[internalId] ?: internalId
+        return if (nationalId in NAMES.indices) NAMES[nationalId] else "#$internalId"
     }
+
+    // Internal Gen III ROM species ID → National Dex number
+    // Source: PokemonData.lua idInternalToNat (Ironmon Tracker Lua, lines 365–379)
+    // IDs 1–251 are identity (not listed); IDs 252–276 unused in ROM.
+    private val INTERNAL_TO_NATIONAL = mapOf(
+        277 to 252, 278 to 253, 279 to 254, 280 to 255, 281 to 256, 282 to 257, 283 to 258, 284 to 259,
+        285 to 260, 286 to 261, 287 to 262, 288 to 263, 289 to 264, 290 to 265, 291 to 266, 292 to 267,
+        293 to 268, 294 to 269, 295 to 270, 296 to 271, 297 to 272, 298 to 273, 299 to 274, 300 to 275,
+        304 to 276, 305 to 277, 309 to 278, 310 to 279, 392 to 280, 393 to 281, 394 to 282, 311 to 283,
+        312 to 284, 306 to 285, 307 to 286, 364 to 287, 365 to 288, 366 to 289, 301 to 290, 302 to 291,
+        303 to 292, 370 to 293, 371 to 294, 372 to 295, 335 to 296, 336 to 297, 350 to 298, 320 to 299,
+        315 to 300, 316 to 301, 322 to 302, 355 to 303, 382 to 304, 383 to 305, 384 to 306, 356 to 307,
+        357 to 308, 337 to 309, 338 to 310, 353 to 311, 354 to 312, 386 to 313, 387 to 314, 363 to 315,
+        367 to 316, 368 to 317, 330 to 318, 331 to 319, 313 to 320, 314 to 321, 339 to 322, 340 to 323,
+        321 to 324, 351 to 325, 352 to 326, 308 to 327, 332 to 328, 333 to 329, 334 to 330, 344 to 331,
+        345 to 332, 358 to 333, 359 to 334, 380 to 335, 379 to 336, 348 to 337, 349 to 338, 323 to 339,
+        324 to 340, 326 to 341, 327 to 342, 318 to 343, 319 to 344, 388 to 345, 389 to 346, 390 to 347,
+        391 to 348, 328 to 349, 329 to 350, 385 to 351, 317 to 352, 377 to 353, 378 to 354, 361 to 355,
+        362 to 356, 369 to 357, 411 to 358, 376 to 359, 360 to 360, 346 to 361, 347 to 362, 341 to 363,
+        342 to 364, 343 to 365, 373 to 366, 374 to 367, 375 to 368, 381 to 369, 325 to 370, 395 to 371,
+        396 to 372, 397 to 373, 398 to 374, 399 to 375, 400 to 376, 401 to 377, 402 to 378, 403 to 379,
+        407 to 380, 408 to 381, 404 to 382, 405 to 383, 406 to 384, 409 to 385, 410 to 386,
+    )
 }

@@ -15,7 +15,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,35 +55,23 @@ private val TYPE_COLORS = mapOf(
     6  to Color(0xFFA8B820),  // Bug
     7  to Color(0xFF705898),  // Ghost
     8  to Color(0xFFB8B8D0),  // Steel
-    10 to Color(0xFFF08030),  // Fire
-    11 to Color(0xFF6890F0),  // Water
-    12 to Color(0xFF78C850),  // Grass
-    13 to Color(0xFFF8D030),  // Electric
-    14 to Color(0xFF98D8D8),  // Ice
-    15 to Color(0xFFF85888),  // Psychic
-    16 to Color(0xFF7038F8),  // Dragon
-    17 to Color(0xFF705848),  // Dark
+    10 to Color(0xFFF08030),  // Fire     (0x0A)
+    11 to Color(0xFF6890F0),  // Water    (0x0B)
+    12 to Color(0xFF78C850),  // Grass    (0x0C)
+    13 to Color(0xFFF8D030),  // Electric (0x0D)
+    14 to Color(0xFFF85888),  // Psychic  (0x0E) — confirmed via PokemonData.TypeIndexMap
+    15 to Color(0xFF98D8D8),  // Ice      (0x0F)
+    16 to Color(0xFF7038F8),  // Dragon   (0x10)
+    17 to Color(0xFF705848),  // Dark     (0x11)
 )
 
 private fun typeColor(typeId: Int) = TYPE_COLORS[typeId] ?: Color(0xFF888888)
 
 // ── Move category (Gen III: type-based, matching MoveData.lua lines 103–119) ─
+// Gen III move category split: physical = types 0–8, special = types 10–17
+// Source: PokemonData.TypeIndexMap in Lua tracker (0x0A=Fire is special, no type 9 in base stats)
 private val PHYSICAL_TYPES = setOf(0, 1, 2, 3, 4, 5, 6, 7, 8)
-private val SPECIAL_TYPES  = setOf(11, 12, 13, 14, 15, 16, 17, 18)
-
-private fun moveCategory(typeId: Int, power: Int): String = when {
-    power == 0               -> "—"
-    typeId in PHYSICAL_TYPES -> "P"
-    typeId in SPECIAL_TYPES  -> "S"
-    else                     -> "—"
-}
-
-private fun moveCategoryColor(typeId: Int, power: Int): Color = when {
-    power == 0               -> TextSecondary
-    typeId in PHYSICAL_TYPES -> Color(0xFFF08030)  // orange
-    typeId in SPECIAL_TYPES  -> Color(0xFF6890F0)  // blue
-    else                     -> TextSecondary
-}
+private val SPECIAL_TYPES  = setOf(10, 11, 12, 13, 14, 15, 16, 17)
 
 // ── Main entry point ─────────────────────────────────────────────────────────
 @Composable
@@ -664,12 +655,62 @@ private fun StatCell(label: String, value: Int, nature: NatureInfo, statIdx: Int
     }
 }
 
+// ── Move category icon ────────────────────────────────────────────────────────
+// Pixel art bitmaps from Lua tracker Constants.PixelImages.PHYSICAL / .SPECIAL (7×7 grids)
+// Drawn via Canvas, each pixel rendered as a small square at the given color.
+private val PHYSICAL_PIXELS = arrayOf(
+    intArrayOf(1,0,0,1,0,0,1),
+    intArrayOf(0,1,0,1,0,1,0),
+    intArrayOf(0,0,1,1,1,0,0),
+    intArrayOf(1,1,1,1,1,1,1),
+    intArrayOf(0,0,1,1,1,0,0),
+    intArrayOf(0,1,0,1,0,1,0),
+    intArrayOf(1,0,0,1,0,0,1),
+)
+private val SPECIAL_PIXELS = arrayOf(
+    intArrayOf(0,0,1,1,1,0,0),
+    intArrayOf(0,1,0,0,0,1,0),
+    intArrayOf(1,0,0,1,0,0,1),
+    intArrayOf(1,0,1,0,1,0,1),
+    intArrayOf(1,0,0,1,0,0,1),
+    intArrayOf(0,1,0,0,0,1,0),
+    intArrayOf(0,0,1,1,1,0,0),
+)
+
+@Composable
+private fun MoveCategoryIcon(typeId: Int, power: Int, modifier: Modifier = Modifier) {
+    val pixels: Array<IntArray>?
+    val color: Color
+    when {
+        power == 0               -> { pixels = null; color = Color.Transparent }
+        typeId in PHYSICAL_TYPES -> { pixels = PHYSICAL_PIXELS; color = Color(0xFFF08030) }
+        typeId in SPECIAL_TYPES  -> { pixels = SPECIAL_PIXELS;  color = Color(0xFF6890F0) }
+        else                     -> { pixels = null; color = Color.Transparent }
+    }
+    Canvas(modifier = modifier) {
+        if (pixels == null) return@Canvas
+        val cellW = size.width  / 7f
+        val cellH = size.height / 7f
+        for (row in 0..6) {
+            for (col in 0..6) {
+                if (pixels[row][col] == 1) {
+                    drawRect(
+                        color = color,
+                        topLeft = Offset(col * cellW, row * cellH),
+                        size = Size(cellW, cellH),
+                    )
+                }
+            }
+        }
+    }
+}
+
 // ── Move table ────────────────────────────────────────────────────────────────
 @Composable
 private fun MoveTable(moves: List<MoveData>, battle: BattleState, onClick: (MoveData) -> Unit) {
     // Column header
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text("Cat", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(22.dp))
+        Spacer(Modifier.width(22.dp))  // category icon column
         Text("Move", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
         Text("Pwr", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(34.dp))
         Text("Eff", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(28.dp))
@@ -686,8 +727,6 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, onClick: () -> Uni
     val effectiveness = battle.enemy?.let { enemy ->
         TypeChart.effectiveness(move.moveType, enemy.type1, enemy.type2)
     }
-    val cat      = moveCategory(move.moveType, move.power)
-    val catColor = moveCategoryColor(move.moveType, move.power)
 
     Row(
         modifier = Modifier
@@ -696,11 +735,13 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, onClick: () -> Uni
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Category
-        Text(
-            text = cat, color = catColor, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.width(22.dp),
+        // Category icon (physical starburst / special diamond, matching Lua Constants.PixelImages)
+        MoveCategoryIcon(
+            typeId = move.moveType,
+            power  = move.power,
+            modifier = Modifier.size(width = 18.dp, height = 18.dp),
         )
+        Spacer(Modifier.width(4.dp))
         // Type dot + name
         Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Box(
