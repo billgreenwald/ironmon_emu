@@ -6,6 +6,7 @@ data class PokemonData(
     val slot: Int,
     val speciesId: Int,
     val speciesName: String,
+    val nickname: String,     // decoded from bytes 0x08–0x11; empty if matches species name or blank
     val level: Int,
     val currentHp: Int,
     val maxHp: Int,
@@ -19,6 +20,8 @@ data class PokemonData(
     val moves: List<MoveData>,
     val heldItemId: Int,
     val experience: Int,
+    // Status condition (raw byte at 0x50): bits 0-2=sleep, 3=PSN, 4=BRN, 5=FRZ, 6=PAR, 7=TOX
+    val statusCondition: Int,
     // Phase A additions
     val nature: Int,          // 0–24 (personality % 25)
     val abilityIndex: Int,    // 0 or 1 (Misc substructure bit 31)
@@ -34,12 +37,31 @@ data class PokemonData(
     val gender: Gender,
     val isShiny: Boolean,
     val hasPokerus: Boolean,
+    // IVs (0–31 each) from Misc substructure ivWord
+    val ivHp: Int,
+    val ivAtk: Int,
+    val ivDef: Int,
+    val ivSpe: Int,
+    val ivSpA: Int,
+    val ivSpD: Int,
+    // EVs (0–255 each) from Effort substructure
+    val evHp: Int,
+    val evAtk: Int,
+    val evDef: Int,
+    val evSpe: Int,
+    val evSpA: Int,
+    val evSpD: Int,
+    // Friendship (0–255) from Growth substructure byte 9
+    val friendship: Int,
+    // Hidden Power type (0–17, Gen III type ID) computed from IVs
+    val hiddenPowerType: Int,
 ) {
     val isAlive: Boolean get() = currentHp > 0
     val hpPercent: Float get() = if (maxHp > 0) currentHp.toFloat() / maxHp else 0f
     val bst: Int get() = baseHp + baseAtk + baseDef + baseSpd + baseSpAtk + baseSpDef
     val abilityId: Int get() =
         if (abilityIndex == 0 || ability2Id == 0) ability1Id else ability2Id
+    val displayName: String get() = nickname.ifEmpty { speciesName }
 }
 
 data class MoveData(

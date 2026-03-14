@@ -1,6 +1,7 @@
 package hh.game.mgba_android.tracker
 
 import android.content.Context
+import hh.game.mgba_android.tracker.data.BagDetailInfo
 import hh.game.mgba_android.tracker.data.BagReader
 import hh.game.mgba_android.tracker.data.DataHelper
 import hh.game.mgba_android.tracker.data.GameAddresses
@@ -199,7 +200,7 @@ object TrackerPoller {
         val stats = StatsReader.read(addresses)
 
         // ── Healing items (matches Lua Program.updateBagItems + recalcLeadPokemonHealingInfo) ──
-        val healInfo = party.firstOrNull()?.let { lead ->
+        val bagDetail = party.firstOrNull()?.let { lead ->
             BagReader.read(addresses, lead.maxHp)
         }
 
@@ -214,7 +215,7 @@ object TrackerPoller {
         return TrackerState.Active(
             game = game, romVersion = romVersion, romTitle = romTitle,
             party = party, battle = battle, currentRoute = route,
-            stats = stats, healInfo = healInfo,
+            stats = stats, bagDetail = bagDetail,
             isGameOver = isGameOver, runAttempts = runAttempts,
             playerLearnset = playerLearnset, enemyLearnset = enemyLearnset,
             routeEncounters = encountersByRoute.mapValues { it.value.toList() },
@@ -297,6 +298,32 @@ object TrackerPoller {
                 val currentHp = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_CURRENT_HP) else 0
                 val maxHpRaw = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_MAX_HP) else 0
 
+                // ── Enemy PP decode from party struct ─────────────────────────
+                // Decrypt enemy party struct to read current PP from Attacks substructure
+                val enemyPpByMoveId: Map<Int, Int> = if (enemyRaw != null && enemyRaw.size >= 100) {
+                    val ePers = enemyRaw.u32(DataHelper.OFF_PERSONALITY)
+                    val eOt   = enemyRaw.u32(DataHelper.OFF_OT_ID)
+                    val eKey  = ePers xor eOt
+                    val eDec  = ByteArray(48)
+                    for (wi in 0 until 12) {
+                        val w = enemyRaw.u32(DataHelper.OFF_ENCRYPTED + wi * 4) xor eKey
+                        eDec[wi*4+0] = (w and 0xFF).toByte()
+                        eDec[wi*4+1] = ((w shr 8) and 0xFF).toByte()
+                        eDec[wi*4+2] = ((w shr 16) and 0xFF).toByte()
+                        eDec[wi*4+3] = ((w shr 24) and 0xFF).toByte()
+                    }
+                    val eOrder = PokemonDecoder.SUBSTRUCTURE_ORDER[(ePers % 24).toInt()]
+                    val atkOff = eOrder[1] * 12
+                    buildMap {
+                        for (slot in 0..3) {
+                            val mId = (eDec[atkOff + slot*2].toInt() and 0xFF) or
+                                      ((eDec[atkOff + slot*2 + 1].toInt() and 0xFF) shl 8)
+                            val pp  = eDec[atkOff + 8 + slot].toInt() and 0xFF
+                            if (mId != 0) put(mId, pp)
+                        }
+                    }
+                } else emptyMap()
+
                 EnemyData(
                     speciesId       = speciesId,
                     name            = SpeciesNames.get(speciesId),
@@ -312,12 +339,23 @@ object TrackerPoller {
                     baseSpAtk       = baseSpAtk,
                     baseSpDef       = baseSpDef,
                     revealedMoveIds = revealedMovesByKey[key]?.toList() ?: emptyList(),
+                    ppByMoveId      = enemyPpByMoveId,
                     status          = enemyMon[DataHelper.BMON_STATUS].toInt() and 0xFF,
                     currentHp       = currentHp,
                     maxHp           = maxHpRaw,
                 )
             } else null
         } else null
+
+        // ── Player stat stages (gBattleMons slot 0, offset 0x18, 7 bytes) ─────
+        // [Atk, Def, SpA, SpD, Spe, Acc, Eva]; 6 = neutral
+        val playerStatStages = MemoryBridge.readBytes(addresses.battleMons + 0x18L, 7)
+            ?.let { b -> IntArray(7) { b[it].toInt() and 0xFF } }
+
+        // ── Trainer opponent ID ───────────────────────────────────────────────
+        val trainerOpponentId = if (!isWild && addresses.trainerBattleOpponent != 0L)
+            MemoryBridge.readU16(addresses.trainerBattleOpponent) ?: 0
+        else 0
 
         // ── Weather ───────────────────────────────────────────────────────────
         val weatherBytes = MemoryBridge.readBytes(addresses.battleWeather, 2)
@@ -348,21 +386,29 @@ object TrackerPoller {
         val spikes = (playerSideStatus ushr 9) and 0x03  // bits 9-10
 
         return BattleState(
-            isActive         = true,
-            isWild           = isWild,
-            enemy            = enemy,
-            weather          = weather,
-            playerReflect    = reflectTurns,
-            playerLightScreen = lightScreenTurns,
-            enemySpikes      = spikes,
-            playerSafeguard  = safeguardTurns,
-            turnCount        = 0,
-            lastMoveId       = 0,
+            isActive           = true,
+            isWild             = isWild,
+            enemy              = enemy,
+            weather            = weather,
+            playerReflect      = reflectTurns,
+            playerLightScreen  = lightScreenTurns,
+            enemySpikes        = spikes,
+            playerSafeguard    = safeguardTurns,
+            turnCount          = 0,
+            lastMoveId         = 0,
+            trainerOpponentId  = trainerOpponentId,
+            playerStatStages   = playerStatStages,
         )
     }
 
     private fun ByteArray.u16(offset: Int): Int =
         (this[offset].toInt() and 0xFF) or ((this[offset + 1].toInt() and 0xFF) shl 8)
+
+    private fun ByteArray.u32(offset: Int): Long =
+        (this[offset].toLong() and 0xFF) or
+        ((this[offset + 1].toLong() and 0xFF) shl 8) or
+        ((this[offset + 2].toLong() and 0xFF) shl 16) or
+        ((this[offset + 3].toLong() and 0xFF) shl 24)
 
     private const val POLL_INTERVAL_MS = 250L
 }

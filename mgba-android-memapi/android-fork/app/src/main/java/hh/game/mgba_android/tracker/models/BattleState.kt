@@ -14,8 +14,9 @@ data class EnemyData(
     val baseSpd: Int,
     val baseSpAtk: Int,
     val baseSpDef: Int,
-    val revealedMoveIds: List<Int>,  // move IDs seen so far in battle
-    val status: Int,                 // status condition byte (0=none)
+    val revealedMoveIds: List<Int>,          // move IDs seen so far in battle
+    val ppByMoveId: Map<Int, Int> = emptyMap(), // moveId → current PP (from enemy party struct)
+    val status: Int,                         // status condition byte (0=none)
     val currentHp: Int,
     val maxHp: Int,
 ) {
@@ -28,12 +29,14 @@ data class BattleState(
     val isWild: Boolean,
     val enemy: EnemyData?,
     val weather: Weather,
-    val playerReflect: Int,       // turns remaining (0 = none)
+    val playerReflect: Int,           // turns remaining (0 = none)
     val playerLightScreen: Int,
-    val enemySpikes: Int,          // 0–3 layers on player's side
+    val enemySpikes: Int,              // 0–3 layers on player's side
     val playerSafeguard: Int,
     val turnCount: Int,
-    val lastMoveId: Int,           // 0 = none
+    val lastMoveId: Int,               // 0 = none
+    val trainerOpponentId: Int = 0,    // gTrainerBattleOpponent_A; 0 for wild
+    val playerStatStages: IntArray? = null, // [Atk,Def,SpA,SpD,Spe,Acc,Eva] 0-12; 6=neutral
 ) {
     companion object {
         val NONE = BattleState(

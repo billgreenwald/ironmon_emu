@@ -3,11 +3,15 @@ package hh.game.mgba_android.tracker.data
 import hh.game.mgba_android.tracker.models.Gender
 import hh.game.mgba_android.tracker.models.MoveData
 import hh.game.mgba_android.tracker.models.PokemonData
+import hh.game.mgba_android.tracker.tables.GenIIICharMap
 import hh.game.mgba_android.tracker.tables.MoveStatsTable
 
 object PokemonDecoder {
 
-    private val SUBSTRUCTURE_ORDER: Array<IntArray> = arrayOf(
+    // sHiddenPowerType[] from pret pokefirered source — maps HP index 0-15 to ROM type IDs
+    private val HP_TYPE_ROM_IDS = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17)
+
+    internal val SUBSTRUCTURE_ORDER: Array<IntArray> = arrayOf(
         intArrayOf(0, 1, 2, 3), // 0:  GAEM
         intArrayOf(0, 1, 3, 2), // 1:  GAME
         intArrayOf(0, 2, 1, 3), // 2:  GEAM
@@ -62,13 +66,15 @@ object PokemonDecoder {
         // Substructure offsets within 48-byte decrypted block
         val growthOffset  = order[0] * 12
         val attacksOffset = order[1] * 12
-        val evOffset      = order[2] * 12   // EVs (unused here)
+        val evOffset      = order[2] * 12
         val miscOffset    = order[3] * 12
 
         // ── Growth ────────────────────────────────────────────────────────────
         val speciesId  = decrypted.u16(growthOffset + DataHelper.GROWTH_SPECIES)
         val heldItemId = decrypted.u16(growthOffset + DataHelper.GROWTH_ITEM)
         val experience = decrypted.u32(growthOffset + DataHelper.GROWTH_EXP).toInt()
+        // Friendship at growthOffset+9 (byte after ppBonuses at +8) — matches Lua: Utils.getbits(growth3, 8, 8)
+        val friendship = decrypted[growthOffset + 9].toInt() and 0xFF
 
         if (speciesId == 0) return null
 
@@ -87,6 +93,45 @@ object PokemonDecoder {
         val ivWord     = decrypted.u32(miscOffset + DataHelper.MISC_IV_ABILITY)
         val hasPokerus = pokerusRaw != 0
         val abilityIndex = ((ivWord ushr 31) and 1).toInt()
+
+        // IVs (5 bits each) from ivWord: HP, Atk, Def, Spe, SpA, SpD
+        val ivHp  = (ivWord ushr  0).toInt() and 0x1F
+        val ivAtk = (ivWord ushr  5).toInt() and 0x1F
+        val ivDef = (ivWord ushr 10).toInt() and 0x1F
+        val ivSpe = (ivWord ushr 15).toInt() and 0x1F
+        val ivSpA = (ivWord ushr 20).toInt() and 0x1F
+        val ivSpD = (ivWord ushr 25).toInt() and 0x1F
+
+        // Hidden Power type — Gen III formula → ROM type ID
+        // Formula yields index 0-15 → map to sHiddenPowerType[] from pret source
+        // (Fighting=1, Flying=2, Poison=3, Ground=4, Rock=5, Bug=6, Ghost=7, Steel=8,
+        //  Fire=10, Water=11, Grass=12, Electric=13, Psychic=14, Ice=15, Dragon=16, Dark=17)
+        val hpTypeIndex = ((ivHp and 1) + 2*(ivAtk and 1) + 4*(ivDef and 1) +
+            8*(ivSpe and 1) + 16*(ivSpA and 1) + 32*(ivSpD and 1)) * 15 / 63
+        val hiddenPowerType = HP_TYPE_ROM_IDS[hpTypeIndex]
+
+        // ── Effort substructure (EVs) ─────────────────────────────────────────
+        val effort1 = decrypted.u32(evOffset + 0)
+        val effort2 = decrypted.u32(evOffset + 4)
+        val evHp  = (effort1 ushr  0).toInt() and 0xFF
+        val evAtk = (effort1 ushr  8).toInt() and 0xFF
+        val evDef = (effort1 ushr 16).toInt() and 0xFF
+        val evSpe = (effort1 ushr 24).toInt() and 0xFF
+        val evSpA = (effort2 ushr  0).toInt() and 0xFF
+        val evSpD = (effort2 ushr  8).toInt() and 0xFF
+
+        // ── Nickname — unencrypted at raw[0x08], 10 bytes, 0xFF = terminator ────
+        // Matches Lua Program.lua: for i=0, sizeofPokemonNickname-1 do readbyte(startAddress + 8 + i)
+        val nickname = buildString {
+            for (i in 0 until 10) {
+                val b = raw[0x08 + i].toInt() and 0xFF
+                if (b == 0xFF) break
+                append(GenIIICharMap.get(b))
+            }
+        }.trim()
+
+        // ── Status condition — unencrypted u32 at raw[0x50] ──────────────────
+        val statusCondition = raw[DataHelper.OFF_STATUS].toInt() and 0xFF
 
         // ── Unencrypted in-battle stats ───────────────────────────────────────
         val level     = raw[DataHelper.OFF_LEVEL].toInt() and 0xFF
@@ -136,36 +181,52 @@ object PokemonDecoder {
         )
 
         return PokemonData(
-            slot         = slot,
-            speciesId    = speciesId,
-            speciesName  = nameTable(speciesId),
-            level        = level,
-            currentHp    = currentHp,
-            maxHp        = maxHp,
-            type1        = type1,
-            type2        = type2,
-            attack       = attack,
-            defense      = defense,
-            speed        = speed,
-            spAtk        = spAtk,
-            spDef        = spDef,
-            moves        = moves,
-            heldItemId   = heldItemId,
-            experience   = experience,
-            nature       = nature,
-            abilityIndex = abilityIndex,
-            ability1Id   = ability1Id,
-            ability2Id   = ability2Id,
-            baseHp       = baseHp,
-            baseAtk      = baseAtk,
-            baseDef      = baseDef,
-            baseSpd      = baseSpd,
-            baseSpAtk    = baseSpAtk,
-            baseSpDef    = baseSpDef,
-            expGroup     = expGroup,
-            gender       = gender,
-            isShiny      = isShiny,
-            hasPokerus   = hasPokerus,
+            slot             = slot,
+            speciesId        = speciesId,
+            speciesName      = nameTable(speciesId),
+            nickname         = nickname,
+            level            = level,
+            currentHp        = currentHp,
+            maxHp            = maxHp,
+            type1            = type1,
+            type2            = type2,
+            attack           = attack,
+            defense          = defense,
+            speed            = speed,
+            spAtk            = spAtk,
+            spDef            = spDef,
+            moves            = moves,
+            heldItemId       = heldItemId,
+            experience       = experience,
+            statusCondition  = statusCondition,
+            nature           = nature,
+            abilityIndex     = abilityIndex,
+            ability1Id       = ability1Id,
+            ability2Id       = ability2Id,
+            baseHp           = baseHp,
+            baseAtk          = baseAtk,
+            baseDef          = baseDef,
+            baseSpd          = baseSpd,
+            baseSpAtk        = baseSpAtk,
+            baseSpDef        = baseSpDef,
+            expGroup         = expGroup,
+            gender           = gender,
+            isShiny          = isShiny,
+            hasPokerus       = hasPokerus,
+            ivHp             = ivHp,
+            ivAtk            = ivAtk,
+            ivDef            = ivDef,
+            ivSpe            = ivSpe,
+            ivSpA            = ivSpA,
+            ivSpD            = ivSpD,
+            evHp             = evHp,
+            evAtk            = evAtk,
+            evDef            = evDef,
+            evSpe            = evSpe,
+            evSpA            = evSpA,
+            evSpD            = evSpD,
+            friendship       = friendship,
+            hiddenPowerType  = hiddenPowerType,
         )
     }
 

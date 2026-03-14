@@ -27,8 +27,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skydoves.landscapist.glide.GlideImage
+import hh.game.mgba_android.tracker.data.BagDetailInfo
 import hh.game.mgba_android.tracker.data.GameStats
-import hh.game.mgba_android.tracker.data.HealInfo
 import hh.game.mgba_android.tracker.data.LearnsetInfo
 import hh.game.mgba_android.tracker.models.*
 import hh.game.mgba_android.tracker.tables.*
@@ -202,7 +202,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
                     .verticalScroll(rememberScrollState()),
             ) {
                 state.leadPokemon?.let { lead ->
-                    MainView(lead, state.battle, state.stats, state.healInfo, state.playerLearnset)
+                    MainView(lead, state.battle, state.stats, state.bagDetail, state.playerLearnset)
                 } ?: StatusText("Party empty")
             }
             1 -> Column(
@@ -261,11 +261,13 @@ private fun PanelHeader(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 @Composable
-private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, healInfo: HealInfo? = null, learnset: LearnsetInfo? = null) {
+private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, bagDetail: BagDetailInfo? = null, learnset: LearnsetInfo? = null) {
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showAbilitySheet by remember { mutableStateOf(false) }
     var showDefenseSheet by remember { mutableStateOf(false) }
     var showLearnsetSheet by remember { mutableStateOf(false) }
+    var showIvSheet by remember { mutableStateOf(false) }
+    var showBagSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -280,19 +282,19 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         ) {
             GlideImage(
                 imageModel = { "file:///android_asset/sprites/${pokemon.speciesId}.gif" },
-                modifier = Modifier.size(80.dp),
+                modifier = Modifier.size(48.dp),
                 failure = {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("#${pokemon.speciesId}", color = TextSecondary, fontSize = 12.sp)
+                        Text("#${pokemon.speciesId}", color = TextSecondary, fontSize = 10.sp)
                     }
                 },
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = buildString {
-                            append(pokemon.speciesName)
+                            append(pokemon.displayName)
                             when (pokemon.gender) {
                                 Gender.MALE   -> append(" ♂")
                                 Gender.FEMALE -> append(" ♀")
@@ -301,26 +303,29 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
                             if (pokemon.isShiny) append(" ✦")
                             if (pokemon.hasPokerus) append(" ✚")
                         },
-                        color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                        color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f),
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
-                    Text("Lv.${pokemon.level}", color = TextSecondary, fontSize = 16.sp)
+                    StatusBadge(pokemon.statusCondition)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Lv.${pokemon.level}", color = TextSecondary, fontSize = 13.sp)
                 }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                     modifier = Modifier.clickable { showDefenseSheet = true },
                 ) {
-                    TypeChip(pokemon.type1)
-                    if (pokemon.type2 != pokemon.type1) TypeChip(pokemon.type2)
+                    TypeChip(pokemon.type1, small = true)
+                    if (pokemon.type2 != pokemon.type1) TypeChip(pokemon.type2, small = true)
                 }
                 Spacer(Modifier.height(2.dp))
                 HpBar(pokemon)
                 // Heals in bag — matches Lua TrackerScreen "Heals:" display (%.0f%% HP (N))
-                if (healInfo != null && healInfo.healCount > 0) {
+                if (bagDetail != null && bagDetail.hpHealCount > 0) {
                     Text(
-                        text = "Heals: %.0f%% HP (%d)".format(healInfo.healPercent, healInfo.healCount),
+                        text = "Heals: %.0f%% HP (%d)".format(bagDetail.hpHealPercent, bagDetail.hpHealCount),
                         color = TextSecondary, fontSize = 11.sp,
+                        modifier = Modifier.clickable { showBagSheet = true },
                     )
                 }
             }
@@ -366,7 +371,33 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
         Spacer(Modifier.height(4.dp))
 
-        StatsTable(pokemon)
+        // Player stat stages — shown when in battle and any stage differs from neutral (6)
+        if (battle.isActive && battle.playerStatStages != null) {
+            val stageLabels = listOf("Atk", "Def", "SpA", "SpD", "Spe", "Acc", "Eva")
+            val anyChanged = battle.playerStatStages.any { it != 6 }
+            if (anyChanged) {
+                Spacer(Modifier.height(2.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    battle.playerStatStages.forEachIndexed { i, stage ->
+                        val delta = stage - 6
+                        if (delta != 0) {
+                            val (stageText, stageColor) = if (delta > 0)
+                                "+$delta" to Color(0xFF4CAF50)
+                            else
+                                "$delta" to Color(0xFFFF6B6B)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(stageLabels[i], color = TextSecondary, fontSize = 9.sp)
+                                Text(stageText, color = stageColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Box(modifier = Modifier.clickable { showIvSheet = true }) {
+            StatsTable(pokemon)
+        }
 
         Spacer(Modifier.height(4.dp))
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
@@ -391,6 +422,12 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     }
     if (showLearnsetSheet && learnset != null) {
         LearnsetSheet(learnset, pokemon.level, onDismiss = { showLearnsetSheet = false })
+    }
+    if (showIvSheet) {
+        IVStatSheet(pokemon, onDismiss = { showIvSheet = false })
+    }
+    if (showBagSheet && bagDetail != null) {
+        BagDetailSheet(bagDetail, onDismiss = { showBagSheet = false })
     }
 }
 
@@ -572,10 +609,15 @@ private fun EnemyView(
 
         // Battle type + weather
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = if (battle.isWild) "WILD" else "TRAINER",
-                color = AccentRed, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-            )
+            Column {
+                Text(
+                    text = if (battle.isWild) "WILD" else "TRAINER",
+                    color = AccentRed, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                )
+                if (!battle.isWild && battle.trainerOpponentId != 0) {
+                    Text("Trainer #${battle.trainerOpponentId}", color = TextSecondary, fontSize = 11.sp)
+                }
+            }
             if (battle.weather != Weather.NONE) {
                 Spacer(Modifier.width(6.dp))
                 Text(battle.weather.displayName, color = AccentBlue, fontSize = 14.sp)
@@ -628,7 +670,8 @@ private fun EnemyView(
                             .background(typeColor(moveTypeId), CircleShape)
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text(MoveNames.get(moveId), color = TextPrimary, fontSize = 14.sp)
+                    val ppText = enemy.ppByMoveId[moveId]?.let { " (${it}PP)" } ?: ""
+                    Text(MoveNames.get(moveId) + ppText, color = TextPrimary, fontSize = 14.sp)
                 }
             }
         }
@@ -1082,6 +1125,110 @@ fun TypeDefenseSheet(type1: Int, type2: Int, onDismiss: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+// status byte bit layout: bits 0-2=sleep turns, 3=PSN, 4=BRN, 5=FRZ, 6=PAR, 7=TOX
+@Composable
+private fun StatusBadge(status: Int) {
+    if (status == 0) return
+    val (label, color) = when {
+        status and 0x07 != 0 -> "SLP ${status and 0x07}" to Color(0xFF888888)
+        status and 0x08 != 0 -> "PSN"  to Color(0xFFA040A0)
+        status and 0x10 != 0 -> "BRN"  to Color(0xFFE07030)
+        status and 0x20 != 0 -> "FRZ"  to Color(0xFF60C8C8)
+        status and 0x40 != 0 -> "PAR"  to Color(0xFFE0D000)
+        status and 0x80 != 0 -> "TOX"  to Color(0xFF602080)
+        else -> return
+    }
+    Box(
+        modifier = Modifier
+            .background(color.copy(alpha = 0.85f), RoundedCornerShape(3.dp))
+            .padding(horizontal = 4.dp, vertical = 1.dp),
+    ) {
+        Text(label, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+// ── IV/EV/Friendship/Hidden Power sheet ──────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun IVStatSheet(pokemon: PokemonData, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Stats Detail", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(10.dp))
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text("Stat", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text("IV",  color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(36.dp))
+                Text("EV",  color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(44.dp))
+            }
+            Spacer(Modifier.height(4.dp))
+
+            val statRows = listOf(
+                Triple("HP",  pokemon.ivHp,  pokemon.evHp),
+                Triple("Atk", pokemon.ivAtk, pokemon.evAtk),
+                Triple("Def", pokemon.ivDef, pokemon.evDef),
+                Triple("SpA", pokemon.ivSpA, pokemon.evSpA),
+                Triple("SpD", pokemon.ivSpD, pokemon.evSpD),
+                Triple("Spe", pokemon.ivSpe, pokemon.evSpe),
+            )
+            statRows.forEach { (label, iv, ev) ->
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                    Text(label, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text("$iv", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.width(36.dp))
+                    Text("$ev", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.width(44.dp))
+                }
+            }
+
+            Spacer(Modifier.height(6.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text("Friendship:", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text("${pokemon.friendship} / 255", color = TextPrimary, fontSize = 13.sp)
+            }
+            Spacer(Modifier.height(4.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Hidden Power:", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                TypeChip(pokemon.hiddenPowerType)
+            }
+
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+// ── Bag detail sheet ──────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BagDetailSheet(detail: BagDetailInfo, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+        Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+            Text("Bag Detail", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(10.dp))
+
+            BagSection("HP Items", detail.hpItems)
+            BagSection("PP Items", detail.ppItems)
+            BagSection("Status Items", detail.statusItems)
+            BagSection("Battle Items", detail.battleItems)
+
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun BagSection(title: String, items: List<hh.game.mgba_android.tracker.data.BagItemEntry>) {
+    if (items.isEmpty()) return
+    Spacer(Modifier.height(8.dp))
+    Text(title, color = AccentBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(4.dp))
+    items.forEach { entry ->
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
+            Text(entry.name, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text("×${entry.quantity}", color = TextSecondary, fontSize = 13.sp)
         }
     }
 }

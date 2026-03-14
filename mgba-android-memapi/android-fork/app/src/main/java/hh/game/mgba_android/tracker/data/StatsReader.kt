@@ -17,10 +17,15 @@ object StatsReader {
     private const val SIZEOF_GAME_STAT = 4 // each stat is a 32-bit dword
 
     fun read(addresses: GameAddresses): GameStats? {
-        // Resolve SaveBlock1 address (always a pointer for FR/LG/Emerald; RS uses direct but is out of scope)
-        val ptrBytes = MemoryBridge.readBytes(addresses.saveBlock1Ptr, 4) ?: return null
-        val saveBlock1Addr = ptrBytes.toLittleEndianLong()
-        if (saveBlock1Addr == 0L) return null
+        // Resolve SaveBlock1 address (pointer for FR/LG/Emerald; direct address for Ruby/Sapphire)
+        val saveBlock1Addr: Long = if (addresses.saveBlock1IsPointer) {
+            val ptrBytes = MemoryBridge.readBytes(addresses.saveBlock1Ptr, 4) ?: return null
+            val addr = ptrBytes.toLittleEndianLong()
+            if (addr == 0L) return null
+            addr
+        } else {
+            addresses.saveBlock1Ptr
+        }
 
         // Get 32-bit XOR key used to encrypt game stats.
         // Ruby/Sapphire (saveBlock2Ptr == 0L) have no encryption per Lua tracker (game == 1 → return nil).

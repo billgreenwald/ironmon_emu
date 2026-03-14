@@ -22,6 +22,7 @@ data class GameAddresses(
     val gMapHeader: Long,        // read mapLayoutId at gMapHeader + 0x12
     // SaveBlock1 (for stats)
     val saveBlock1Ptr: Long,
+    val saveBlock1IsPointer: Boolean = true,  // true = dereference pointer; false = use address directly (Ruby/Sapphire)
     val gameStatsOffset: Int,    // byte offset within SaveBlock1 to game stats array
     // SaveBlock2 (for XOR key used to decrypt game stats)
     // saveBlock2Ptr == 0L means no encryption (Ruby/Sapphire per Lua tracker)
@@ -33,6 +34,8 @@ data class GameAddresses(
     val bagPocket_Items_size: Int,
     val bagPocket_Berries_offset: Int,
     val bagPocket_Berries_size: Int,
+    // gTrainerBattleOpponent_A (u16): opponent trainer class index; 0 = wild (Lua tracker)
+    val trainerBattleOpponent: Long = 0L,
 )
 
 object DataHelper {
@@ -101,6 +104,10 @@ object DataHelper {
     const val BMON_MOVE4:      Int = 0x12
     const val BMON_STATUS:     Int = 0x28  // status1 (approximate; used for display only)
 
+    // ── Party Pokemon unencrypted status (u32 at raw[0x50]) ──────────────────
+    // Bit layout: bits 0-2 = sleep turns, bit 3 = PSN, bit 4 = BRN, bit 5 = FRZ, bit 6 = PAR, bit 7 = TOX
+    const val OFF_STATUS:      Int = 0x50
+
     // ── gBattleResults offsets (from Lua tracker Program.Addresses) ──────────
     const val BATTLE_RESULTS_ENEMY_MOVE_OFFSET: Int = 0x24  // offsetBattleResultsEnemyMoveId
 
@@ -131,6 +138,7 @@ object DataHelper {
         battleResults       = 0x3004F90L,   // gBattleResults (FR/LG all variants)
         gMapHeader          = 0x02036DFCL,
         saveBlock1Ptr       = 0x03005008L,
+        saveBlock1IsPointer = true,
         gameStatsOffset     = 0x1200,
         saveBlock2Ptr       = 0x0300500CL,  // gSaveBlock2ptr (English FR/LG)
         encryptionKeyOffset = 0xF20,        // EncryptionKeyOffset (all FR/LG variants)
@@ -139,6 +147,7 @@ object DataHelper {
         bagPocket_Items_size    = 0x2A,     // 42 slots
         bagPocket_Berries_offset = 0x54C,
         bagPocket_Berries_size  = 0x2B,     // 43 slots
+        trainerBattleOpponent   = 0x020386AEL,  // gTrainerBattleOpponent_A (English FR/LG)
     )
 
     // FireRed English v1.1 (BPRE, version byte 1)
@@ -168,25 +177,26 @@ object DataHelper {
 
     // Ruby v1.0
     // Addresses from Lua tracker: Pokemon Ruby v1.0.json
-    // NOTE: Ruby/Sapphire battle addresses are unverified placeholders (out of scope).
     // saveBlock2Ptr = 0L signals no encryption (Ruby/Sapphire per Lua tracker game==1 check).
+    // saveBlock1IsPointer = false: gSaveBlock1 is a direct RAM address (0x2025734), not a pointer-to-pointer.
     private val RUBY_V10 = GameAddresses(
-        partyCount          = 0x03004350L,
-        partyBase           = 0x020244ECL,
+        partyCount          = 0x03004350L,  // gPlayerPartyCount (IWRAM)
+        partyBase           = 0x03004360L,  // pstats (IWRAM)
         baseStatsTable      = 0x081FEC18L,
         levelUpLearnsets    = 0x08207BC8L,  // Pokemon Ruby v1.0.json
-        experienceTables    = 0x081E8CE4L,
-        enemyParty          = 0x020244ECL,
-        battleTypeFlags     = 0x03004360L,
-        battleMons          = 0x03004360L,
-        battlersCount       = 0x03004398L,
-        battleWeather       = 0x020238C8L,
-        sideStatuses        = 0x02023718L,
-        sideTimers          = 0x0202371EL,
-        battleOutcome       = 0x03004360L,
-        battleResults       = 0x30042E0L,   // gBattleResults (Ruby/Sapphire all variants)
+        experienceTables    = 0x081FDF78L,  // from Lua Ruby v1.0.json
+        enemyParty          = 0x030045C0L,  // estats (IWRAM)
+        battleTypeFlags     = 0x020239F8L,  // gBattleTypeFlags
+        battleMons          = 0x02024A80L,  // gBattleMons
+        battlersCount       = 0x02024A68L,  // gBattlersCount
+        battleWeather       = 0x02024DB8L,  // gBattleWeather
+        sideStatuses        = 0x02024C7AL,  // gSideStatuses
+        sideTimers          = 0x02024C80L,  // gSideTimers
+        battleOutcome       = 0x02024D26L,  // gBattleOutcome
+        battleResults       = 0x030042E0L,  // gBattleResults (Ruby/Sapphire all variants)
         gMapHeader          = 0x0202E828L,
-        saveBlock1Ptr       = 0x03005D8CL,
+        saveBlock1Ptr       = 0x02025734L,  // gSaveBlock1 — direct address, not a pointer
+        saveBlock1IsPointer = false,
         gameStatsOffset     = 0x1540,
         saveBlock2Ptr       = 0L,           // No encryption for Ruby/Sapphire
         encryptionKeyOffset = 0,
@@ -195,6 +205,7 @@ object DataHelper {
         bagPocket_Items_size    = 0x14,     // 20 slots
         bagPocket_Berries_offset = 0x740,
         bagPocket_Berries_size  = 0x2E,     // 46 slots
+        trainerBattleOpponent   = 0x0202FF5EL,  // gTrainerBattleOpponent_A
     )
 
     // Ruby v1.1 / v1.2
@@ -203,18 +214,17 @@ object DataHelper {
         levelUpLearnsets = 0x08207BE0L,  // Pokemon Ruby v1.1.json
     )
 
-    // Sapphire v1.0
+    // Sapphire v1.0 — same battle addresses as Ruby, different ROM addresses
     private val SAPPHIRE_V10 = RUBY_V10.copy(
         baseStatsTable   = 0x081FEBA8L,
         levelUpLearnsets = 0x08207B58L,  // Pokemon Sapphire v1.0.json
-        experienceTables = 0x081E8CECL,
+        experienceTables = 0x081FDF08L,  // from Lua Sapphire v1.0.json
     )
 
     // Sapphire v1.1 / v1.2
-    private val SAPPHIRE_V11 = RUBY_V10.copy(
+    private val SAPPHIRE_V11 = SAPPHIRE_V10.copy(
         baseStatsTable   = 0x081FEBC0L,
         levelUpLearnsets = 0x08207B70L,  // Pokemon Sapphire v1.1.json
-        experienceTables = 0x081E8CECL,
     )
 
     // Emerald (single version)
@@ -228,14 +238,15 @@ object DataHelper {
         enemyParty          = 0x020244ECL,
         battleTypeFlags     = 0x02022FECL,
         battleMons          = 0x02024084L,
-        battlersCount       = 0x02024074L,
+        battlersCount       = 0x0202406CL,  // gBattlersCount — was 0x02024074 (off by 8), fixed from Emerald.json
         battleWeather       = 0x020243CCL,
         sideStatuses        = 0x0202428EL,
         sideTimers          = 0x02024294L,
-        battleOutcome       = 0x0202433AL, // gBattleOutcome from Emerald.json (was wrong)
+        battleOutcome       = 0x0202433AL, // gBattleOutcome from Emerald.json
         battleResults       = 0x3005D10L,  // gBattleResults from Emerald.json
         gMapHeader          = 0x02037318L,
         saveBlock1Ptr       = 0x03005D8CL,
+        saveBlock1IsPointer = true,
         gameStatsOffset     = 0x159C,
         saveBlock2Ptr       = 0x03005D90L, // gSaveBlock2ptr from Emerald.json
         encryptionKeyOffset = 0xAC,        // EncryptionKeyOffset from Emerald.json
@@ -244,6 +255,7 @@ object DataHelper {
         bagPocket_Items_size    = 0x1E,     // 30 slots
         bagPocket_Berries_offset = 0x790,
         bagPocket_Berries_size  = 0x2E,     // 46 slots
+        trainerBattleOpponent   = 0x02038BCAL,  // gTrainerBattleOpponent_A from Emerald.json
     )
 
     /**
@@ -257,7 +269,7 @@ object DataHelper {
             gameCode == "BPRI" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824D864L, saveBlock2Ptr = 0x03004F5CL) // Italian
             gameCode == "BPRF" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824EBD4L, saveBlock2Ptr = 0x03004F5CL) // French
             gameCode == "BPRD" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824EBD4L, saveBlock2Ptr = 0x03004F5CL) // German (approx)
-            gameCode == "BPRJ" -> FIRE_RED_V10.copy(baseStatsTable = 0x0821118CL, saveBlock2Ptr = 0x0300504CL) // Japanese
+            gameCode == "BPRJ" -> FIRE_RED_V10.copy(baseStatsTable = 0x0821118CL, saveBlock2Ptr = 0x0300504CL, trainerBattleOpponent = 0x0203860EL) // Japanese
             romVersion >= 1 -> FIRE_RED_V11
             else -> FIRE_RED_V10
         }
