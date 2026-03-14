@@ -109,8 +109,12 @@ IronMon Emu is distributed as an APK for sideloading. It is not on the Play Stor
 
 ## FAQ
 
+- The BSTs are either correct, or +/- 1 of the real BST.  What gives?
+  - I have no idea.  I am tracking this down, its the only bug i currently know of.
 - Will you make an ios version
   - I dont have an iphone, and I havent dealt with jailbreaking ios devices in a decade, and since I'm not releasing an app with Nintedo assets into a real store, there is no plan.  Feel free to put a PR in
+- Will you put this in the actual play store
+ - No, for the same reasons of Nintendo assets.
 - Something doesnt work
   - Make an issue on github, and ill get to it!
 - Did you use AI to make this?
