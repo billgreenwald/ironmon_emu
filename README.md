@@ -67,7 +67,9 @@ Most elements in the tracker panel are interactive — tap them to get a detail 
 | **Move name** | Move detail sheet: full description, type, power, accuracy, PP |
 | **Ability name** | Ability detail sheet: full in-game ability description |
 | **Type chip** (on your Pokémon or opponent) | Type defense chart: full 2× / 0.5× / 0× breakdown against all 18 types |
-| **Species sprite / name** | Learnset sheet: all moves the Pokémon learns by level-up and at what level |
+| **Moves** | List of what level each move is learned |
+| **Stats** | EVs, Friendship, and Hidden Power Type |
+| **Heals** | Full bag status, PP heal %, status heals |
 
 <p align="center">
   <img src="pop%20up%20info.png" alt="Pop-up Info" width="600"/>
