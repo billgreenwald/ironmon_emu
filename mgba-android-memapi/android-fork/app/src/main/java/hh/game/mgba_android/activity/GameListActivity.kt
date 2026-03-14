@@ -66,67 +66,7 @@ class GameListActivity : AppCompatActivity() {
         var uri = Uri.parse(sharepreferences?.getString(FOLDER_PATH, null))
         var documentfile = DocumentFile.fromTreeUri(this, uri)
         var coverfilefolder = documentfile?.findFile("gbacovers")
-        viewModel.gameListData.observe(this,{
-            list ->
-            gamelistview.adapter = gameListAdapter.also {
-                it.updateList(list)
-                it.updateCoverfolder(coverfilefolder)
-                it.itemClickListener = { position, game ->
-                    startActivity(
-                        Intent(
-                            this@GameListActivity,
-                            GameActivity::class.java
-                        ).also {
-                            var game = list.get(position)
-                            var gamepath = when (game) {
-                                is GBAgameData -> game.gbaDocumentFile.getAbsolutePath(this@GameListActivity)
-                                else -> (game as GBgameData).gbDocumentFile.getAbsolutePath(
-                                    this@GameListActivity
-                                )
-                            }
-                            it.putExtra(
-                                "gamepath",
-                                gamepath
-                            )
-                            when (game) {
-                                is GBAgameData -> {
-                                    it.putExtra("gamedetail", (game as GBAgameData).gbaGame)
-                                    it.putExtra("gametype",Gametype.GBA.name)
-                                    it.putExtra("cheat", if(game.gbaGame.GameNum?.isNotBlank() == true)game.gbaGame.GameNum
-                                    else game.gbaDocumentFile.name?.replace(".gba","")
-                                    )
-
-                                }
-                                is GBgameData -> {
-                                    it.putExtra("gamedetail", (game as GBgameData).gbgame)
-                                    it.putExtra("gametype",Gametype.GB.name)
-                                }
-                            }
-                        })
-                }
-                it.itemOnLongClickListener = { position, game ->
-                    startActivity(
-                        Intent(
-                            this@GameListActivity,
-                            CheatsActivity::class.java
-                        ).also {
-                            when (game) {
-                                is GBAgameData -> {
-                                    it.putExtra("gamedetail", (game as GBAgameData).gbaGame)
-                                    it.putExtra("gamepath",game.gbaDocumentFile.getAbsolutePath(this@GameListActivity))
-                                    it.putExtra("gametype",Gametype.GBA.name)
-                                }
-                                is GBgameData -> {
-                                    it.putExtra("gamedetail", (game as GBgameData).gbgame)
-                                    it.putExtra("gamepath",game.gbDocumentFile.getAbsolutePath(this@GameListActivity))
-                                    it.putExtra("gametype",Gametype.GB.name)
-                                }
-                            }
-                        })
-                }
-
-            }
-        })
-        viewModel.getGbaGameList(this,documentfile)
+        viewModel.familyGroupData.observe(this, { _ -> })
+        viewModel.loadFamilies(this, documentfile)
     }
 }

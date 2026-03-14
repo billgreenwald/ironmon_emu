@@ -118,7 +118,7 @@ object DataHelper {
         partyCount          = 0x02024029L,
         partyBase           = 0x02024284L,
         baseStatsTable      = 0x08254784L,
-        levelUpLearnsets    = 0x0825D794L,
+        levelUpLearnsets    = 0x0825D7B4L,  // Pokemon FireRed v1.0.json
         experienceTables    = 0x08253AE4L,
         enemyParty          = 0x0202402CL,
         battleTypeFlags     = 0x02022B4CL,
@@ -144,7 +144,7 @@ object DataHelper {
     // FireRed English v1.1 (BPRE, version byte 1)
     private val FIRE_RED_V11 = FIRE_RED_V10.copy(
         baseStatsTable   = 0x082547F4L,
-        levelUpLearnsets = 0x0825D804L,
+        levelUpLearnsets = 0x0825D824L,  // Pokemon FireRed v1.1.json
         experienceTables = 0x08253B54L,
     )
 
@@ -155,14 +155,14 @@ object DataHelper {
     // LeafGreen English v1.0
     private val LEAF_GREEN_V10 = FIRE_RED_V10.copy(
         baseStatsTable   = 0x08254760L,
-        levelUpLearnsets = 0x0825D770L,
+        levelUpLearnsets = 0x0825D794L,  // Pokemon LeafGreen v1.0.json
         experienceTables = 0x08253AC0L,
     )
 
     // LeafGreen English v1.1
     private val LEAF_GREEN_V11 = FIRE_RED_V10.copy(
         baseStatsTable   = 0x082547D0L,
-        levelUpLearnsets = 0x0825D804L,
+        levelUpLearnsets = 0x0825D804L,  // Pokemon LeafGreen v1.1.json
         experienceTables = 0x08253B30L,
     )
 
@@ -174,7 +174,7 @@ object DataHelper {
         partyCount          = 0x03004350L,
         partyBase           = 0x020244ECL,
         baseStatsTable      = 0x081FEC18L,
-        levelUpLearnsets    = 0x0823B16CL,
+        levelUpLearnsets    = 0x08207BC8L,  // Pokemon Ruby v1.0.json
         experienceTables    = 0x081E8CE4L,
         enemyParty          = 0x020244ECL,
         battleTypeFlags     = 0x03004360L,
@@ -197,20 +197,23 @@ object DataHelper {
         bagPocket_Berries_size  = 0x2E,     // 46 slots
     )
 
-    // Ruby v1.1 / v1.2 share same base stats address
+    // Ruby v1.1 / v1.2
     private val RUBY_V11 = RUBY_V10.copy(
         baseStatsTable   = 0x081FEC30L,
+        levelUpLearnsets = 0x08207BE0L,  // Pokemon Ruby v1.1.json
     )
 
     // Sapphire v1.0
     private val SAPPHIRE_V10 = RUBY_V10.copy(
         baseStatsTable   = 0x081FEBA8L,
+        levelUpLearnsets = 0x08207B58L,  // Pokemon Sapphire v1.0.json
         experienceTables = 0x081E8CECL,
     )
 
     // Sapphire v1.1 / v1.2
     private val SAPPHIRE_V11 = RUBY_V10.copy(
         baseStatsTable   = 0x081FEBC0L,
+        levelUpLearnsets = 0x08207B70L,  // Pokemon Sapphire v1.1.json
         experienceTables = 0x081E8CECL,
     )
 
@@ -220,7 +223,7 @@ object DataHelper {
         partyCount          = 0x020244E9L,
         partyBase           = 0x020244ECL,
         baseStatsTable      = 0x083203CCL,
-        levelUpLearnsets    = 0x0832677CL,
+        levelUpLearnsets    = 0x0832937CL,  // Pokemon Emerald.json
         experienceTables    = 0x082E82C4L,
         enemyParty          = 0x020244ECL,
         battleTypeFlags     = 0x02022FECL,

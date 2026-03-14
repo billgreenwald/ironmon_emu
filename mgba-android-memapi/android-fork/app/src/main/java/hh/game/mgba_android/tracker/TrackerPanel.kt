@@ -27,9 +27,13 @@ import androidx.compose.ui.unit.sp
 import com.skydoves.landscapist.glide.GlideImage
 import hh.game.mgba_android.tracker.data.GameStats
 import hh.game.mgba_android.tracker.data.HealInfo
+import hh.game.mgba_android.tracker.data.LearnsetInfo
 import hh.game.mgba_android.tracker.models.*
 import hh.game.mgba_android.tracker.tables.*
 import hh.game.mgba_android.tracker.tables.MoveDescTable
+import hh.game.mgba_android.tracker.tables.RouteEncounterSlots
+import hh.game.mgba_android.tracker.tables.RouteNames
+import hh.game.mgba_android.tracker.tables.SpeciesNames
 import kotlinx.coroutines.launch
 
 // ── Color palette ────────────────────────────────────────────────────────────
@@ -141,78 +145,76 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
         )
     }
 
-    if (state.battle.isActive) {
-        // Two-tab pager: MY MON | OPPONENT
-        val pagerState = rememberPagerState(pageCount = { 2 })
-        val scope = rememberCoroutineScope()
+    // Three-tab pager: MY MON | ROUTE | OPPONENT
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    val scope = rememberCoroutineScope()
 
-        // Auto-navigate to OPPONENT tab when battle starts
-        LaunchedEffect(Unit) {
-            pagerState.animateScrollToPage(1)
-        }
-
-        TabRow(
-            selectedTabIndex = pagerState.currentPage,
-            containerColor = HeaderBg,
-            contentColor = TextPrimary,
+    TabRow(
+        selectedTabIndex = pagerState.currentPage,
+        containerColor = HeaderBg,
+        contentColor = TextPrimary,
+    ) {
+        Tab(
+            selected = pagerState.currentPage == 0,
+            onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
         ) {
-            Tab(
-                selected = pagerState.currentPage == 0,
-                onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-            ) {
-                Text(
-                    "MY MON",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-            }
-            Tab(
-                selected = pagerState.currentPage == 1,
-                onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
-            ) {
-                Text(
-                    "OPPONENT",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-            }
+            Text(
+                "MY MON",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
         }
-
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-        ) { page ->
-            when (page) {
-                0 -> Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    state.leadPokemon?.let { lead ->
-                        MainView(lead, state.battle, state.stats, state.healInfo)
-                    } ?: StatusText("Party empty")
-                }
-                else -> Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    EnemyView(state.battle, statMarkings)
-                }
-            }
-        }
-    } else {
-        // Outside battle: just the player card, full height
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+        Tab(
+            selected = pagerState.currentPage == 1,
+            onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
         ) {
-            state.leadPokemon?.let { lead ->
-                MainView(lead, state.battle, state.stats, state.healInfo)
-            } ?: StatusText("Party empty")
+            Text(
+                "OPPONENT",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+        }
+        Tab(
+            selected = pagerState.currentPage == 2,
+            onClick = { scope.launch { pagerState.animateScrollToPage(2) } },
+        ) {
+            Text(
+                "ROUTE",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+        }
+    }
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+    ) { page ->
+        when (page) {
+            0 -> Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                state.leadPokemon?.let { lead ->
+                    MainView(lead, state.battle, state.stats, state.healInfo, state.playerLearnset)
+                } ?: StatusText("Party empty")
+            }
+            1 -> Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                if (state.battle.isActive) {
+                    EnemyView(state.battle, statMarkings, state.enemyLearnset)
+                } else {
+                    StatusText("Not in battle")
+                }
+            }
+            else -> RouteView(state)
         }
     }
 }
@@ -226,15 +228,10 @@ private fun PanelHeader(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
             .padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column {
-            Text(
-                text = "IRONMON", color = AccentRed, fontSize = 10.sp,
-                fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
-            )
-            if (state.romTitle.isNotEmpty()) {
-                Text(text = state.romTitle, color = TextSecondary, fontSize = 8.sp)
-            }
-        }
+        Text(
+            text = "IRONMON", color = AccentRed, fontSize = 10.sp,
+            fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
+        )
         Spacer(Modifier.weight(1f))
         Text(
             text = "${state.game.displayName.removePrefix("Pokémon ")} v1.${state.romVersion}",
@@ -262,7 +259,7 @@ private fun PanelHeader(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 @Composable
-private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, healInfo: HealInfo? = null) {
+private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, healInfo: HealInfo? = null, learnset: LearnsetInfo? = null) {
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showAbilitySheet by remember { mutableStateOf(false) }
     var showDefenseSheet by remember { mutableStateOf(false) }
@@ -326,6 +323,19 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
             }
         }
 
+        // Steps / battles / centers — shown right below the sprite row
+        stats?.let { gs ->
+            Spacer(Modifier.height(2.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("%,d steps".format(gs.steps), color = TextSecondary, fontSize = 11.sp)
+                Text("${gs.totalBattles} battles", color = TextSecondary, fontSize = 11.sp)
+                Text("${gs.pokemonCenterVisits} centers", color = TextSecondary, fontSize = 11.sp)
+            }
+        }
+
         Spacer(Modifier.height(4.dp))
 
         val abilityName = AbilityTable.name(pokemon.abilityId)
@@ -345,17 +355,8 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         val itemName = if (pokemon.heldItemId > 0) ItemTable.get(pokemon.heldItemId) else "None"
         Text(text = "Item: $itemName", color = TextSecondary, fontSize = 12.sp)
 
-        stats?.let { gs ->
-            Spacer(Modifier.height(3.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("%,d steps".format(gs.steps), color = TextSecondary, fontSize = 12.sp)
-                Text("${gs.totalBattles} battles", color = TextSecondary, fontSize = 12.sp)
-                Text("${gs.pokemonCenterVisits} centers", color = TextSecondary, fontSize = 12.sp)
-            }
-        }
+        // Learnset row + BST + evo level (Lua: "Moves X/Y (nextLevel)")
+        LearnsetRow(learnset, pokemon.level, pokemon.bst, EvolutionLevel.get(pokemon.speciesId))
 
         Spacer(Modifier.height(4.dp))
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
@@ -367,7 +368,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
         Spacer(Modifier.height(4.dp))
 
-        MoveTable(pokemon.moves, battle, onClick = { showMoveSheet = it })
+        MoveTable(pokemon.moves, battle, stabTypes = setOf(pokemon.type1, pokemon.type2), onClick = { showMoveSheet = it })
     }
 
     Spacer(Modifier.height(4.dp))
@@ -386,6 +387,109 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     }
 }
 
+// ── Route view (ROUTE tab) ────────────────────────────────────────────────────
+// Shows all wild Pokemon encountered this run, organized by route.
+// Matches Lua tracker Tracker.Data.encounterTable discovery mechanic.
+@Composable
+private fun RouteView(state: TrackerState.Active) {
+    val isHoenn = state.game == GameVersion.RUBY || state.game == GameVersion.SAPPHIRE || state.game == GameVersion.EMERALD
+    val currentMapId = state.currentRoute?.mapLayoutId
+
+    // Pre-filter to routes that have at least one encounter — avoid early returns inside Compose lambdas
+    val routesWithEncounters = state.routeVisitOrder
+        .mapNotNull { mapId -> state.routeEncounters[mapId]?.let { if (it.isEmpty()) null else mapId to it } }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        if (routesWithEncounters.isEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "No encounters recorded yet.\nWild battles will appear here.",
+                color = TextSecondary, fontSize = 13.sp,
+                modifier = Modifier.padding(4.dp),
+            )
+        } else {
+            routesWithEncounters.forEach { (mapId, encounters) ->
+                val routeName = RouteNames.get(mapId, isHoenn)
+                val isCurrent = mapId == currentMapId
+
+                // Route header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp, bottom = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = routeName,
+                        color = if (isCurrent) AccentBlue else TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (isCurrent) {
+                        Text("◄", color = AccentBlue, fontSize = 10.sp)
+                    }
+                }
+
+                // Species grid: pad to the route's defined encounter slot count (from
+                // RouteData.lua), showing "?" for undiscovered slots like the Lua tracker.
+                val definedSlots = RouteEncounterSlots.get(mapId, isHoenn)
+                val totalSlots = maxOf(encounters.size, definedSlots)
+                val slots = List(totalSlots) { i -> if (i < encounters.size) encounters[i] else -1 }
+                slots.chunked(3).forEach { rowSlots ->
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        rowSlots.forEach { speciesId ->
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                if (speciesId > 0) {
+                                    GlideImage(
+                                        imageModel = { "file:///android_asset/sprites/$speciesId.gif" },
+                                        modifier = Modifier.size(36.dp),
+                                        failure = {
+                                            Box(
+                                                Modifier.size(36.dp).background(CardBg, RoundedCornerShape(4.dp)),
+                                                contentAlignment = Alignment.Center,
+                                            ) { Text("#$speciesId", color = TextSecondary, fontSize = 8.sp) }
+                                        },
+                                    )
+                                    Text(
+                                        text = SpeciesNames.get(speciesId),
+                                        color = TextPrimary, fontSize = 9.sp,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    )
+                                } else {
+                                    // Undiscovered slot — "?" like Lua tracker
+                                    Box(
+                                        Modifier.size(36.dp).background(Color(0xFF1E2A3A), RoundedCornerShape(4.dp)),
+                                        contentAlignment = Alignment.Center,
+                                    ) { Text("?", color = Color(0xFF445566), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                                    Text("???", color = Color(0xFF445566), fontSize = 9.sp)
+                                }
+                            }
+                        }
+                        // Pad row to 3 if last row is short
+                        val padding = 3 - rowSlots.size
+                        if (padding > 0) { repeat(padding) { Spacer(Modifier.weight(1f)) } }
+                    }
+                }
+
+                Divider(
+                    color = Color(0xFF303050), thickness = 0.5.dp,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
 // ── Enemy view (OPPONENT tab) ─────────────────────────────────────────────────
 // Stat marking states match Lua Constants.STAT_STATES:
 //   0=blank, 1="+" (green), 2="--" (red), 3="=" (gray)
@@ -394,6 +498,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
 private fun EnemyView(
     battle: BattleState,
     statMarkings: SnapshotStateMap<Pair<Int, String>, Int>,
+    learnset: LearnsetInfo? = null,
 ) {
     val enemy = battle.enemy
     if (enemy == null) {
@@ -448,6 +553,9 @@ private fun EnemyView(
                 }
                 Spacer(Modifier.height(2.dp))
                 HpBar(enemy.hpPercent, enemy.currentHp, enemy.maxHp)
+                Spacer(Modifier.height(2.dp))
+                // Learnset row + BST + evo level inline (Lua: "Moves X/Y (nextLevel)")
+                LearnsetRow(learnset, enemy.level, enemy.bst, EvolutionLevel.get(enemy.speciesId))
             }
         }
 
@@ -524,7 +632,7 @@ private fun EnemyView(
         Text("Stat Markings:", color = TextSecondary, fontSize = 13.sp)
         Spacer(Modifier.height(4.dp))
 
-        // Row 1: Atk | Def | SpA
+        // Row 1: Atk | Def | SpA  (3 entries)
         Row(modifier = Modifier.fillMaxWidth()) {
             for (i in 0..2) {
                 val key = statKeys[i]
@@ -542,9 +650,9 @@ private fun EnemyView(
             }
         }
         Spacer(Modifier.height(4.dp))
-        // Row 2: SpD | Spe | Acc
+        // Row 2: SpD | Spe | Acc | Eva  (4 entries)
         Row(modifier = Modifier.fillMaxWidth()) {
-            for (i in 3..5) {
+            for (i in 3..6) {
                 val key = statKeys[i]
                 val label = statLabels[i]
                 val markKey = enemy.speciesId to key
@@ -558,23 +666,6 @@ private fun EnemyView(
                     modifier = Modifier.weight(1f),
                 )
             }
-        }
-        Spacer(Modifier.height(4.dp))
-        // Row 3: Eva (left-aligned, 1/3 width)
-        Row(modifier = Modifier.fillMaxWidth()) {
-            val key = statKeys[6]
-            val label = statLabels[6]
-            val markKey = enemy.speciesId to key
-            StatMarkingCell(
-                label = label,
-                state = statMarkings[markKey] ?: 0,
-                onTap = {
-                    val cur = statMarkings[markKey] ?: 0
-                    statMarkings[markKey] = (cur + 1) % 4
-                },
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.weight(2f))
         }
     }
 
@@ -617,28 +708,17 @@ private fun StatMarkingCell(label: String, state: Int, onTap: () -> Unit, modifi
     }
 }
 
-// ── Stats table (2 rows × 3 cols, inline in MainView) ────────────────────────
+// ── Stats table (1 row × 6 cols) ─────────────────────────────────────────────
 @Composable
 private fun StatsTable(pokemon: PokemonData) {
     val nature = NatureTable.get(pokemon.nature)
-    // Row 1: HP | Atk | Def
     Row(modifier = Modifier.fillMaxWidth()) {
         StatCell("HP",  pokemon.maxHp,   nature, statIdx = -1, Modifier.weight(1f))
         StatCell("Atk", pokemon.attack,  nature, statIdx = 0,  Modifier.weight(1f))
         StatCell("Def", pokemon.defense, nature, statIdx = 1,  Modifier.weight(1f))
-    }
-    Spacer(Modifier.height(4.dp))
-    // Row 2: SpA | SpD | Spd
-    Row(modifier = Modifier.fillMaxWidth()) {
-        StatCell("SpA", pokemon.spAtk, nature, statIdx = 2, Modifier.weight(1f))
-        StatCell("SpD", pokemon.spDef, nature, statIdx = 3, Modifier.weight(1f))
-        StatCell("Spe", pokemon.speed, nature, statIdx = 4, Modifier.weight(1f))
-    }
-    Spacer(Modifier.height(4.dp))
-    Row {
-        Text("BST", color = TextSecondary, fontSize = 12.sp)
-        Spacer(Modifier.width(4.dp))
-        Text("${pokemon.bst}", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        StatCell("SpA", pokemon.spAtk,   nature, statIdx = 2,  Modifier.weight(1f))
+        StatCell("SpD", pokemon.spDef,   nature, statIdx = 3,  Modifier.weight(1f))
+        StatCell("Spe", pokemon.speed,   nature, statIdx = 4,  Modifier.weight(1f))
     }
 }
 
@@ -707,10 +787,10 @@ private fun MoveCategoryIcon(typeId: Int, power: Int, modifier: Modifier = Modif
 
 // ── Move table ────────────────────────────────────────────────────────────────
 @Composable
-private fun MoveTable(moves: List<MoveData>, battle: BattleState, onClick: (MoveData) -> Unit) {
+private fun MoveTable(moves: List<MoveData>, battle: BattleState, stabTypes: Set<Int> = emptySet(), onClick: (MoveData) -> Unit) {
     // Column header
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Spacer(Modifier.width(22.dp))  // category icon column
+        Spacer(Modifier.width(18.dp))  // category icon column
         Text("Move", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
         Text("Pwr", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(34.dp))
         Text("Eff", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(28.dp))
@@ -718,12 +798,12 @@ private fun MoveTable(moves: List<MoveData>, battle: BattleState, onClick: (Move
     }
     Spacer(Modifier.height(2.dp))
     moves.forEach { move ->
-        MoveTableRow(move, battle, onClick = { onClick(move) })
+        MoveTableRow(move, battle, isStab = move.moveType in stabTypes, onClick = { onClick(move) })
     }
 }
 
 @Composable
-private fun MoveTableRow(move: MoveData, battle: BattleState, onClick: () -> Unit) {
+private fun MoveTableRow(move: MoveData, battle: BattleState, isStab: Boolean = false, onClick: () -> Unit) {
     val effectiveness = battle.enemy?.let { enemy ->
         TypeChart.effectiveness(move.moveType, enemy.type1, enemy.type2)
     }
@@ -739,7 +819,7 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, onClick: () -> Uni
         MoveCategoryIcon(
             typeId = move.moveType,
             power  = move.power,
-            modifier = Modifier.size(width = 18.dp, height = 18.dp),
+            modifier = Modifier.size(width = 14.dp, height = 14.dp),
         )
         Spacer(Modifier.width(4.dp))
         // Type dot + name
@@ -751,7 +831,9 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, onClick: () -> Uni
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                text = move.moveName, color = TextPrimary, fontSize = 14.sp,
+                text = move.moveName,
+                color = if (isStab) Color(0xFF4CAF50) else TextPrimary,
+                fontSize = 14.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         }
@@ -781,6 +863,48 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, onClick: () -> Uni
             text = "${move.pp}", color = TextSecondary, fontSize = 14.sp,
             modifier = Modifier.width(28.dp),
         )
+    }
+}
+
+// ── Learnset row (Lua: "Moves X/Y (nextLevel)") ──────────────────────────────
+// Shows learned/total counts + next move name/level, evo level, BST right-aligned.
+// Next move level turns yellow when 1 level away; evo level turns yellow when ≤2 away.
+@Composable
+private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, evoLevel: Int = 0) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (learnset != null) {
+            Text(
+                text = "Moves ${learnset.learnedCount}/${learnset.totalCount}",
+                color = TextSecondary, fontSize = 12.sp,
+            )
+            if (!learnset.allLearned) {
+                Spacer(Modifier.width(4.dp))
+                val nextSoon = learnset.nextMoveLevel <= currentLevel + 1
+                val levelColor = if (nextSoon) Color(0xFFFFEB3B) else TextSecondary
+                Text(
+                    text = "(Lv.${learnset.nextMoveLevel})",
+                    color = levelColor, fontSize = 12.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+        } else {
+            Spacer(Modifier.weight(1f))
+        }
+        if (evoLevel > 0) {
+            val evoSoon = currentLevel >= evoLevel - 2
+            val evoColor = if (evoSoon) Color(0xFFFFEB3B) else TextSecondary
+            Text("Evo ", color = TextSecondary, fontSize = 12.sp)
+            Text("Lv.$evoLevel", color = evoColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("  ", color = TextSecondary, fontSize = 12.sp)
+        }
+        Text("BST ", color = TextSecondary, fontSize = 12.sp)
+        Text("$bst", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
 

@@ -6,35 +6,77 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.anggrayudi.storage.file.getAbsolutePath
-import hh.game.mgba_android.database.GB.GBgameData
-import hh.game.mgba_android.database.GBA.GBAgameData
-import hh.game.mgba_android.utils.GameListListener
-import hh.game.mgba_android.utils.Gameutils
+import hh.game.mgba_android.tracker.quickload.FamilyCache
+import hh.game.mgba_android.tracker.quickload.QuickloadManager
+import hh.game.mgba_android.tracker.quickload.RomFamilyGroup
+import hh.game.mgba_android.tracker.quickload.RomFamilyUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class GameListViewmodel : ViewModel() {
-    var gameListData = MutableLiveData<ArrayList<Any>>()
-    fun getGbaGameList(context: Context, documentfile: DocumentFile?) {
+    val familyGroupData = MutableLiveData<List<RomFamilyGroup>>()
+    val isScanning = MutableLiveData<Boolean>(false)
+
+    /**
+     * Fast startup: load cached families from disk (no filesystem scan).
+     * If no cache exists, immediately scan filenames (no JNI/DB needed).
+     */
+    fun loadFamilies(context: Context, documentfile: DocumentFile?) {
         viewModelScope.launch {
-            documentfile?.apply {
-                var gamelist = ArrayList(documentfile?.listFiles()?.filter {
-                    it.getAbsolutePath(context).contains(".gba", ignoreCase = true)
-                            ||
-                            it.getAbsolutePath(context).contains(".gb", ignoreCase = true)
-                }?.toList())
-                Gameutils.getGameList(
-                    context,
-                    gamelist,
-                    object : GameListListener {
-                        override fun onGetGamelist(
-                            gbagamelist: ArrayList<GBAgameData>,
-                            gbgamelist: ArrayList<GBgameData>
-                        ) {
-                            gameListData.postValue(ArrayList(gbagamelist + gbgamelist))
-                        }
-                    })
+            documentfile ?: return@launch
+            val cached = withContext(Dispatchers.IO) { FamilyCache.load(context) }
+            if (cached.isNotEmpty()) {
+                familyGroupData.postValue(cached.map {
+                    it.copy(lastPlayedNumber = QuickloadManager.getLastNumber(context, it.prefix))
+                })
+            } else {
+                // No cache yet — run a quick filename scan (no JNI or DB)
+                scanAndSave(context, documentfile)
             }
         }
+    }
 
+    /**
+     * Full rescan triggered by the user (⟳ button).
+     * Pure filename parsing — fast even with 700+ ROMs.
+     */
+    fun rescanFamilies(context: Context, documentfile: DocumentFile?) {
+        if (isScanning.value == true) return
+        viewModelScope.launch {
+            isScanning.postValue(true)
+            scanAndSave(context, documentfile)
+            isScanning.postValue(false)
+        }
+    }
+
+    private suspend fun scanAndSave(context: Context, documentfile: DocumentFile?) {
+        documentfile ?: return
+        val groups = withContext(Dispatchers.IO) {
+            val files = documentfile.listFiles() ?: return@withContext emptyList()
+            files
+                .mapNotNull { file ->
+                    val name = file.name ?: return@mapNotNull null
+                    if (!name.endsWith(".gba", ignoreCase = true) &&
+                        !name.endsWith(".gb", ignoreCase = true)) return@mapNotNull null
+                    val path = file.getAbsolutePath(context) ?: return@mapNotNull null
+                    RomFamilyUtils.parseFamily(name, path).takeIf { it.number != null }
+                }
+                .groupBy { Pair(it.prefix, it.extension) }
+                .filter { (_, members) -> members.size >= 2 }
+                .map { (key, members) ->
+                    val sorted = members.sortedBy { it.number!! }
+                    RomFamilyGroup(
+                        prefix           = key.first,
+                        extension        = key.second,
+                        totalCount       = sorted.size,
+                        lastPlayedNumber = QuickloadManager.getLastNumber(context, key.first),
+                        allMemberPaths   = sorted.map { it.absolutePath },
+                    )
+                }
+                .sortedBy { it.prefix }
+        }
+        FamilyCache.save(context, groups)
+        familyGroupData.postValue(groups)
     }
 }

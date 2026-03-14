@@ -5,6 +5,7 @@ import hh.game.mgba_android.tracker.data.BagReader
 import hh.game.mgba_android.tracker.data.DataHelper
 import hh.game.mgba_android.tracker.data.GameAddresses
 import hh.game.mgba_android.tracker.data.GameSettings
+import hh.game.mgba_android.tracker.data.LearnsetReader
 import hh.game.mgba_android.tracker.data.PokemonDecoder
 import hh.game.mgba_android.tracker.data.RouteReader
 import hh.game.mgba_android.tracker.data.StatsReader
@@ -37,6 +38,12 @@ object TrackerPoller {
     private var battleJustStarted: Boolean = false
     private var lastBattleActive = false
 
+    // Route encounter tracking: mapLayoutId → species IDs seen (wild battles only)
+    private val encountersByRoute = mutableMapOf<Int, MutableList<Int>>()
+    private val routeVisitOrder = mutableListOf<Int>()  // insertion-ordered unique mapLayoutIds
+    // Whether the current wild battle has already been recorded (reset when battle ends)
+    private var currentWildBattleRecorded = false
+
     // Game over state — @Volatile so the main-thread click and Default-dispatcher poll agree
     @Volatile private var isGameOver = false
 
@@ -49,6 +56,9 @@ object TrackerPoller {
         isGameOver = false
         revealedMovesByKey.clear()
         lastEnemyMoveId = 0
+        encountersByRoute.clear()
+        routeVisitOrder.clear()
+        currentWildBattleRecorded = false
     }
     fun debugForceGameOver() { isGameOver = true }
 
@@ -80,6 +90,9 @@ object TrackerPoller {
         _state.value = TrackerState.Disconnected
         revealedMovesByKey.clear()
         lastEnemyMoveId = 0
+        encountersByRoute.clear()
+        routeVisitOrder.clear()
+        currentWildBattleRecorded = false
     }
 
     private fun poll(): TrackerState {
@@ -133,10 +146,29 @@ object TrackerPoller {
             }
         }
 
+        // ── Route ─────────────────────────────────────────────────────────────
+        val route = RouteReader.read(game, addresses)
+
         // ── Battle ────────────────────────────────────────────────────────────
         // Capture pre-poll battle state so we can detect the active→ended transition below.
         val wasBattleActive = lastBattleActive
         val battle = pollBattle(game, addresses)
+
+        // ── Wild encounter recording (Lua tracker: Tracker.TrackRouteEncounter) ───
+        // Reset flag when battle ends so it's ready for the next encounter.
+        if (!battle.isActive) currentWildBattleRecorded = false
+        // Keep retrying until enemy data is available — GBA may not populate it on the
+        // very first active frame, so we cannot rely on the single wasBattleActive transition.
+        if (battle.isActive && battle.isWild && !currentWildBattleRecorded) {
+            val mapId = route?.mapLayoutId
+            val sid = battle.enemy?.speciesId
+            if (mapId != null && sid != null && sid in 1..386) {
+                currentWildBattleRecorded = true
+                if (mapId !in routeVisitOrder) routeVisitOrder.add(mapId)
+                val list = encountersByRoute.getOrPut(mapId) { mutableListOf() }
+                if (sid !in list) list.add(sid)
+            }
+        }
 
         // ── Game over detection ───────────────────────────────────────────────
         // Matches Lua tracker LeadPokemonFaints condition (most common Ironmon rule):
@@ -158,10 +190,10 @@ object TrackerPoller {
             isGameOver = false
             revealedMovesByKey.clear()
             lastEnemyMoveId = 0
+            encountersByRoute.clear()
+            routeVisitOrder.clear()
+            currentWildBattleRecorded = false
         }
-
-        // ── Route ─────────────────────────────────────────────────────────────
-        val route = RouteReader.read(game, addresses)
 
         // ── Game stats (steps / battles / center visits) ─────────────────────
         val stats = StatsReader.read(addresses)
@@ -171,7 +203,23 @@ object TrackerPoller {
             BagReader.read(addresses, lead.maxHp)
         }
 
-        return TrackerState.Active(game = game, romVersion = romVersion, romTitle = romTitle, party = party, battle = battle, currentRoute = route, stats = stats, healInfo = healInfo, isGameOver = isGameOver, runAttempts = runAttempts)
+        // ── Learnsets (Lua PokemonData.readLevelUpMoves + Utils.getMovesLearnedHeader) ─────
+        val playerLearnset = party.firstOrNull()?.let { lead ->
+            LearnsetReader.read(lead.speciesId, lead.level, addresses)
+        }
+        val enemyLearnset = battle.enemy?.let { enemy ->
+            LearnsetReader.read(enemy.speciesId, enemy.level, addresses)
+        }
+
+        return TrackerState.Active(
+            game = game, romVersion = romVersion, romTitle = romTitle,
+            party = party, battle = battle, currentRoute = route,
+            stats = stats, healInfo = healInfo,
+            isGameOver = isGameOver, runAttempts = runAttempts,
+            playerLearnset = playerLearnset, enemyLearnset = enemyLearnset,
+            routeEncounters = encountersByRoute.mapValues { it.value.toList() },
+            routeVisitOrder = routeVisitOrder.toList(),
+        )
     }
 
     private fun pollBattle(game: GameVersion, addresses: GameAddresses): BattleState {

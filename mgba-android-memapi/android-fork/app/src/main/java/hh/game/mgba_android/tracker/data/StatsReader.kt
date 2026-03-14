@@ -10,26 +10,48 @@ data class GameStats(
 
 object StatsReader {
 
+    // Stat indices per Lua tracker Constants.GAME_STATS (game_stat.h)
+    private const val IDX_STEPS = 5
+    private const val IDX_TOTAL_BATTLES = 7
+    private const val IDX_USED_POKECENTER = 15
+    private const val SIZEOF_GAME_STAT = 4 // each stat is a 32-bit dword
+
     fun read(addresses: GameAddresses): GameStats? {
+        // Resolve SaveBlock1 address (always a pointer for FR/LG/Emerald; RS uses direct but is out of scope)
         val ptrBytes = MemoryBridge.readBytes(addresses.saveBlock1Ptr, 4) ?: return null
-        val saveBlock1Addr = ((ptrBytes[0].toLong() and 0xFF) or
-            ((ptrBytes[1].toLong() and 0xFF) shl 8) or
-            ((ptrBytes[2].toLong() and 0xFF) shl 16) or
-            ((ptrBytes[3].toLong() and 0xFF) shl 24))
+        val saveBlock1Addr = ptrBytes.toLittleEndianLong()
         if (saveBlock1Addr == 0L) return null
-        val statsOff = addresses.gameStatsOffset.toLong()
-        // steps at index 5 (offset +20), battles at index 7 (offset +28), center at index 15 (offset +60)
-        fun readStat(idx: Int): Long {
-            val bytes = MemoryBridge.readBytes(saveBlock1Addr + statsOff + idx * 4, 4) ?: return 0L
-            return (bytes[0].toLong() and 0xFF) or
-                ((bytes[1].toLong() and 0xFF) shl 8) or
-                ((bytes[2].toLong() and 0xFF) shl 16) or
-                ((bytes[3].toLong() and 0xFF) shl 24)
+
+        // Get 32-bit XOR key used to encrypt game stats.
+        // Ruby/Sapphire (saveBlock2Ptr == 0L) have no encryption per Lua tracker (game == 1 → return nil).
+        val xorKey: Long = if (addresses.saveBlock2Ptr == 0L) {
+            0L
+        } else {
+            val sb2PtrBytes = MemoryBridge.readBytes(addresses.saveBlock2Ptr, 4) ?: return null
+            val sb2Addr = sb2PtrBytes.toLittleEndianLong()
+            if (sb2Addr == 0L) return null
+            val keyBytes = MemoryBridge.readBytes(sb2Addr + addresses.encryptionKeyOffset, 4) ?: return null
+            keyBytes.toLittleEndianLong()
         }
+
+        val statsBase = saveBlock1Addr + addresses.gameStatsOffset
+
+        fun readStat(idx: Int): Long {
+            val bytes = MemoryBridge.readBytes(statsBase + idx * SIZEOF_GAME_STAT, 4) ?: return 0L
+            val raw = bytes.toLittleEndianLong()
+            return if (xorKey == 0L) raw else (raw xor xorKey) and 0xFFFFFFFFL
+        }
+
         return GameStats(
-            steps = readStat(5),
-            totalBattles = readStat(7),
-            pokemonCenterVisits = readStat(15),
+            steps               = readStat(IDX_STEPS),
+            totalBattles        = readStat(IDX_TOTAL_BATTLES),
+            pokemonCenterVisits = readStat(IDX_USED_POKECENTER),
         )
     }
+
+    private fun ByteArray.toLittleEndianLong(): Long =
+        (this[0].toLong() and 0xFF) or
+        ((this[1].toLong() and 0xFF) shl 8) or
+        ((this[2].toLong() and 0xFF) shl 16) or
+        ((this[3].toLong() and 0xFF) shl 24)
 }

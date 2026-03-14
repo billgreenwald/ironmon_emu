@@ -2,6 +2,7 @@ package hh.game.mgba_android.tracker.models
 
 import hh.game.mgba_android.tracker.data.GameStats
 import hh.game.mgba_android.tracker.data.HealInfo
+import hh.game.mgba_android.tracker.data.LearnsetInfo
 import hh.game.mgba_android.tracker.data.RouteInfo
 
 sealed class TrackerState {
@@ -23,6 +24,11 @@ sealed class TrackerState {
         val healInfo: HealInfo? = null,
         val isGameOver: Boolean = false,
         val runAttempts: Int = 0,
+        val playerLearnset: LearnsetInfo? = null,
+        val enemyLearnset: LearnsetInfo? = null,
+        // Route encounter tracking: mapLayoutId → list of seen species IDs (in encounter order)
+        val routeEncounters: Map<Int, List<Int>> = emptyMap(),
+        val routeVisitOrder: List<Int> = emptyList(),
     ) : TrackerState() {
         val leadPokemon: PokemonData? get() = party.firstOrNull()
     }
