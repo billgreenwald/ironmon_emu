@@ -111,7 +111,7 @@ private fun StatusText(msg: String) {
 private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) {
     val statMarkings: SnapshotStateMap<Pair<Int, String>, Int> = remember { mutableStateMapOf() }
 
-    PanelHeader(state, onQuickload)
+    PanelHeader(state)
 
     // Game over banner
     if (state.isGameOver) {
@@ -183,7 +183,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
             onClick = { scope.launch { pagerState.animateScrollToPage(2) } },
         ) {
             Text(
-                "ROUTE",
+                "ROUTES",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -222,7 +222,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
 }
 
 @Composable
-private fun PanelHeader(state: TrackerState.Active, onQuickload: (() -> Unit)?) {
+private fun PanelHeader(state: TrackerState.Active) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -244,18 +244,6 @@ private fun PanelHeader(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
             text = "Run ${state.runAttempts + 1}",
             color = AccentRed, fontSize = 9.sp, fontWeight = FontWeight.Bold,
         )
-        if (onQuickload != null) {
-            Spacer(Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .background(AccentRed, RoundedCornerShape(4.dp))
-                    .clickable { onQuickload() }
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("Next Run →", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-            }
-        }
     }
 }
 
@@ -440,8 +428,19 @@ private fun RouteView(state: TrackerState.Active) {
     val currentMapId = state.currentRoute?.mapLayoutId
 
     // Pre-filter to routes that have at least one encounter — avoid early returns inside Compose lambdas
-    val routesWithEncounters = state.routeVisitOrder
-        .mapNotNull { mapId -> state.routeEncounters[mapId]?.let { if (it.isEmpty()) null else mapId to it } }
+    val allMapIds = state.routeEncounters.keys
+        .filter { state.routeEncounters[it]?.isNotEmpty() == true }
+    val routesWithEncounters = buildList {
+        // Current route first (if it has encounters)
+        currentMapId?.let { cur ->
+            state.routeEncounters[cur]?.takeIf { it.isNotEmpty() }?.let { add(cur to it) }
+        }
+        // Remaining routes sorted numerically
+        allMapIds
+            .filter { it != currentMapId }
+            .sorted()
+            .forEach { mapId -> add(mapId to state.routeEncounters[mapId]!!) }
+    }
 
     Column(
         modifier = Modifier
@@ -571,7 +570,7 @@ private fun EnemyView(
         ) {
             GlideImage(
                 imageModel = { "file:///android_asset/sprites/${enemy.speciesId}.gif" },
-                modifier = Modifier.size(80.dp),
+                modifier = Modifier.size(48.dp),
                 failure = {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("#${enemy.speciesId}", color = TextSecondary, fontSize = 12.sp)
@@ -598,12 +597,12 @@ private fun EnemyView(
                 }
                 Spacer(Modifier.height(2.dp))
                 HpBar(enemy.hpPercent, enemy.currentHp, enemy.maxHp)
-                Spacer(Modifier.height(2.dp))
-                // Learnset row + BST + evo level inline (Lua: "Moves X/Y (nextLevel)")
-                LearnsetRow(learnset, enemy.level, enemy.bst, EvolutionLevel.get(enemy.speciesId),
-                    onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null)
             }
         }
+        Spacer(Modifier.height(2.dp))
+        // Learnset row + BST + evo level below header row (Lua: "Moves X/Y (nextLevel)")
+        LearnsetRow(learnset, enemy.level, enemy.bst, EvolutionLevel.get(enemy.speciesId),
+            onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null)
 
         Spacer(Modifier.height(4.dp))
 

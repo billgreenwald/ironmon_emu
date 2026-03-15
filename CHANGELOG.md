@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.3] - 2026-03-14
+
+### Fixed
+- AbilityTable was missing Hyper Cutter (52), Pickup (53), and Truant (54) — every ability from Hustle onward was shifted 3 slots too low, causing wrong ability names to display (e.g. Truant shown as Plus)
+- ItemTable corrected several name mismatches vs. Lua tracker source: "Poké Ball", "Poké Doll", "Pokéblock Case", "S.S. Ticket", "Moomoo Milk"
+
+### Changed
+- Route tab renamed from "ROUTE" to "ROUTES"
+- Routes tab now sorted numerically, with the current route pinned to the top
+- "Next Run →" button moved from the tracker header into the emulator Tools popup (middle button) to prevent accidental taps; run counter is incremented when triggered from there
+- Opponent sprite shrunk from 80dp to 48dp (matching the player sprite size)
+- Opponent BST/learnset row moved below the sprite+name header row for more horizontal space
+
 ## [1.0.2] - 2026-03-14
 
 ### Changed

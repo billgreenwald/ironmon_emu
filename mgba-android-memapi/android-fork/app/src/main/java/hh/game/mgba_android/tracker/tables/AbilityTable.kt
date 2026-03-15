@@ -57,31 +57,32 @@ object AbilityTable {
         AbilityInfo("Flame Body",     "May burn on contact."),                     // 49
         AbilityInfo("Run Away",       "Guarantees escape from wild battles."),     // 50
         AbilityInfo("Keen Eye",       "Accuracy cannot be reduced."),              // 51
-        AbilityInfo("Hustle",         "Boosts Attack but lowers accuracy."),       // 52
-        AbilityInfo("Cute Charm",     "May cause attraction on contact."),         // 53
-        AbilityInfo("Plus",           "Boosts Sp. Atk with a partner's Minus."),   // 54
-        AbilityInfo("Minus",          "Boosts Sp. Atk with a partner's Plus."),    // 55
-        AbilityInfo("Forecast",       "Changes type with the weather."),           // 56
-        AbilityInfo("Sticky Hold",    "Item cannot be taken by foe."),             // 57
-        AbilityInfo("Shed Skin",      "May heal status each turn."),               // 58
-        AbilityInfo("Guts",           "Boosts Attack when statused."),             // 59
-        AbilityInfo("Marvel Scale",   "Boosts Defense when statused."),            // 60
-        AbilityInfo("Liquid Ooze",    "Damages foes using draining moves."),       // 61
-        AbilityInfo("Overgrow",       "Powers up Grass moves at low HP."),         // 62
-        AbilityInfo("Blaze",          "Powers up Fire moves at low HP."),          // 63
-        AbilityInfo("Torrent",        "Powers up Water moves at low HP."),         // 64
-        AbilityInfo("Swarm",          "Powers up Bug moves at low HP."),           // 65
-        AbilityInfo("Rock Head",      "No recoil damage from moves."),             // 66
-        AbilityInfo("Drought",        "Summons intense sunlight in battle."),      // 67
-        AbilityInfo("Arena Trap",     "Traps non-Flying foes."),                   // 68
-        AbilityInfo("Vital Spirit",   "Prevents sleep."),                          // 69
-        AbilityInfo("White Smoke",    "Prevents stat reduction by foes."),         // 70
-        AbilityInfo("Pure Power",     "Doubles Attack stat."),                     // 71
-        AbilityInfo("Shell Armor",    "Hard shell blocks critical hits."),         // 72
-        AbilityInfo("Cacophony",      "Immune to sound-based moves."),             // 73 (unused)
-        AbilityInfo("Air Lock",       "Negates weather effects."),                 // 74
-        AbilityInfo("Tangled Feet",   "Boosts evasion when confused."),            // 75 (not Gen III but in table)
-        AbilityInfo("Motor Drive",    "Immune to Electric; raises Speed."),        // 76
+        AbilityInfo("Hyper Cutter",   "Attack stat cannot be lowered by foes."),   // 52
+        AbilityInfo("Pickup",         "May pick up items after battle."),           // 53
+        AbilityInfo("Truant",         "Can only attack every other turn."),         // 54
+        AbilityInfo("Hustle",         "Boosts Attack but lowers accuracy."),        // 55
+        AbilityInfo("Cute Charm",     "May cause attraction on contact."),          // 56
+        AbilityInfo("Plus",           "Boosts Sp. Atk with a partner's Minus."),    // 57
+        AbilityInfo("Minus",          "Boosts Sp. Atk with a partner's Plus."),     // 58
+        AbilityInfo("Forecast",       "Changes type with the weather."),            // 59
+        AbilityInfo("Sticky Hold",    "Item cannot be taken by foe."),              // 60
+        AbilityInfo("Shed Skin",      "May heal status each turn."),                // 61
+        AbilityInfo("Guts",           "Boosts Attack when statused."),              // 62
+        AbilityInfo("Marvel Scale",   "Boosts Defense when statused."),             // 63
+        AbilityInfo("Liquid Ooze",    "Damages foes using draining moves."),        // 64
+        AbilityInfo("Overgrow",       "Powers up Grass moves at low HP."),          // 65
+        AbilityInfo("Blaze",          "Powers up Fire moves at low HP."),           // 66
+        AbilityInfo("Torrent",        "Powers up Water moves at low HP."),          // 67
+        AbilityInfo("Swarm",          "Powers up Bug moves at low HP."),            // 68
+        AbilityInfo("Rock Head",      "No recoil damage from moves."),              // 69
+        AbilityInfo("Drought",        "Summons intense sunlight in battle."),       // 70
+        AbilityInfo("Arena Trap",     "Traps non-Flying foes."),                    // 71
+        AbilityInfo("Vital Spirit",   "Prevents sleep."),                           // 72
+        AbilityInfo("White Smoke",    "Prevents stat reduction by foes."),          // 73
+        AbilityInfo("Pure Power",     "Doubles Attack stat."),                      // 74
+        AbilityInfo("Shell Armor",    "Hard shell blocks critical hits."),          // 75
+        AbilityInfo("Cacophony",      "Immune to sound-based moves."),              // 76 (unused)
+        AbilityInfo("Air Lock",       "Negates weather effects."),                  // 77
     )
 
     fun get(abilityId: Int): AbilityInfo =

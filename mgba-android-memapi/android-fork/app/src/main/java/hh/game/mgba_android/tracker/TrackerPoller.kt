@@ -73,6 +73,17 @@ object TrackerPoller {
         RunRepository.save(ctx, lastGameCode, data)
     }
 
+    /** Called when the user manually triggers "Next Run" from the tools menu. */
+    fun manualNextRun() {
+        runAttempts++
+        isGameOver = true
+        val ctx = appContext ?: return
+        if (lastGameCode.isEmpty()) return
+        val data = RunRepository.load(ctx, lastGameCode)
+        data.stats.attempts = runAttempts
+        RunRepository.save(ctx, lastGameCode, data)
+    }
+
     private var pollJob: Job? = null
 
     fun start(context: Context, scope: CoroutineScope) {

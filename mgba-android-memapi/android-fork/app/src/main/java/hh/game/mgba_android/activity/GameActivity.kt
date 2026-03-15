@@ -248,6 +248,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                     onQuickload = if (QuickloadManager.canQuickload()) {
                         {
                             Log.d("Quickload", "button tapped, family=${QuickloadManager.currentFamily}")
+                            TrackerPoller.manualNextRun()
                             lifecycleScope.launch(Dispatchers.IO) {
                                 val nextPath = QuickloadManager.advanceToNext(applicationContext)
                                 Log.d("Quickload", "nextPath=$nextPath")
@@ -325,7 +326,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         
         // Initialize Tools Button
         findViewById<View>(R.id.tools_btn).setOnClickListener {
-            val options = arrayOf("Shaders", "Memory Tools", "Save State", "Load State", "Cheats", "Sound")
+            val options = arrayOf("Shaders", "Memory Tools", "Save State", "Load State", "Cheats", "Sound", "Next Run →")
             AlertDialog.Builder(this)
                 .setTitle("Tools")
                 .setItems(options) { _, which ->
@@ -388,6 +389,32 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                             Mute(!isMute)
                             isMute = !isMute
                             Toast.makeText(this, if (isMute) "Sound Off" else "Sound On", Toast.LENGTH_SHORT).show()
+                        }
+                        6 -> {
+                            if (QuickloadManager.canQuickload()) {
+                                TrackerPoller.manualNextRun()
+                                lifecycleScope.launch(Dispatchers.IO) {
+                                    val nextPath = QuickloadManager.advanceToNext(applicationContext)
+                                    if (nextPath != null) {
+                                        withContext(Dispatchers.Main) {
+                                            val next = Intent(this@GameActivity, GameActivity::class.java).apply {
+                                                putExtra("gamepath", nextPath)
+                                                val cheat = this@GameActivity.intent.getStringExtra("cheat")
+                                                if (cheat != null) putExtra("cheat", cheat)
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                            }
+                                            startActivity(next)
+                                            android.os.Process.killProcess(android.os.Process.myPid())
+                                        }
+                                    } else {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@GameActivity, "No next ROM found", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            } else {
+                                Toast.makeText(this, "Quickload not available", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 }
