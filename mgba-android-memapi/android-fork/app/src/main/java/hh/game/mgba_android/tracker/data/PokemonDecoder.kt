@@ -4,6 +4,7 @@ import hh.game.mgba_android.tracker.models.Gender
 import hh.game.mgba_android.tracker.models.MoveData
 import hh.game.mgba_android.tracker.models.PokemonData
 import hh.game.mgba_android.tracker.tables.GenIIICharMap
+import hh.game.mgba_android.tracker.tables.BstTable
 import hh.game.mgba_android.tracker.tables.MoveStatsTable
 
 object PokemonDecoder {
@@ -149,15 +150,10 @@ object PokemonDecoder {
         val shinySrc = (otId xor personality xor (personality ushr 16) xor (otId ushr 16))
         val isShiny = shinySrc < 8
 
-        // ── Base stats from ROM ───────────────────────────────────────────────
+        // ── Base stats from ROM (type, gender, ability, exp group) ───────────
         val baseStats = baseStatsReader?.invoke(speciesId)
 
-        val baseHp     = baseStats?.get(DataHelper.BASE_STATS_HP)?.toInt()?.and(0xFF) ?: 0
-        val baseAtk    = baseStats?.get(DataHelper.BASE_STATS_ATK)?.toInt()?.and(0xFF) ?: 0
-        val baseDef    = baseStats?.get(DataHelper.BASE_STATS_DEF)?.toInt()?.and(0xFF) ?: 0
-        val baseSpd    = baseStats?.get(DataHelper.BASE_STATS_SPD)?.toInt()?.and(0xFF) ?: 0
-        val baseSpAtk  = baseStats?.get(DataHelper.BASE_STATS_SP_ATK)?.toInt()?.and(0xFF) ?: 0
-        val baseSpDef  = baseStats?.get(DataHelper.BASE_STATS_SP_DEF)?.toInt()?.and(0xFF) ?: 0
+        val bst        = BstTable.bst(speciesId)
         val type1      = baseStats?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0
         val type2      = baseStats?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: type1
         val genderRatio = baseStats?.get(DataHelper.BASE_STATS_GENDER_RATIO)?.toInt()?.and(0xFF) ?: 0xFF
@@ -203,12 +199,7 @@ object PokemonDecoder {
             abilityIndex     = abilityIndex,
             ability1Id       = ability1Id,
             ability2Id       = ability2Id,
-            baseHp           = baseHp,
-            baseAtk          = baseAtk,
-            baseDef          = baseDef,
-            baseSpd          = baseSpd,
-            baseSpAtk        = baseSpAtk,
-            baseSpDef        = baseSpDef,
+            bst              = bst,
             expGroup         = expGroup,
             gender           = gender,
             isShiny          = isShiny,

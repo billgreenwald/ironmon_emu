@@ -27,12 +27,7 @@ data class PokemonData(
     val abilityIndex: Int,    // 0 or 1 (Misc substructure bit 31)
     val ability1Id: Int,      // from base stats ROM
     val ability2Id: Int,      // from base stats ROM
-    val baseHp: Int,
-    val baseAtk: Int,
-    val baseDef: Int,
-    val baseSpd: Int,
-    val baseSpAtk: Int,
-    val baseSpDef: Int,
+    val bst: Int,             // Base Stat Total from BstTable (static lookup)
     val expGroup: Int,        // 0–5 growth rate group
     val gender: Gender,
     val isShiny: Boolean,
@@ -58,7 +53,6 @@ data class PokemonData(
 ) {
     val isAlive: Boolean get() = currentHp > 0
     val hpPercent: Float get() = if (maxHp > 0) currentHp.toFloat() / maxHp else 0f
-    val bst: Int get() = baseHp + baseAtk + baseDef + baseSpd + baseSpAtk + baseSpDef
     val abilityId: Int get() =
         if (abilityIndex == 0 || ability2Id == 0) ability1Id else ability2Id
     val displayName: String get() = nickname.ifEmpty { speciesName }

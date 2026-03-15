@@ -8,12 +8,7 @@ data class EnemyData(
     val type2: Int,
     val ability1Id: Int,
     val ability2Id: Int,
-    val baseHp: Int,
-    val baseAtk: Int,
-    val baseDef: Int,
-    val baseSpd: Int,
-    val baseSpAtk: Int,
-    val baseSpDef: Int,
+    val bst: Int,                            // Base Stat Total from BstTable (static lookup)
     val revealedMoveIds: List<Int>,          // move IDs seen so far in battle
     val ppByMoveId: Map<Int, Int> = emptyMap(), // moveId → current PP (from enemy party struct)
     val status: Int,                         // status condition byte (0=none)
@@ -21,7 +16,6 @@ data class EnemyData(
     val maxHp: Int,
 ) {
     val hpPercent: Float get() = if (maxHp > 0) currentHp.toFloat() / maxHp else 0f
-    val bst: Int get() = baseHp + baseAtk + baseDef + baseSpd + baseSpAtk + baseSpDef
 }
 
 data class BattleState(

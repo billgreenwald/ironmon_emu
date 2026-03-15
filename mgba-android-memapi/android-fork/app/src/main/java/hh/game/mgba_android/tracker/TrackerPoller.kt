@@ -17,6 +17,7 @@ import hh.game.mgba_android.tracker.models.TrackerState
 import hh.game.mgba_android.tracker.models.Weather
 import hh.game.mgba_android.tracker.persistence.RunRepository
 import hh.game.mgba_android.tracker.tables.AbilityTable
+import hh.game.mgba_android.tracker.tables.BstTable
 import hh.game.mgba_android.tracker.tables.MoveNames
 import hh.game.mgba_android.tracker.tables.SpeciesNames
 import kotlinx.coroutines.CoroutineScope
@@ -273,8 +274,6 @@ object TrackerPoller {
                     lastEnemyMoveId = currentEnemyMoveId
                 }
 
-                var baseHp = 0; var baseAtk = 0; var baseDef = 0
-                var baseSpd = 0; var baseSpAtk = 0; var baseSpDef = 0
                 var type1 = 0; var type2 = 0
                 var ability1Id = 0; var ability2Id = 0
 
@@ -283,17 +282,12 @@ object TrackerPoller {
                     DataHelper.BASE_STATS_ENTRY_SIZE
                 )
                 if (baseStats != null) {
-                    baseHp    = baseStats[DataHelper.BASE_STATS_HP].toInt() and 0xFF
-                    baseAtk   = baseStats[DataHelper.BASE_STATS_ATK].toInt() and 0xFF
-                    baseDef   = baseStats[DataHelper.BASE_STATS_DEF].toInt() and 0xFF
-                    baseSpd   = baseStats[DataHelper.BASE_STATS_SPD].toInt() and 0xFF
-                    baseSpAtk = baseStats[DataHelper.BASE_STATS_SP_ATK].toInt() and 0xFF
-                    baseSpDef = baseStats[DataHelper.BASE_STATS_SP_DEF].toInt() and 0xFF
                     type1     = baseStats[DataHelper.BASE_STATS_TYPE1].toInt() and 0xFF
                     type2     = baseStats[DataHelper.BASE_STATS_TYPE2].toInt() and 0xFF
                     ability1Id = baseStats[DataHelper.BASE_STATS_ABILITY1].toInt() and 0xFF
                     ability2Id = baseStats[DataHelper.BASE_STATS_ABILITY2].toInt() and 0xFF
                 }
+                val bst = BstTable.bst(speciesId)
 
                 val currentHp = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_CURRENT_HP) else 0
                 val maxHpRaw = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_MAX_HP) else 0
@@ -332,12 +326,7 @@ object TrackerPoller {
                     type2           = type2,
                     ability1Id      = ability1Id,
                     ability2Id      = ability2Id,
-                    baseHp          = baseHp,
-                    baseAtk         = baseAtk,
-                    baseDef         = baseDef,
-                    baseSpd         = baseSpd,
-                    baseSpAtk       = baseSpAtk,
-                    baseSpDef       = baseSpDef,
+                    bst             = bst,
                     revealedMoveIds = revealedMovesByKey[key]?.toList() ?: emptyList(),
                     ppByMoveId      = enemyPpByMoveId,
                     status          = enemyMon[DataHelper.BMON_STATUS].toInt() and 0xFF,

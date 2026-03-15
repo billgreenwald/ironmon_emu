@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.2] - 2026-03-14
+
+### Changed
+- BST (Base Stat Total) is now sourced from a static lookup table matching the Ironmon Tracker Lua source (`PokemonData.lua`) instead of being computed by summing individual base stat bytes read from ROM. This eliminates 6 ROM reads per Pokémon per poll cycle and ensures BST values are always consistent with the reference tracker.
+
 ## [1.0.1] - 2026-03-14
 
 ### Fixed
