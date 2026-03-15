@@ -12,7 +12,7 @@ A GBA emulator for Android with a built-in [IronMon Tracker](https://github.com/
 
 IronMon Emu replicates the full feature set of the [Ironmon-Tracker](https://github.com/besteon/Ironmon-Tracker) Lua script — live, on your Android device. Everything you would see on a second monitor or stream overlay is shown in the right-hand panel while you play.
 
-The tracker panel has three tabs:
+The tracker panel has three tabs, which you can select by tapping the tab name or by swiping left/right anywhere on the tracker pannel:
 
 - **MY MON** — Your lead Pokémon's species, level, nature (with stat impact highlighted), ability, held item, base stats, moves with power/accuracy/PP, type chips, shiny/Pokérus/gender indicators, HP bar, and XP progress.
 - **OPPONENT** — When a battle starts, the opponent tab automatically populates with the enemy Pokémon's species, level, type, BST, stat markings, and moves as they are revealed. Wild vs. trainer battles are detected automatically.
