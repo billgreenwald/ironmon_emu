@@ -3,20 +3,20 @@
 ## [1.0.3] - 2026-03-14
 
 ### Fixed
-- AbilityTable was missing Hyper Cutter (52), Pickup (53), and Truant (54) — every ability from Hustle onward was shifted 3 slots too low, causing wrong ability names to display (e.g. Truant shown as Plus)
+- AbilityTable was missing Hyper Cutter (52), Pickup (53), and Truant (54) — every ability from Hustle onward was shifted 3 slots too low, causing wrong ability names to display (e.g. Truant shown as Plus).  This has beeen addressed and all tables have been fully compared to the original tracker to ensure this was the only mistake still existing.
 - ItemTable corrected several name mismatches vs. Lua tracker source: "Poké Ball", "Poké Doll", "Pokéblock Case", "S.S. Ticket", "Moomoo Milk"
 
 ### Changed
 - Route tab renamed from "ROUTE" to "ROUTES"
 - Routes tab now sorted numerically, with the current route pinned to the top
 - "Next Run →" button moved from the tracker header into the emulator Tools popup (middle button) to prevent accidental taps; run counter is incremented when triggered from there
-- Opponent sprite shrunk from 80dp to 48dp (matching the player sprite size)
+- Opponent sprite shrunk from 80dp to 48dp (matching the player sprite size) to prevent overflow of text to multiple lines.  See below entry as well
 - Opponent BST/learnset row moved below the sprite+name header row for more horizontal space
 
 ## [1.0.2] - 2026-03-14
 
 ### Changed
-- BST (Base Stat Total) is now sourced from a static lookup table matching the Ironmon Tracker Lua source (`PokemonData.lua`) instead of being computed by summing individual base stat bytes read from ROM. This eliminates 6 ROM reads per Pokémon per poll cycle and ensures BST values are always consistent with the reference tracker.
+- BST (Base Stat Total) is now sourced from a static lookup table matching the Ironmon Tracker Lua source (`PokemonData.lua`) instead of being computed by summing individual base stat bytes read from ROM. Previously, hidden information to the player was leaking; this is no longer the case.
 
 ## [1.0.1] - 2026-03-14
 
