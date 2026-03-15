@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4] - 2026-03-15
+
+### Fixed
+- Route encounters now persist across app restarts — closing and reopening the app no longer wipes the route tab for the current run
+- Fixed a timing bug where `count == 0` (party transiently empty at ROM load) was clearing restored route encounters immediately after loading them from disk
+- Skip the first battle frame when recording wild encounters to avoid capturing stale enemy data from the previous battle at high emulation speeds
+
 ## [1.0.3] - 2026-03-14
 
 ### Fixed

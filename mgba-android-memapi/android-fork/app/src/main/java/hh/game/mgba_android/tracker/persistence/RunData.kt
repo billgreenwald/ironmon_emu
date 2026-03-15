@@ -10,6 +10,7 @@ data class RunData(
     @SerializedName("pokemonNotes")    val pokemonNotes: MutableMap<Int, String> = mutableMapOf(),
     @SerializedName("routeLog")        val routeLog: MutableList<String> = mutableListOf(),
     @SerializedName("stats")           val stats: RunStats = RunStats(),
+    @SerializedName("routeEncounters") val routeEncounters: MutableMap<String, MutableList<Int>> = mutableMapOf(),
 )
 
 data class RunStats(
