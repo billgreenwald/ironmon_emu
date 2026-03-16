@@ -260,9 +260,8 @@ object TrackerPoller {
             isGameOver = false
             revealedMovesByKey.clear()
             lastEnemyMoveId = 0
-            visitedRoutes.clear()
-            // Do NOT clear encountersByRoute here — party is transiently empty at ROM load,
-            // which would wipe restored encounters. resetGameOver() handles clearing on new run.
+            // Do NOT clear encountersByRoute or visitedRoutes here — party is transiently empty at
+            // ROM load, which would wipe restored data. resetGameOver() handles clearing on new run.
             currentWildBattleRecorded = false
         }
 
