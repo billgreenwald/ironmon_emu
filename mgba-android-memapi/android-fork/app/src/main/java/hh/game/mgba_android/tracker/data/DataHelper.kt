@@ -36,6 +36,8 @@ data class GameAddresses(
     val bagPocket_Berries_size: Int,
     // gTrainerBattleOpponent_A (u16): opponent trainer class index; 0 = wild (Lua tracker)
     val trainerBattleOpponent: Long = 0L,
+    // gBattlerPartyIndexes: u8 array; [0]=playerSlot, [2]=enemySlot (Lua: Battle.Combatants.LeftOther)
+    val gBattlerPartyIndexes: Long = 0L,
 )
 
 object DataHelper {
@@ -142,6 +144,7 @@ object DataHelper {
         bagPocket_Berries_offset = 0x54C,
         bagPocket_Berries_size  = 0x2B,     // 43 slots
         trainerBattleOpponent   = 0x020386AEL,  // gTrainerBattleOpponent_A (English FR/LG)
+        gBattlerPartyIndexes    = 0x02023BCEL,  // gBattlerPartyIndexes (English FR/LG all versions)
     )
 
     // FireRed English v1.1 (BPRE, version byte 1)
@@ -200,6 +203,7 @@ object DataHelper {
         bagPocket_Berries_offset = 0x740,
         bagPocket_Berries_size  = 0x2E,     // 46 slots
         trainerBattleOpponent   = 0x0202FF5EL,  // gTrainerBattleOpponent_A
+        gBattlerPartyIndexes    = 0x02024A6AL,  // gBattlerPartyIndexes (Ruby/Sapphire all versions)
     )
 
     // Ruby v1.1 / v1.2
@@ -250,6 +254,7 @@ object DataHelper {
         bagPocket_Berries_offset = 0x790,
         bagPocket_Berries_size  = 0x2E,     // 46 slots
         trainerBattleOpponent   = 0x02038BCAL,  // gTrainerBattleOpponent_A from Emerald.json
+        gBattlerPartyIndexes    = 0x0202406EL,  // gBattlerPartyIndexes from Emerald.json
     )
 
     /**
@@ -263,7 +268,7 @@ object DataHelper {
             gameCode == "BPRI" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824D864L, saveBlock2Ptr = 0x03004F5CL) // Italian
             gameCode == "BPRF" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824EBD4L, saveBlock2Ptr = 0x03004F5CL) // French
             gameCode == "BPRD" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824EBD4L, saveBlock2Ptr = 0x03004F5CL) // German (approx)
-            gameCode == "BPRJ" -> FIRE_RED_V10.copy(baseStatsTable = 0x0821118CL, saveBlock2Ptr = 0x0300504CL, trainerBattleOpponent = 0x0203860EL) // Japanese
+            gameCode == "BPRJ" -> FIRE_RED_V10.copy(baseStatsTable = 0x0821118CL, saveBlock2Ptr = 0x0300504CL, trainerBattleOpponent = 0x0203860EL, gBattlerPartyIndexes = 0x02023B2EL) // Japanese
             romVersion >= 1 -> FIRE_RED_V11
             else -> FIRE_RED_V10
         }

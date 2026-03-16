@@ -295,8 +295,16 @@ object TrackerPoller {
         val enemy: EnemyData? = if (enemyMon != null) {
             val speciesId = enemyMon.u16(DataHelper.BMON_SPECIES)
             if (speciesId in 1..386) {
+                // Use gBattlerPartyIndexes[2] to find the active enemy party slot (Lua: Battle.Combatants.LeftOther)
+                val activeEnemySlot: Int = if (addresses.gBattlerPartyIndexes != 0L) {
+                    val idx = MemoryBridge.readU8(addresses.gBattlerPartyIndexes + 2L) ?: 0
+                    idx.coerceIn(0, 5)
+                } else 0
                 // Enemy party struct — for level and HP (party offsets are reliable)
-                val enemyRaw = MemoryBridge.readBytes(addresses.enemyParty, DataHelper.POKEMON_STRUCT_SIZE)
+                val enemyRaw = MemoryBridge.readBytes(
+                    addresses.enemyParty + activeEnemySlot * DataHelper.POKEMON_STRUCT_SIZE,
+                    DataHelper.POKEMON_STRUCT_SIZE
+                )
 
                 val level = if (enemyRaw != null) enemyRaw[DataHelper.OFF_LEVEL].toInt() and 0xFF else 0
 

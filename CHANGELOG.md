@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.6] - 2026-03-15
+
+### Fixed
+- Opponent tab blank when facing a trainer's non-first Pokémon (e.g. Beldum as last mon): level, HP, and PP were always read from enemy party slot 0 instead of the active slot. Now uses `gBattlerPartyIndexes[2]` (matching Lua tracker) to find the correct slot.
+
 ## [1.0.5] - 2026-03-15
 
 ### Changed
