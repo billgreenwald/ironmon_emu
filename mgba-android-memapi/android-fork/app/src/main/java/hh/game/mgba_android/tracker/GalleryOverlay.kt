@@ -130,6 +130,17 @@ fun GalleryOverlay(
                         }
                     }
                 }
+
+                // ── Attribution footer ──────────────────────────────────────
+                Text(
+                    text = "Images provided by Fellshadow",
+                    color = TextSecGallery,
+                    fontSize = 10.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(GalleryBg)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                )
             }
         }
     }
