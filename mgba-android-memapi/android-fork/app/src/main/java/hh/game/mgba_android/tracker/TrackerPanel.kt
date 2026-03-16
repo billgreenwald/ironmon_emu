@@ -442,17 +442,20 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
     val isHoenn = state.game == GameVersion.RUBY || state.game == GameVersion.SAPPHIRE || state.game == GameVersion.EMERALD
     val currentMapId = state.currentRoute?.mapLayoutId
 
-    // Union of routes with wild encounters + routes with trainers; exclude routes with neither.
-    val allMapIds: Set<Int> = state.routeEncounters.keys
-        .filter { state.routeEncounters[it]?.isNotEmpty() == true }
-        .toMutableSet()
-        .also { it.addAll(state.trainerCounts.keys) }
+    // Show every route the player has physically stepped onto — encounter/trainer data fills in naturally.
+    val allMapIds: Set<Int> = state.visitedRoutes
 
     // Build ordered list: current route first, rest sorted numerically.
+    // Only show routes that have encounters OR trainers — skip empty pass-through maps.
     val orderedMapIds = buildList {
-        currentMapId?.let { cur -> if (cur in allMapIds) add(cur) }
+        currentMapId?.let { cur ->
+            if (cur in allMapIds &&
+                (state.routeEncounters[cur]?.isNotEmpty() == true || state.trainerCounts[cur] != null)
+            ) add(cur)
+        }
         allMapIds
             .filter { it != currentMapId }
+            .filter { state.routeEncounters[it]?.isNotEmpty() == true || state.trainerCounts[it] != null }
             .sorted()
             .forEach { add(it) }
     }

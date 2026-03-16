@@ -46,6 +46,7 @@ object TrackerPoller {
     // Route encounter tracking: mapLayoutId → species IDs seen (wild battles only)
     private val encountersByRoute = mutableMapOf<Int, MutableList<Int>>()
     private val routeVisitOrder = mutableListOf<Int>()  // insertion-ordered unique mapLayoutIds
+    private val visitedRoutes = mutableSetOf<Int>()  // every map the player has stepped onto
     // Whether the current wild battle has already been recorded (reset when battle ends)
     private var currentWildBattleRecorded = false
 
@@ -63,12 +64,14 @@ object TrackerPoller {
         lastEnemyMoveId = 0
         encountersByRoute.clear()
         routeVisitOrder.clear()
+        visitedRoutes.clear()
         currentWildBattleRecorded = false
         // Clear persisted route encounters for new run
         appContext?.let { ctx ->
             if (lastGameCode.isNotEmpty()) {
                 val data = RunRepository.load(ctx, lastGameCode)
                 data.routeEncounters.clear()
+                data.visitedRoutes.clear()
                 RunRepository.save(ctx, lastGameCode, data)
             }
         }
@@ -116,7 +119,9 @@ object TrackerPoller {
         lastEnemyMoveId = 0
         encountersByRoute.clear()
         routeVisitOrder.clear()
+        visitedRoutes.clear()
         currentWildBattleRecorded = false
+        lastGameCode = ""  // force restore from disk on next game load
     }
 
     private fun poll(): TrackerState {
@@ -147,13 +152,15 @@ object TrackerPoller {
                 // Restore encounter map from saved data
                 encountersByRoute.clear()
                 routeVisitOrder.clear()
+                visitedRoutes.clear()
                 runData.routeEncounters.forEach { (mapIdStr, species) ->
                     val mapId = mapIdStr.toIntOrNull() ?: return@forEach
                     encountersByRoute[mapId] = species.map { (it as? Number)?.toInt() ?: it as Int }.toMutableList()
                     Log.d(TAG, "restore mapId=$mapId species=${encountersByRoute[mapId]}")
                 }
                 encountersByRoute.keys.sorted().forEach { routeVisitOrder.add(it) }
-                Log.d(TAG, "restore done: encountersByRoute=$encountersByRoute")
+                visitedRoutes.addAll(runData.visitedRoutes)
+                Log.d(TAG, "restore done: encountersByRoute=$encountersByRoute visitedRoutes=$visitedRoutes")
             } ?: run { runAttempts = 0 }
         }
 
@@ -184,6 +191,19 @@ object TrackerPoller {
 
         // ── Route ─────────────────────────────────────────────────────────────
         val route = RouteReader.read(game, addresses)
+
+        // Track visited routes — record the moment the player steps onto a new map
+        val mapId = route?.mapLayoutId
+        if (mapId != null && mapId !in visitedRoutes) {
+            visitedRoutes.add(mapId)
+            appContext?.let { ctx ->
+                val data = RunRepository.load(ctx, gameCode)
+                if (mapId !in data.visitedRoutes) {
+                    data.visitedRoutes.add(mapId)
+                    RunRepository.save(ctx, gameCode, data)
+                }
+            }
+        }
 
         // ── Battle ────────────────────────────────────────────────────────────
         // Capture pre-poll battle state so we can detect the active→ended transition below.
@@ -240,6 +260,7 @@ object TrackerPoller {
             isGameOver = false
             revealedMovesByKey.clear()
             lastEnemyMoveId = 0
+            visitedRoutes.clear()
             // Do NOT clear encountersByRoute here — party is transiently empty at ROM load,
             // which would wipe restored encounters. resetGameOver() handles clearing on new run.
             currentWildBattleRecorded = false
@@ -274,6 +295,7 @@ object TrackerPoller {
             routeEncounters = encountersByRoute.mapValues { it.value.toList() },
             routeVisitOrder = routeVisitOrder.toList(),
             trainerCounts = trainerCounts,
+            visitedRoutes = visitedRoutes.toSet(),
         )
     }
 
