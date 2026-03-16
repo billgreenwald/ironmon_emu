@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -846,9 +847,10 @@ private fun MoveTable(moves: List<MoveData>, battle: BattleState, stabTypes: Set
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(18.dp))  // category icon column
         Text("Move", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
-        Text("Pwr", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(34.dp))
-        Text("Eff", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(28.dp))
-        Text("PP",  color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(28.dp))
+        Text("Pwr", color = TextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.width(28.dp))
+        Text("Eff", color = TextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.width(22.dp))
+        Text("Acc", color = TextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.width(28.dp))
+        Text("PP",  color = TextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.width(24.dp))
     }
     Spacer(Modifier.height(2.dp))
     moves.forEach { move ->
@@ -887,35 +889,41 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, isStab: Boolean = 
             Text(
                 text = move.moveName,
                 color = if (isStab) Color(0xFF4CAF50) else TextPrimary,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         }
         // Power
         Text(
             text = if (move.power > 0) "${move.power}" else "—",
-            color = TextSecondary, fontSize = 14.sp,
-            modifier = Modifier.width(34.dp),
+            color = TextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center,
+            modifier = Modifier.width(28.dp),
         )
         // Effectiveness arrows
         val (effText, effColor) = when (effectiveness) {
             null  -> "" to TextSecondary
             0.0f  -> "✕"  to Color(0xFF888888)
-            0.25f -> "▼▼" to Color(0xFFFF4444)
-            0.5f  -> "▼"  to Color(0xFFFF8866)
+            0.25f -> "⇊"  to Color(0xFFFF4444)
+            0.5f  -> "↓"  to Color(0xFFFF8866)
             1.0f  -> ""   to TextSecondary
-            2.0f  -> "▲"  to Color(0xFF66CC44)
-            4.0f  -> "▲▲" to Color(0xFF00DD44)
+            2.0f  -> "↑"  to Color(0xFF66CC44)
+            4.0f  -> "⇈"  to Color(0xFF00DD44)
             else  -> ""   to TextSecondary
         }
         Text(
-            text = effText, color = effColor, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+            text = effText, color = effColor, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center, modifier = Modifier.width(22.dp),
+        )
+        // Accuracy
+        Text(
+            text = if (move.accuracy > 0) "${move.accuracy}" else "—",
+            color = TextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center,
             modifier = Modifier.width(28.dp),
         )
         // PP
         Text(
-            text = "${move.pp}", color = TextSecondary, fontSize = 14.sp,
-            modifier = Modifier.width(28.dp),
+            text = "${move.pp}", color = TextSecondary, fontSize = 13.sp,
+            textAlign = TextAlign.Center, modifier = Modifier.width(24.dp),
         )
     }
 }

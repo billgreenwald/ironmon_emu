@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.5] - 2026-03-15
+
+### Changed
+- Move table: stacked Unicode arrows (⇈/↑/↓/⇊) replace side-by-side text (▲▲/▲/▼/▼▼) for type effectiveness
+- Move table: accuracy column added; Pwr/Eff/Acc/PP columns center-aligned; move name font reduced to 13sp
+
 ## [1.0.4] - 2026-03-15
 
 ### Fixed
