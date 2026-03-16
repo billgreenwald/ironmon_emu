@@ -446,11 +446,14 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
     val allMapIds: Set<Int> = state.visitedRoutes
 
     // Build ordered list: current route first, rest sorted numerically.
-    // Only show routes that have encounters OR trainers — skip empty pass-through maps.
+    // Show current route even with no encounters yet if it has defined wild slots.
+    // Other routes show only once they have encounters or trainers recorded.
     val orderedMapIds = buildList {
         currentMapId?.let { cur ->
             if (cur in allMapIds &&
-                (state.routeEncounters[cur]?.isNotEmpty() == true || state.trainerCounts[cur] != null)
+                (state.routeEncounters[cur]?.isNotEmpty() == true ||
+                    state.trainerCounts[cur] != null ||
+                    RouteEncounterSlots.get(cur, isHoenn) > 0)
             ) add(cur)
         }
         allMapIds
@@ -513,11 +516,11 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
                     }
                 }
 
-                if (encounters.isNotEmpty()) {
+                val definedSlots = RouteEncounterSlots.get(mapId, isHoenn)
+                val totalSlots = maxOf(encounters.size, definedSlots)
+                if (totalSlots > 0) {
                     // Species grid: pad to the route's defined encounter slot count (from
                     // RouteData.lua), showing "?" for undiscovered slots like the Lua tracker.
-                    val definedSlots = RouteEncounterSlots.get(mapId, isHoenn)
-                    val totalSlots = maxOf(encounters.size, definedSlots)
                     val slots = List(totalSlots) { i -> if (i < encounters.size) encounters[i] else -1 }
                     slots.chunked(3).forEach { rowSlots ->
                         Row(modifier = Modifier.fillMaxWidth()) {
@@ -558,7 +561,7 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
                         }
                     }
                 } else {
-                    // Trainer-only location — no wild Pokémon
+                    // Trainer-only location — no wild Pokémon defined
                     Text(
                         text = "── no wild Pokémon ──",
                         color = Color(0xFF445566),

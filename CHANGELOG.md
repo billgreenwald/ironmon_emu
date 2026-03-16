@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.5] - 2026-03-16
+
+### Fixed
+- Route tab now shows all wild Pokémon slots as `?` immediately when entering a route with defined encounters, instead of waiting until the first battle — matches Lua tracker discovery display
+- ItemTable corrected against Lua tracker source: multiple sections had wrong IDs (held items off by 2, sellable items off by 4, contest scarves/key items/TMs/HMs all shifted). Shell Bell now correctly shows as Shell Bell instead of Silk Scarf, etc.
+
 ## [1.2.0] - 2026-03-15
 
 ### Added
