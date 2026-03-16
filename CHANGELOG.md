@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1] - 2026-03-15
+
+### Fixed
+- Gen III Pokémon with internal species ID > 386 (e.g. Beldum = 398, Metang = 399, Metagross = 400, and others) were silently rejected by an incorrect `in 1..386` bounds check. The Lua tracker uses 411 as `baseGameTotal` — all three checks updated to `in 1..411`
+- Affected: enemy battle detection, wild encounter recording, and learnset lookup (`TrackerPoller`, `LearnsetReader`)
+
 ## [1.1.0] - 2026-03-15
 
 ### Added

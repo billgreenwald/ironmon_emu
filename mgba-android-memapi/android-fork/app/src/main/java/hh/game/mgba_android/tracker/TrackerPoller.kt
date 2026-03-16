@@ -199,7 +199,7 @@ object TrackerPoller {
         if (battle.isActive && battle.isWild && !currentWildBattleRecorded && !isFirstBattleFrame) {
             val mapId = route?.mapLayoutId
             val sid = battle.enemy?.speciesId
-            if (mapId != null && sid != null && sid in 1..386) {
+            if (mapId != null && sid != null && sid in 1..411) {
                 currentWildBattleRecorded = true
                 if (mapId !in routeVisitOrder) routeVisitOrder.add(mapId)
                 val list = encountersByRoute.getOrPut(mapId) { mutableListOf() }
@@ -301,7 +301,7 @@ object TrackerPoller {
 
         val enemy: EnemyData? = if (enemyMon != null) {
             val speciesId = enemyMon.u16(DataHelper.BMON_SPECIES)
-            if (speciesId in 1..386) {
+            if (speciesId in 1..411) {
                 // Use gBattlerPartyIndexes[2] to find the active enemy party slot (Lua: Battle.Combatants.LeftOther)
                 val activeEnemySlot: Int = if (addresses.gBattlerPartyIndexes != 0L) {
                     val idx = MemoryBridge.readU8(addresses.gBattlerPartyIndexes + 2L) ?: 0
