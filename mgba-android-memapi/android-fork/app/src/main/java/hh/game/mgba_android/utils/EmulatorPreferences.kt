@@ -8,6 +8,7 @@ object EmulatorPreferences {
     private const val KEY_SECONDARY_FPS = "pref_secondary_fps"
     private const val KEY_SPEED_BUTTON  = "pref_speed_button" // "none"|"L"|"R"|"start"|"select"
     private const val KEY_SHOW_FPS      = "pref_show_fps"
+    private const val KEY_MUTED         = "pref_mute"
 
     val speedOptions = listOf(1 to 60f, 2 to 120f, 3 to 180f, 4 to 240f)
     // All mappable GBA inputs (matches getKey() string names)
@@ -24,6 +25,13 @@ object EmulatorPreferences {
 
     fun getShowFps(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
         .getBoolean(KEY_SHOW_FPS, true)
+
+    fun getMuted(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
+        .getBoolean(KEY_MUTED, false)
+
+    fun setMuted(ctx: Context, muted: Boolean) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putBoolean(KEY_MUTED, muted).apply()
+    }
 
     fun save(ctx: Context, defaultFps: Float, secondaryFps: Float, button: String, showFps: Boolean) {
         ctx.getSharedPreferences(PREFS, 0).edit()

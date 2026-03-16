@@ -180,7 +180,9 @@ class GameListMaterialActivity : ComponentActivity() {
         fun render() {
             setContent {
                 Mgba_AndroidTheme {
+                    val ctx = this@GameListMaterialActivity
                     var showSpeedSettings by remember { mutableStateOf(false) }
+                    var isMuted by remember { mutableStateOf(EmulatorPreferences.getMuted(ctx)) }
                     Column {
                         FamilyTopBar(
                             isScanning = latestScanning,
@@ -190,6 +192,11 @@ class GameListMaterialActivity : ComponentActivity() {
                                 storageHelper.openFolderPicker()
                             },
                             onSettings = { showSpeedSettings = true },
+                            isMuted = isMuted,
+                            onMuteToggle = {
+                                isMuted = !isMuted
+                                EmulatorPreferences.setMuted(ctx, isMuted)
+                            },
                         )
                         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                             if (latestFamilies.isEmpty() && !latestScanning) {
@@ -252,6 +259,8 @@ fun FamilyTopBar(
     onRescan: () -> Unit = {},
     onFolderPick: () -> Unit = {},
     onSettings: () -> Unit = {},
+    isMuted: Boolean = false,
+    onMuteToggle: () -> Unit = {},
 ) {
     TopAppBar(
         title = { Text(LocalContext.current.getString(R.string.app_name), color = Color.White) },
@@ -272,6 +281,9 @@ fun FamilyTopBar(
             }
             IconButton(onClick = onSettings) {
                 Text("⚙", fontSize = 18.sp, color = Color.White)
+            }
+            IconButton(onClick = onMuteToggle) {
+                Text(if (isMuted) "🔇" else "🔊", fontSize = 18.sp)
             }
         }
     )

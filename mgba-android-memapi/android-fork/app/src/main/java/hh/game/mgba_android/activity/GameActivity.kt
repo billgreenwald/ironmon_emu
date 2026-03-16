@@ -318,6 +318,13 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                 Forward(defaultFps)
             }
         }
+        isMute = EmulatorPreferences.getMuted(this)
+        if (isMute) {
+            lifecycleScope.launch {
+                TrackerPoller.state.first { it is TrackerState.Active }
+                Mute(true)
+            }
+        }
 
         // Copy shaders from assets to files dir
         // Always copy to ensure we have the latest shaders (e.g. after app update)
@@ -388,6 +395,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                         5 -> {
                             Mute(!isMute)
                             isMute = !isMute
+                            EmulatorPreferences.setMuted(this, isMute)
                             Toast.makeText(this, if (isMute) "Sound Off" else "Sound On", Toast.LENGTH_SHORT).show()
                         }
                         6 -> {
