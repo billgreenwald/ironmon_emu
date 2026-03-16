@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.6] - 2026-03-16
+
+### Fixed
+- MoveStatsTable: Ice and Psychic type IDs were swapped throughout — 12 Ice-type moves (including Ice Beam, Blizzard, Powder Snow, Icy Wind, Sheer Cold) were coded as Psychic, and 9 Psychic moves (including Psychic, Psybeam, Confusion, Extrasensory) were coded as Ice. All corrected to match Lua tracker type constants (Ice=15, Psychic=14)
+- EvolutionLevel: Gen III section was keyed by national Dex numbers instead of internal ROM species IDs, causing wrong evolution levels (e.g. Milotic showed "evo lv45", Swablu showed wrong level). Completely rebuilt using correct internal IDs from PokemonData.lua `idInternalToNat` mapping
+
 ## [1.2.5] - 2026-03-16
 
 ### Fixed
