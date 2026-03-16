@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.0] - 2026-03-15
+
+### Added
+- Route image gallery overlay: tapping any route name with available images opens a full-screen tabbed gallery (Maps + Hidden Items) above the game
+- 106 hidden-item location images sourced from the FR/LG imgur album, organized by route/dungeon
+- 11 dungeon/building route maps (Mt. Moon, Rock Tunnel, Power Plant, Rocket Hideout, Safari Zone, Seafoam Islands, Silph Co., Victory Road, Poke Mansion, Saffron Gym, S.S. Anne)
+- `ImageAssetMap` — explicit route-name → asset-path mapping covering 46 FRLG locations
+- `GalleryOverlay` — full-screen Compose Dialog with HorizontalPager, ◀ ▶ navigation, and per-tab empty state
+- Routes with images show a `↗` indicator in both the header and the Routes tab
+- `download_imgur_items.py` — Imgur API script for fetching additional hidden-item images (gitignored)
+
 ## [1.1.1] - 2026-03-15
 
 ### Fixed

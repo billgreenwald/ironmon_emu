@@ -111,6 +111,7 @@ private fun StatusText(msg: String) {
 @Composable
 private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) {
     val statMarkings: SnapshotStateMap<Pair<Int, String>, Int> = remember { mutableStateMapOf() }
+    var galleryRoute by remember { mutableStateOf<String?>(null) }
 
     PanelHeader(state)
 
@@ -141,10 +142,16 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
     }
 
     // Route name
-    state.currentRoute?.let {
+    state.currentRoute?.let { route ->
+        val images = ImageAssetMap.MAP[route.name]
+        val hasImages = images != null && (images.routeMaps.isNotEmpty() || images.hiddenItems.isNotEmpty())
         Text(
-            text = it.name, color = AccentBlue, fontSize = 14.sp,
-            modifier = Modifier.padding(horizontal = 10.dp),
+            text = if (hasImages) "${route.name} ↗" else route.name,
+            color = AccentBlue,
+            fontSize = 14.sp,
+            modifier = Modifier
+                .padding(horizontal = 10.dp)
+                .then(if (hasImages) Modifier.clickable { galleryRoute = route.name } else Modifier),
         )
     }
 
@@ -217,7 +224,14 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
                     StatusText("Not in battle")
                 }
             }
-            else -> RouteView(state)
+            else -> RouteView(state, onOpenGallery = { galleryRoute = it })
+        }
+    }
+
+    // Gallery overlay — shown as a full-screen Dialog above game + tracker
+    galleryRoute?.let { name ->
+        ImageAssetMap.MAP[name]?.let { images ->
+            GalleryOverlay(routeName = name, routeImages = images, onDismiss = { galleryRoute = null })
         }
     }
 }
@@ -424,7 +438,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
 // Shows all wild Pokemon encountered this run, organized by route.
 // Matches Lua tracker Tracker.Data.encounterTable discovery mechanic.
 @Composable
-private fun RouteView(state: TrackerState.Active) {
+private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Unit = {}) {
     val isHoenn = state.game == GameVersion.RUBY || state.game == GameVersion.SAPPHIRE || state.game == GameVersion.EMERALD
     val currentMapId = state.currentRoute?.mapLayoutId
 
@@ -470,12 +484,16 @@ private fun RouteView(state: TrackerState.Active) {
                         .padding(top = 6.dp, bottom = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    val routeImages = ImageAssetMap.MAP[routeName]
+                    val hasImages = routeImages != null && (routeImages.routeMaps.isNotEmpty() || routeImages.hiddenItems.isNotEmpty())
                     Text(
-                        text = routeName,
+                        text = if (hasImages) "$routeName ↗" else routeName,
                         color = if (isCurrent) AccentBlue else TextSecondary,
                         fontSize = 12.sp,
                         fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).then(
+                            if (hasImages) Modifier.clickable { onOpenGallery(routeName) } else Modifier
+                        ),
                     )
                     if (trainerCount != null) {
                         val (defeated, total) = trainerCount
