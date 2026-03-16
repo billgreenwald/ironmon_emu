@@ -428,19 +428,19 @@ private fun RouteView(state: TrackerState.Active) {
     val isHoenn = state.game == GameVersion.RUBY || state.game == GameVersion.SAPPHIRE || state.game == GameVersion.EMERALD
     val currentMapId = state.currentRoute?.mapLayoutId
 
-    // Pre-filter to routes that have at least one encounter — avoid early returns inside Compose lambdas
-    val allMapIds = state.routeEncounters.keys
+    // Union of routes with wild encounters + routes with trainers; exclude routes with neither.
+    val allMapIds: Set<Int> = state.routeEncounters.keys
         .filter { state.routeEncounters[it]?.isNotEmpty() == true }
-    val routesWithEncounters = buildList {
-        // Current route first (if it has encounters)
-        currentMapId?.let { cur ->
-            state.routeEncounters[cur]?.takeIf { it.isNotEmpty() }?.let { add(cur to it) }
-        }
-        // Remaining routes sorted numerically
+        .toMutableSet()
+        .also { it.addAll(state.trainerCounts.keys) }
+
+    // Build ordered list: current route first, rest sorted numerically.
+    val orderedMapIds = buildList {
+        currentMapId?.let { cur -> if (cur in allMapIds) add(cur) }
         allMapIds
             .filter { it != currentMapId }
             .sorted()
-            .forEach { mapId -> add(mapId to state.routeEncounters[mapId]!!) }
+            .forEach { add(it) }
     }
 
     Column(
@@ -449,7 +449,7 @@ private fun RouteView(state: TrackerState.Active) {
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        if (routesWithEncounters.isEmpty()) {
+        if (orderedMapIds.isEmpty()) {
             Spacer(Modifier.height(12.dp))
             Text(
                 "No encounters recorded yet.\nWild battles will appear here.",
@@ -457,11 +457,13 @@ private fun RouteView(state: TrackerState.Active) {
                 modifier = Modifier.padding(4.dp),
             )
         } else {
-            routesWithEncounters.forEach { (mapId, encounters) ->
+            orderedMapIds.forEach { mapId ->
                 val routeName = RouteNames.get(mapId, isHoenn)
                 val isCurrent = mapId == currentMapId
+                val encounters = state.routeEncounters[mapId] ?: emptyList()
+                val trainerCount = state.trainerCounts[mapId]  // (defeated, total) or null
 
-                // Route header
+                // Route header with optional trainer count
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -475,53 +477,73 @@ private fun RouteView(state: TrackerState.Active) {
                         fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                         modifier = Modifier.weight(1f),
                     )
+                    if (trainerCount != null) {
+                        val (defeated, total) = trainerCount
+                        Text(
+                            text = "($defeated/$total)",
+                            color = if (defeated == total) Color(0xFF66BB6A) else TextSecondary,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
                     if (isCurrent) {
-                        Text("◄", color = AccentBlue, fontSize = 10.sp)
+                        Text("◄", color = AccentBlue, fontSize = 10.sp,
+                            modifier = Modifier.padding(start = 4.dp))
                     }
                 }
 
-                // Species grid: pad to the route's defined encounter slot count (from
-                // RouteData.lua), showing "?" for undiscovered slots like the Lua tracker.
-                val definedSlots = RouteEncounterSlots.get(mapId, isHoenn)
-                val totalSlots = maxOf(encounters.size, definedSlots)
-                val slots = List(totalSlots) { i -> if (i < encounters.size) encounters[i] else -1 }
-                slots.chunked(3).forEach { rowSlots ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        rowSlots.forEach { speciesId ->
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                if (speciesId > 0) {
-                                    GlideImage(
-                                        imageModel = { "file:///android_asset/sprites/$speciesId.gif" },
-                                        modifier = Modifier.size(36.dp),
-                                        failure = {
-                                            Box(
-                                                Modifier.size(36.dp).background(CardBg, RoundedCornerShape(4.dp)),
-                                                contentAlignment = Alignment.Center,
-                                            ) { Text("#$speciesId", color = TextSecondary, fontSize = 8.sp) }
-                                        },
-                                    )
-                                    Text(
-                                        text = SpeciesNames.get(speciesId),
-                                        color = TextPrimary, fontSize = 9.sp,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    )
-                                } else {
-                                    // Undiscovered slot — "?" like Lua tracker
-                                    Box(
-                                        Modifier.size(36.dp).background(Color(0xFF1E2A3A), RoundedCornerShape(4.dp)),
-                                        contentAlignment = Alignment.Center,
-                                    ) { Text("?", color = Color(0xFF445566), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-                                    Text("???", color = Color(0xFF445566), fontSize = 9.sp)
+                if (encounters.isNotEmpty()) {
+                    // Species grid: pad to the route's defined encounter slot count (from
+                    // RouteData.lua), showing "?" for undiscovered slots like the Lua tracker.
+                    val definedSlots = RouteEncounterSlots.get(mapId, isHoenn)
+                    val totalSlots = maxOf(encounters.size, definedSlots)
+                    val slots = List(totalSlots) { i -> if (i < encounters.size) encounters[i] else -1 }
+                    slots.chunked(3).forEach { rowSlots ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            rowSlots.forEach { speciesId ->
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    if (speciesId > 0) {
+                                        GlideImage(
+                                            imageModel = { "file:///android_asset/sprites/$speciesId.gif" },
+                                            modifier = Modifier.size(36.dp),
+                                            failure = {
+                                                Box(
+                                                    Modifier.size(36.dp).background(CardBg, RoundedCornerShape(4.dp)),
+                                                    contentAlignment = Alignment.Center,
+                                                ) { Text("#$speciesId", color = TextSecondary, fontSize = 8.sp) }
+                                            },
+                                        )
+                                        Text(
+                                            text = SpeciesNames.get(speciesId),
+                                            color = TextPrimary, fontSize = 9.sp,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        )
+                                    } else {
+                                        // Undiscovered slot — "?" like Lua tracker
+                                        Box(
+                                            Modifier.size(36.dp).background(Color(0xFF1E2A3A), RoundedCornerShape(4.dp)),
+                                            contentAlignment = Alignment.Center,
+                                        ) { Text("?", color = Color(0xFF445566), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                                        Text("???", color = Color(0xFF445566), fontSize = 9.sp)
+                                    }
                                 }
                             }
+                            // Pad row to 3 if last row is short
+                            val padding = 3 - rowSlots.size
+                            if (padding > 0) { repeat(padding) { Spacer(Modifier.weight(1f)) } }
                         }
-                        // Pad row to 3 if last row is short
-                        val padding = 3 - rowSlots.size
-                        if (padding > 0) { repeat(padding) { Spacer(Modifier.weight(1f)) } }
                     }
+                } else {
+                    // Trainer-only location — no wild Pokémon
+                    Text(
+                        text = "── no wild Pokémon ──",
+                        color = Color(0xFF445566),
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp),
+                    )
                 }
 
                 Divider(

@@ -11,6 +11,8 @@ import hh.game.mgba_android.tracker.data.LearnsetReader
 import hh.game.mgba_android.tracker.data.PokemonDecoder
 import hh.game.mgba_android.tracker.data.RouteReader
 import hh.game.mgba_android.tracker.data.StatsReader
+import hh.game.mgba_android.tracker.data.TrainerFlagReader
+import hh.game.mgba_android.tracker.tables.TrainerRouteTable
 import hh.game.mgba_android.tracker.models.BattleState
 import hh.game.mgba_android.tracker.models.EnemyData
 import hh.game.mgba_android.tracker.models.GameVersion
@@ -246,6 +248,10 @@ object TrackerPoller {
         // ── Game stats (steps / battles / center visits) ─────────────────────
         val stats = StatsReader.read(addresses)
 
+        // ── Trainer defeat counts (live from SaveBlock1 trainer flags) ────────
+        val trainerTable = TrainerRouteTable.get(game)
+        val trainerCounts = TrainerFlagReader.readCounts(addresses, trainerTable)
+
         // ── Healing items (matches Lua Program.updateBagItems + recalcLeadPokemonHealingInfo) ──
         val bagDetail = party.firstOrNull()?.let { lead ->
             BagReader.read(addresses, lead.maxHp)
@@ -267,6 +273,7 @@ object TrackerPoller {
             playerLearnset = playerLearnset, enemyLearnset = enemyLearnset,
             routeEncounters = encountersByRoute.mapValues { it.value.toList() },
             routeVisitOrder = routeVisitOrder.toList(),
+            trainerCounts = trainerCounts,
         )
     }
 

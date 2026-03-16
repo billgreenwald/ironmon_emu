@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0] - 2026-03-15
+
+### Added
+- Trainer defeat counts in the Routes tab: every location with trainers (gyms, dungeons, routes) now shows `(defeated/total)` next to its name, read live from SaveBlock1 trainer flags — matching the `TrainersOnRouteScreen.lua` display in the reference tracker
+- Trainer-only locations (gyms with no wild Pokémon) now appear in the Routes tab with a "no wild Pokémon" note instead of being hidden
+- Trainer tables ported from `RouteData.lua` for all 5 supported games (FR/LG, Emerald, Ruby, Sapphire)
+- `gameFlagsOffset` added to `GameAddresses` for all game variants (FR/LG: 0xEE0, Emerald: 0x1270, Ruby/Sapphire: 0x1220 — from Lua tracker JSON files)
+
 ## [1.0.6] - 2026-03-15
 
 ### Fixed

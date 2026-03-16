@@ -24,6 +24,7 @@ data class GameAddresses(
     val saveBlock1Ptr: Long,
     val saveBlock1IsPointer: Boolean = true,  // true = dereference pointer; false = use address directly (Ruby/Sapphire)
     val gameStatsOffset: Int,    // byte offset within SaveBlock1 to game stats array
+    val gameFlagsOffset: Int,    // byte offset within SaveBlock1 to game flags array (trainer defeat bits)
     // SaveBlock2 (for XOR key used to decrypt game stats)
     // saveBlock2Ptr == 0L means no encryption (Ruby/Sapphire per Lua tracker)
     val saveBlock2Ptr: Long,
@@ -136,6 +137,7 @@ object DataHelper {
         saveBlock1Ptr       = 0x03005008L,
         saveBlock1IsPointer = true,
         gameStatsOffset     = 0x1200,
+        gameFlagsOffset     = 0xEE0,        // gameFlagsOffset (all FR/LG variants)
         saveBlock2Ptr       = 0x0300500CL,  // gSaveBlock2ptr (English FR/LG)
         encryptionKeyOffset = 0xF20,        // EncryptionKeyOffset (all FR/LG variants)
         // Bag offsets from Lua tracker: Pokemon FireRed v1.0.json (same for all FR/LG)
@@ -195,6 +197,7 @@ object DataHelper {
         saveBlock1Ptr       = 0x02025734L,  // gSaveBlock1 — direct address, not a pointer
         saveBlock1IsPointer = false,
         gameStatsOffset     = 0x1540,
+        gameFlagsOffset     = 0x1220,       // gameFlagsOffset (all Ruby/Sapphire variants)
         saveBlock2Ptr       = 0L,           // No encryption for Ruby/Sapphire
         encryptionKeyOffset = 0,
         // Bag offsets from Lua tracker: Pokemon Ruby v1.0.json
@@ -246,6 +249,7 @@ object DataHelper {
         saveBlock1Ptr       = 0x03005D8CL,
         saveBlock1IsPointer = true,
         gameStatsOffset     = 0x159C,
+        gameFlagsOffset     = 0x1270,       // gameFlagsOffset from Emerald.json
         saveBlock2Ptr       = 0x03005D90L, // gSaveBlock2ptr from Emerald.json
         encryptionKeyOffset = 0xAC,        // EncryptionKeyOffset from Emerald.json
         // Bag offsets from Lua tracker: Pokemon Emerald.json
