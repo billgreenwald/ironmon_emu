@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.9] - 2026-03-17
+
+### Added
+- Route header now shows trainer count (`Trainers: X/Y`) next to the route name above the tabs — turns green when all trainers on the current route are defeated
+
 ## [1.2.8] - 2026-03-17
 
 ### Fixed

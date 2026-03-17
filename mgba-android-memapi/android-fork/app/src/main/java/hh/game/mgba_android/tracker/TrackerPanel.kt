@@ -141,18 +141,31 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
         }
     }
 
-    // Route name
+    // Route name + trainer count
     state.currentRoute?.let { route ->
         val images = ImageAssetMap.MAP[route.name]
         val hasImages = images != null && (images.routeMaps.isNotEmpty() || images.hiddenItems.isNotEmpty())
-        Text(
-            text = if (hasImages) "${route.name} ↗" else route.name,
-            color = AccentBlue,
-            fontSize = 14.sp,
-            modifier = Modifier
-                .padding(horizontal = 10.dp)
-                .then(if (hasImages) Modifier.clickable { galleryRoute = route.name } else Modifier),
-        )
+        val trainerCount = state.trainerCounts[route.mapLayoutId]
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 10.dp),
+        ) {
+            Text(
+                text = if (hasImages) "${route.name} ↗" else route.name,
+                color = AccentBlue,
+                fontSize = 14.sp,
+                modifier = if (hasImages) Modifier.clickable { galleryRoute = route.name } else Modifier,
+            )
+            if (trainerCount != null) {
+                val (defeated, total) = trainerCount
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Trainers: $defeated/$total",
+                    color = if (defeated >= total) Color(0xFF4CAF50) else TextSecondary,
+                    fontSize = 12.sp,
+                )
+            }
+        }
     }
 
     // Three-tab pager: MY MON | ROUTE | OPPONENT
