@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.7] - 2026-03-16
+
+### Fixed
+- Oak's Lab trainer count now shows `0/1` / `1/1` instead of `0/3` — only one rival fight occurs per run (which of the 3 trainer flag IDs fires depends on starter choice); all 3 flags are still checked so the defeat is detected regardless of which starter was picked
+
 ## [1.2.6] - 2026-03-16
 
 ### Fixed

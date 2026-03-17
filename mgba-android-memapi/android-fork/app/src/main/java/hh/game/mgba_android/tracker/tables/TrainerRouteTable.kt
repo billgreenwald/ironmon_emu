@@ -264,10 +264,22 @@ object TrainerRouteTable {
         431 to listOf(804),
     )
 
+    /**
+     * MapIds where only one fight can ever occur per run even though multiple trainer IDs
+     * are defined (e.g. Oak's Lab rival — one of 3 IDs fires depending on starter choice).
+     * readCounts caps the result to (min(defeated,1), 1) for these maps.
+     */
+    val FRLG_SINGLE_FIGHT: Set<Int> = setOf(5)  // Oak's Lab
+
     fun get(version: GameVersion): Map<Int, List<Int>> = when (version) {
         GameVersion.FIRE_RED, GameVersion.LEAF_GREEN -> FRLG
         GameVersion.EMERALD                          -> EMERALD
         GameVersion.RUBY, GameVersion.SAPPHIRE       -> RUBY_SAPPHIRE
         else                                         -> emptyMap()
+    }
+
+    fun getSingleFightMaps(version: GameVersion): Set<Int> = when (version) {
+        GameVersion.FIRE_RED, GameVersion.LEAF_GREEN -> FRLG_SINGLE_FIGHT
+        else                                         -> emptySet()
     }
 }

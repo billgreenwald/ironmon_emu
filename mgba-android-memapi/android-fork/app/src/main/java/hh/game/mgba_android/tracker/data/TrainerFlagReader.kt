@@ -52,18 +52,26 @@ object TrainerFlagReader {
      * Reads all trainer defeat flags for the given [trainerTable] (mapId → trainerIds)
      * and returns a map of mapId → (defeated, total).
      * Returns an empty map if the flag bytes cannot be read.
+     *
+     * [singleFightMaps] — set of mapIds where only one fight can ever occur per run
+     * (e.g. Oak's Lab rival: 3 trainer IDs exist but only one fires per starter choice).
+     * For these maps the result is capped to (min(defeated,1), 1).
      */
     fun readCounts(
         addresses: GameAddresses,
         trainerTable: Map<Int, List<Int>>,
+        singleFightMaps: Set<Int> = emptySet(),
     ): Map<Int, Pair<Int, Int>> {
         if (trainerTable.isEmpty()) return emptyMap()
         val flagBytes = readFlagBytes(addresses) ?: return emptyMap()
         return buildMap {
             for ((mapId, trainerIds) in trainerTable) {
-                val total    = trainerIds.size
                 val defeated = trainerIds.count { isDefeated(flagBytes, it) }
-                put(mapId, defeated to total)
+                if (mapId in singleFightMaps) {
+                    put(mapId, minOf(defeated, 1) to 1)
+                } else {
+                    put(mapId, defeated to trainerIds.size)
+                }
             }
         }
     }

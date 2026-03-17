@@ -270,7 +270,7 @@ object TrackerPoller {
 
         // ── Trainer defeat counts (live from SaveBlock1 trainer flags) ────────
         val trainerTable = TrainerRouteTable.get(game)
-        val trainerCounts = TrainerFlagReader.readCounts(addresses, trainerTable)
+        val trainerCounts = TrainerFlagReader.readCounts(addresses, trainerTable, TrainerRouteTable.getSingleFightMaps(game))
 
         // ── Healing items (matches Lua Program.updateBagItems + recalcLeadPokemonHealingInfo) ──
         val bagDetail = party.firstOrNull()?.let { lead ->
