@@ -1,0 +1,8 @@
+[submodule "mgba-android-memapi/android-fork/app/src/main/cpp/mgba"]
+	path = mgba-android-memapi/android-fork/app/src/main/cpp/mgba
+	url = https://github.com/huhao1987/mgba
+	branch = android_port_0.10
+[submodule "mgba-android-memapi/android-fork/app/src/main/cpp/SDL2"]
+	path = mgba-android-memapi/android-fork/app/src/main/cpp/SDL2
+	url = https://github.com/huhao1987/SDL
+	branch = SDL2_update_Android
