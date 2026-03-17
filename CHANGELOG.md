@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.8] - 2026-03-17
+
+### Fixed
+- Type defense sheet is now scrollable when fully expanded — prevents content being cut off for Pokémon with many weakness/resistance entries
+- Type defense sheet now hides 1× (neutral) matchups — only weaknesses, resistances, and immunities are shown
+- Variable-power moves (Magnitude, Endeavor, Low Kick, Flail, Reversal, Return, Frustration, Hidden Power, Eruption, Water Spout, Present, Spit Up, OHKO moves, and others) now display the correct label (e.g. `RNG`, `WT`, `<HP`, `>HP`, `>FR`, `<FR`, `VAR`, `100x`, `—`) instead of `1` in the move table and move detail sheet — matching Lua tracker display conventions
+
 ## [1.2.7] - 2026-03-16
 
 ### Fixed

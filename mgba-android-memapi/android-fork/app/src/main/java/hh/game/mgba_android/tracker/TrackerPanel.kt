@@ -941,7 +941,7 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, isStab: Boolean = 
         }
         // Power
         Text(
-            text = if (move.power > 0) "${move.power}" else "—",
+            text = MoveStatsTable.get(move.moveId).displayPower ?: if (move.power > 0) "${move.power}" else "—",
             color = TextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center,
             modifier = Modifier.width(28.dp),
         )
@@ -1109,7 +1109,7 @@ fun MoveDetailSheet(move: MoveData, onDismiss: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Power: ${if (move.power > 0) move.power.toString() else "—"}",
+                Text("Power: ${MoveStatsTable.get(move.moveId).displayPower ?: if (move.power > 0) move.power.toString() else "—"}",
                     color = TextSecondary, fontSize = 13.sp)
                 Text("Acc: ${if (move.accuracy > 0) "${move.accuracy}%" else "—"}",
                     color = TextSecondary, fontSize = 13.sp)
@@ -1146,14 +1146,14 @@ fun AbilityDetailSheet(abilityId: Int, onDismiss: () -> Unit) {
 fun TypeDefenseSheet(type1: Int, type2: Int, onDismiss: () -> Unit) {
     val chart = TypeChart.defenseChart(type1, type2)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
             Row {
                 Text("Type Defenses: ", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 TypeChip(type1); Spacer(Modifier.width(4.dp))
                 if (type2 != type1) TypeChip(type2)
             }
             Spacer(Modifier.height(8.dp))
-            chart.entries.sortedBy { it.value }.forEach { (typeId, mult) ->
+            chart.entries.filter { it.value != 1.0f }.sortedBy { it.value }.forEach { (typeId, mult) ->
                 val multStr = when (mult) {
                     0.0f  -> "0×"
                     0.25f -> "¼×"

@@ -1,6 +1,6 @@
 package hh.game.mgba_android.tracker.tables
 
-data class MoveStats(val power: Int, val accuracy: Int, val type: Int, val pp: Int)
+data class MoveStats(val power: Int, val accuracy: Int, val type: Int, val pp: Int, val displayPower: String? = null)
 
 object MoveStatsTable {
 
@@ -37,7 +37,7 @@ object MoveStatsTable {
         // 11=ViceGrip
         moves[11]  = MoveStats(55,  100, 0,  30)
         // 12=Guillotine (OHKO)
-        moves[12]  = MoveStats(1,   30,  0,  5)
+        moves[12]  = MoveStats(1,   30,  0,  5,  "—")
         // 13=Razor Wind
         moves[13]  = MoveStats(80,  100, 0,  10)
         // 14=Swords Dance
@@ -77,7 +77,7 @@ object MoveStatsTable {
         // 31=Fury Attack
         moves[31]  = MoveStats(15,  85,  0,  20)
         // 32=Horn Drill (OHKO)
-        moves[32]  = MoveStats(1,   30,  0,  5)
+        moves[32]  = MoveStats(1,   30,  0,  5,  "—")
         // 33=Tackle
         moves[33]  = MoveStats(35,  95,  0,  35)
         // 34=Body Slam
@@ -111,7 +111,7 @@ object MoveStatsTable {
         // 48=Supersonic
         moves[48]  = MoveStats(0,   55,  0,  20)
         // 49=SonicBoom (special/fixed damage)
-        moves[49]  = MoveStats(1,   90,  0,  20)
+        moves[49]  = MoveStats(1,   90,  0,  20, "—")
         // 50=Disable
         moves[50]  = MoveStats(0,   55,  0,  20)
         // 51=Acid
@@ -147,11 +147,11 @@ object MoveStatsTable {
         // 66=Submission
         moves[66]  = MoveStats(80,  80,  1,  25)
         // 67=Low Kick (varies)
-        moves[67]  = MoveStats(1,   100, 1,  20)
+        moves[67]  = MoveStats(1,   100, 1,  20, "WT")
         // 68=Counter (varies)
-        moves[68]  = MoveStats(1,   100, 1,  20)
+        moves[68]  = MoveStats(1,   100, 1,  20, "—")
         // 69=Seismic Toss (varies)
-        moves[69]  = MoveStats(1,   100, 1,  20)
+        moves[69]  = MoveStats(1,   100, 1,  20, "—")
         // 70=Strength
         moves[70]  = MoveStats(80,  100, 0,  15)
         // 71=Absorb
@@ -177,7 +177,7 @@ object MoveStatsTable {
         // 81=String Shot
         moves[81]  = MoveStats(0,   95,  6,  40)
         // 82=Dragon Rage (fixed)
-        moves[82]  = MoveStats(1,   100, 16, 10)
+        moves[82]  = MoveStats(1,   100, 16, 10, "—")
         // 83=Fire Spin
         moves[83]  = MoveStats(15,  70,  10, 15)
         // 84=ThunderShock
@@ -193,7 +193,7 @@ object MoveStatsTable {
         // 89=Earthquake
         moves[89]  = MoveStats(100, 100, 4,  10)
         // 90=Fissure (OHKO)
-        moves[90]  = MoveStats(1,   30,  4,  5)
+        moves[90]  = MoveStats(1,   30,  4,  5,  "—")
         // 91=Dig
         moves[91]  = MoveStats(60,  100, 4,  10)
         // 92=Toxic
@@ -215,7 +215,7 @@ object MoveStatsTable {
         // 100=Teleport
         moves[100] = MoveStats(0,   0,   15, 20)
         // 101=Night Shade (fixed)
-        moves[101] = MoveStats(1,   100, 7,  15)
+        moves[101] = MoveStats(1,   100, 7,  15, "—")
         // 102=Mimic
         moves[102] = MoveStats(0,   0,   0,  10)
         // 103=Screech
@@ -247,7 +247,7 @@ object MoveStatsTable {
         // 116=Focus Energy
         moves[116] = MoveStats(0,   0,   0,  30)
         // 117=Bide
-        moves[117] = MoveStats(0,   0,   0,  10)
+        moves[117] = MoveStats(0,   0,   0,  10, "—")
         // 118=Metronome
         moves[118] = MoveStats(0,   0,   0,  10)
         // 119=Mirror Move
@@ -311,7 +311,7 @@ object MoveStatsTable {
         // 148=Flash
         moves[148] = MoveStats(0,   70,  0,  20)
         // 149=Psywave (fixed)
-        moves[149] = MoveStats(1,   80,  15, 15)
+        moves[149] = MoveStats(1,   80,  15, 15, "—")
         // 150=Splash
         moves[150] = MoveStats(0,   0,   0,  40)
         // 151=Acid Armor
@@ -337,7 +337,7 @@ object MoveStatsTable {
         // 161=Tri Attack
         moves[161] = MoveStats(80,  100, 0,  10)
         // 162=Super Fang (fixed)
-        moves[162] = MoveStats(1,   90,  0,  10)
+        moves[162] = MoveStats(1,   90,  0,  10, "—")
         // 163=Slash
         moves[163] = MoveStats(70,  100, 0,  20)
         // 164=Substitute
@@ -363,7 +363,7 @@ object MoveStatsTable {
         // 174=Curse
         moves[174] = MoveStats(0,   0,   7,  10)
         // 175=Flail (varies)
-        moves[175] = MoveStats(1,   100, 0,  15)
+        moves[175] = MoveStats(1,   100, 0,  15, "<HP")
         // 176=Conversion 2
         moves[176] = MoveStats(0,   0,   0,  30)
         // 177=Aeroblast
@@ -371,7 +371,7 @@ object MoveStatsTable {
         // 178=Cotton Spore
         moves[178] = MoveStats(0,   85,  12, 40)
         // 179=Reversal (varies)
-        moves[179] = MoveStats(1,   100, 1,  15)
+        moves[179] = MoveStats(1,   100, 1,  15, "<HP")
         // 180=Spite
         moves[180] = MoveStats(0,   100, 7,  10)
         // 181=Powder Snow
@@ -445,11 +445,11 @@ object MoveStatsTable {
         // 215=Heal Bell
         moves[215] = MoveStats(0,   0,   0,  5)
         // 216=Return (varies)
-        moves[216] = MoveStats(1,   100, 0,  20)
+        moves[216] = MoveStats(1,   100, 0,  20, ">FR")
         // 217=Present (varies)
-        moves[217] = MoveStats(1,   90,  0,  15)
+        moves[217] = MoveStats(1,   90,  0,  15, "RNG")
         // 218=Frustration (varies)
-        moves[218] = MoveStats(1,   100, 0,  20)
+        moves[218] = MoveStats(1,   100, 0,  20, "<FR")
         // 219=Safeguard
         moves[219] = MoveStats(0,   0,   0,  25)
         // 220=Pain Split
@@ -457,7 +457,7 @@ object MoveStatsTable {
         // 221=Sacred Fire
         moves[221] = MoveStats(100, 95,  10, 5)
         // 222=Magnitude (varies)
-        moves[222] = MoveStats(1,   100, 4,  30)
+        moves[222] = MoveStats(1,   100, 4,  30, "RNG")
         // 223=DynamicPunch
         moves[223] = MoveStats(100, 50,  1,  5)
         // 224=Megahorn
@@ -487,7 +487,7 @@ object MoveStatsTable {
         // 236=Moonlight
         moves[236] = MoveStats(0,   0,   0,  5)
         // 237=Hidden Power (varies)
-        moves[237] = MoveStats(1,   100, 0,  15)
+        moves[237] = MoveStats(1,   100, 0,  15, "VAR")
         // 238=Cross Chop
         moves[238] = MoveStats(100, 80,  1,  5)
         // 239=Twister
@@ -499,7 +499,7 @@ object MoveStatsTable {
         // 242=Crunch
         moves[242] = MoveStats(80,  100, 17, 15)
         // 243=Mirror Coat (varies)
-        moves[243] = MoveStats(1,   100, 14, 20)
+        moves[243] = MoveStats(1,   100, 14, 20, "—")
         // 244=Psych Up
         moves[244] = MoveStats(0,   0,   0,  10)
         // 245=ExtremeSpeed
@@ -523,7 +523,7 @@ object MoveStatsTable {
         // 254=Stockpile
         moves[254] = MoveStats(0,   0,   0,  20)
         // 255=Spit Up (varies)
-        moves[255] = MoveStats(1,   100, 0,  10)
+        moves[255] = MoveStats(1,   100, 0,  10, "100x")
         // 256=Swallow
         moves[256] = MoveStats(0,   0,   0,  10)
         // 257=Heat Wave
@@ -579,9 +579,9 @@ object MoveStatsTable {
         // 282=Knock Off
         moves[282] = MoveStats(20,  100, 17, 20)
         // 283=Endeavor (varies)
-        moves[283] = MoveStats(1,   100, 0,  5)
+        moves[283] = MoveStats(1,   100, 0,  5,  "—")
         // 284=Eruption (varies)
-        moves[284] = MoveStats(1,   100, 10, 5)
+        moves[284] = MoveStats(1,   100, 10, 5,  ">HP")
         // 285=Skill Swap
         moves[285] = MoveStats(0,   0,   15, 10)
         // 286=Imprison
@@ -659,7 +659,7 @@ object MoveStatsTable {
         // 322=Cosmic Power
         moves[322] = MoveStats(0,   0,   15, 20)
         // 323=Water Spout (varies)
-        moves[323] = MoveStats(1,   100, 11, 5)
+        moves[323] = MoveStats(1,   100, 11, 5,  ">HP")
         // 324=Signal Beam
         moves[324] = MoveStats(75,  100, 6,  15)
         // 325=Shadow Punch
@@ -671,7 +671,7 @@ object MoveStatsTable {
         // 328=Sand Tomb
         moves[328] = MoveStats(15,  70,  4,  15)
         // 329=Sheer Cold (OHKO)
-        moves[329] = MoveStats(1,   30,  15, 5)
+        moves[329] = MoveStats(1,   30,  15, 5,  "—")
         // 330=Muddy Water
         moves[330] = MoveStats(95,  85,  11, 10)
         // 331=Bullet Seed
