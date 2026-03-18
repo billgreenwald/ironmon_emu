@@ -6,13 +6,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
-import android.os.Handler
-import android.os.IBinder
-import android.os.Looper
-import android.os.Message
-import android.os.Messenger
-import android.os.SharedMemory
+import android.os.*
 import android.system.ErrnoException
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -20,7 +14,8 @@ import androidx.documentfile.provider.DocumentFile
 import com.anggrayudi.storage.file.getAbsolutePath
 import com.anggrayudi.storage.file.openOutputStream
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 import java.io.File
 
 object QuickloadManager {
@@ -61,7 +56,7 @@ object QuickloadManager {
                 replyChannel.trySend(data)
                 Log.d("Quickload", "Received data size ${data.size}")
             } catch (e: ErrnoException) {
-                Log.d("Quickload", "Unable to map shared memory")
+                Log.e("Quickload", "Unable to map shared memory", e)
             } finally {
                 buffer?.let { SharedMemory.unmap(it) }
                 sharedMemory?.close()
@@ -96,9 +91,9 @@ object QuickloadManager {
                 context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
             } else Log.d("Quickload", "Randomizer version not supported!")
         } catch (e: PackageManager.NameNotFoundException) {
-            Log.d("Quickload", "UPR-Android app is not installed on the device!")
+            Log.e("Quickload", "UPR-Android app is not installed on the device!", e)
         } catch (e: SecurityException) {
-            Log.d("Quickload", "Unable to bind to service!")
+            Log.e("Quickload", "Unable to bind to service!", e)
         }
     }
 
@@ -154,12 +149,17 @@ object QuickloadManager {
                     obj = currentFile?.uri
                     replyTo = replyMessenger
                 }
-                serviceMessenger!!.send(message)
-                withTimeoutOrNull(5000) {
-                    val data = replyChannel.receive()
-                    currentFile?.openOutputStream(context, append = false)?.use {
-                        it.write(data)
+                try {
+                    serviceMessenger!!.send(message)
+                    withTimeout(10_000L) {
+                        currentFile?.openOutputStream(context, append = false)?.use {
+                            it.write(replyChannel.receive())
+                        }
                     }
+                } catch (e: RemoteException) {
+                    Log.e("Quickload", "Failed to send message!", e)
+                } catch (e: TimeoutCancellationException) {
+                    Log.e("Quickload", "Request timed out!", e)
                 }
             }
             return currentPath
