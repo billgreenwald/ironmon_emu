@@ -52,15 +52,15 @@ class GameListViewmodel : ViewModel() {
 
     private fun collectRomFiles(dir: DocumentFile, context: Context): List<Pair<String, String>> {
         val result = mutableListOf<Pair<String, String>>()
-        for (child in dir.listFiles() ?: return result) {
+        for (child in dir.listFiles()) {
             if (child.isDirectory) {
                 result += collectRomFiles(child, context)
             } else {
                 val name = child.name ?: continue
                 if (!name.endsWith(".gba", ignoreCase = true) &&
                     !name.endsWith(".gb", ignoreCase = true)) continue
-                val path = child.getAbsolutePath(context) ?: continue
-                result += Pair(name, path)
+                val path = child.getAbsolutePath(context)
+                result += name to path
             }
         }
         return result
@@ -70,11 +70,8 @@ class GameListViewmodel : ViewModel() {
         documentfile ?: return
         val groups = withContext(Dispatchers.IO) {
             collectRomFiles(documentfile, context)
-                .mapNotNull { (name, path) ->
-                    RomFamilyUtils.parseFamily(name, path).takeIf { it.number != null }
-                }
-                .groupBy { Pair(it.prefix, it.extension) }
-                .filter { (_, members) -> members.size >= 2 }
+                .map { RomFamilyUtils.parseFamily(it.first, it.second) }
+                .groupBy { it.prefix to it.extension }
                 .map { (key, members) ->
                     val sorted = members.sortedBy { it.number!! }
                     RomFamilyGroup(

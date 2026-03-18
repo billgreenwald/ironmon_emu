@@ -1,9 +1,22 @@
 package hh.game.mgba_android.tracker.quickload
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.*
+import android.system.ErrnoException
+import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.documentfile.provider.DocumentFile
 import com.anggrayudi.storage.file.getAbsolutePath
+import com.anggrayudi.storage.file.openOutputStream
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
+import java.io.File
 
 object QuickloadManager {
 
@@ -14,6 +27,44 @@ object QuickloadManager {
     // Set by GameActivity.onCreate — cleared on GameActivity.onDestroy
     @Volatile var currentFamily: RomFamily? = null
     @Volatile private var folderUri: Uri? = null
+
+    // Randomizer service connection
+    private var serviceMessenger: Messenger? = null
+    private var connected = false
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            serviceMessenger = Messenger(service)
+            connected = true
+            Log.d("Quickload", "Connected to Randomizer service")
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            serviceMessenger = null
+            connected = false
+            Log.d("Quickload", "Disconnected from Randomizer service")
+        }
+
+    }
+    private val replyHandler = object : Handler(Looper.getMainLooper()) {
+        @RequiresApi(Build.VERSION_CODES.O_MR1)
+        override fun handleMessage(msg: Message) {
+            val sharedMemory = msg.obj as? SharedMemory
+            val buffer = sharedMemory?.mapReadOnly()
+            try {
+                val data = ByteArray(msg.arg1)
+                buffer?.get(data)
+                replyChannel.trySend(data)
+                Log.d("Quickload", "Received data size ${data.size}")
+            } catch (e: ErrnoException) {
+                Log.e("Quickload", "Unable to map shared memory", e)
+            } finally {
+                buffer?.let { SharedMemory.unmap(it) }
+                sharedMemory?.close()
+            }
+        }
+    }
+    private val replyMessenger = Messenger(replyHandler)
+    private val replyChannel = Channel<ByteArray>()
 
     /**
      * Call from GameActivity.onCreate after resolving gamepath.
@@ -29,16 +80,35 @@ object QuickloadManager {
         if (family.number != null) {
             saveLastNumber(context, family.prefix, family.number)
         }
+
+        // check to see if Randomizer app is installed
+        try {
+            val info = context.packageManager.getPackageInfo("ly.mens.rndpkmn", PackageManager.GET_SERVICES)
+            if (info.services.any { "OverwriteService" in it.name }) {
+                val intent = Intent().apply {
+                    component = ComponentName("ly.mens.rndpkmn", "ly.mens.rndpkmn.OverwriteService")
+                }
+                context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            } else Log.d("Quickload", "Randomizer version not supported!")
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.e("Quickload", "UPR-Android app is not installed on the device!", e)
+        } catch (e: SecurityException) {
+            Log.e("Quickload", "Unable to bind to service!", e)
+        }
     }
 
     /** Call from GameActivity.onDestroy to avoid stale references. */
-    fun unregister() {
+    fun unregister(context: Context) {
         currentFamily = null
         folderUri = null
+        if (connected) {
+            context.unbindService(connection)
+            connected = false
+        }
     }
 
     /** True only when the current ROM is part of a numbered family. */
-    fun canQuickload(): Boolean = currentFamily?.number != null
+    fun canQuickload(): Boolean = currentFamily?.number != null || connected
 
     /**
      * Returns the absolute path of the next ROM (number+1) in the family.
@@ -69,8 +139,31 @@ object QuickloadManager {
      * Advances to the next ROM: saves prefs and returns the next ROM's path.
      * Returns null if no next ROM exists. The caller is responsible for loading it via JNI.
      */
-    fun advanceToNext(context: Context): String? {
-        val nextPath = getNextRomPath(context) ?: return null
+    suspend fun advanceToNext(context: Context): String? {
+        val nextPath = getNextRomPath(context)
+        if (nextPath == null) {
+            val currentPath = currentFamily?.absolutePath
+            val currentFile = currentPath?.let { DocumentFile.fromFile(File(it)) }
+            if (connected) {
+                val message = Message.obtain().apply {
+                    obj = currentFile?.uri
+                    replyTo = replyMessenger
+                }
+                try {
+                    serviceMessenger!!.send(message)
+                    withTimeout(10_000L) {
+                        currentFile?.openOutputStream(context, append = false)?.use {
+                            it.write(replyChannel.receive())
+                        }
+                    }
+                } catch (e: RemoteException) {
+                    Log.e("Quickload", "Failed to send message!", e)
+                } catch (e: TimeoutCancellationException) {
+                    Log.e("Quickload", "Request timed out!", e)
+                }
+            }
+            return currentPath
+        }
         val nextFileName = nextPath.substringAfterLast('/')
         val nextFamily = RomFamilyUtils.parseFamily(nextFileName, nextPath)
         if (nextFamily.number != null) {
