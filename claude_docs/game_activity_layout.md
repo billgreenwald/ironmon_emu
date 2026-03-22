@@ -6,7 +6,7 @@
 - `res/layout/padboard.xml`
 
 ## Purpose
-Host activity for the mGBA SDL surface + tracker panel. Owns the 70/30 split between game and tracker.
+Host activity for the mGBA SDL surface + tracker panel. Owns the configurable game/tracker split (default 70/30; settable to 80/20 or 90/10 via `EmulatorPreferences.getSplitFraction()`).
 
 ---
 
@@ -28,7 +28,7 @@ The SDL surface (`mSurface`) is resized to `gameWidth` (70% of screen) in `onCre
 1. Resolve `gamepath` + `cheat` from intent extras (must be before `super.onCreate()`)
 2. `QuickloadManager.register(applicationContext, gamepath)`
 3. `super.onCreate()` — loads SDL libs, creates `mSurface`
-4. Resize `mSurface` width to `gameWidth = (screenWidth * 0.7).toInt()`
+4. Read `splitFraction = EmulatorPreferences.getSplitFraction(this)` (default 0.7); resize `mSurface` width to `gameWidth = (screenWidth * splitFraction).toInt()`; update `gameZoneBoundary` Guideline percent via `ConstraintSet`
 5. Set frame rate hint to 59.7275 fps (GBA rate, for LTPO display compatibility)
 6. `MemoryBridge.reader = { addr, len -> getMemoryRange(addr, len) }`
 7. `TrackerPoller.start(applicationContext, lifecycleScope)`
@@ -51,7 +51,7 @@ super.onDestroy()
 ```xml
 android:screenOrientation="sensorLandscape"
 ```
-Tracker only works in landscape (hardcoded 70/30 split).
+Tracker only works in landscape (configurable split, default 70/30).
 
 ## JNI Declarations in GameActivity
 ```kotlin

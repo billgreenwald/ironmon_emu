@@ -2,6 +2,12 @@
 
 ## [1.2.10] - 2026-03-22
 
+### Added
+- **Configurable game/tracker split ratio** — choose 70/30, 80/20, or 90/10 in Emulator Settings; tracker fonts scale automatically to fit the narrower panel
+- **Collapsible tracker panel** — enable in settings to get a 24dp arrow strip that hides/shows the tracker with a tap or horizontal swipe, giving the game the full screen when collapsed
+- **Always show on-screen controls** toggle in settings — disables auto-hide when a gamepad is detected (workaround for controller misfire on padboard buttons)
+- **Export Debug Logs** button at the bottom of the ROM list page — captures `logcat` output to a timestamped file and opens the system share sheet
+
 ### Fixed
 - 19 Psychic-type moves (Future Sight, Calm Mind, Hypnosis, Agility, Reflect, Light Screen, Rest, Amnesia, Kinesis, Psywave, Meditate, Teleport, Barrier, Role Play, Magic Coat, Skill Swap, Imprison, Cosmic Power, Psycho Boost) were incorrectly showing as Ice type — corrected against Lua tracker `PokemonData.TypeIndexMap` (Psychic=14, Ice=15 in ROM)
 

@@ -7,8 +7,11 @@ object EmulatorPreferences {
     private const val KEY_DEFAULT_FPS   = "pref_default_fps"
     private const val KEY_SECONDARY_FPS = "pref_secondary_fps"
     private const val KEY_SPEED_BUTTON  = "pref_speed_button" // "none"|"L"|"R"|"start"|"select"
-    private const val KEY_SHOW_FPS      = "pref_show_fps"
-    private const val KEY_MUTED         = "pref_mute"
+    private const val KEY_SHOW_FPS           = "pref_show_fps"
+    private const val KEY_MUTED              = "pref_mute"
+    private const val KEY_SPLIT_FRACTION     = "pref_split_fraction"
+    private const val KEY_ALWAYS_SHOW_CONTROLS = "pref_always_show_controls"
+    private const val KEY_TRACKER_COLLAPSIBLE  = "pref_tracker_collapsible"
 
     val speedOptions = listOf(1 to 60f, 2 to 120f, 3 to 180f, 4 to 240f)
     // All mappable GBA inputs (matches getKey() string names)
@@ -33,12 +36,33 @@ object EmulatorPreferences {
         ctx.getSharedPreferences(PREFS, 0).edit().putBoolean(KEY_MUTED, muted).apply()
     }
 
-    fun save(ctx: Context, defaultFps: Float, secondaryFps: Float, button: String, showFps: Boolean) {
+    fun getSplitFraction(ctx: Context): Float = ctx.getSharedPreferences(PREFS, 0)
+        .getFloat(KEY_SPLIT_FRACTION, 0.7f)
+
+    fun getAlwaysShowControls(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
+        .getBoolean(KEY_ALWAYS_SHOW_CONTROLS, false)
+
+    fun getTrackerCollapsible(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
+        .getBoolean(KEY_TRACKER_COLLAPSIBLE, false)
+
+    fun save(
+        ctx: Context,
+        defaultFps: Float,
+        secondaryFps: Float,
+        button: String,
+        showFps: Boolean,
+        splitFraction: Float = getSplitFraction(ctx),
+        alwaysShowControls: Boolean = getAlwaysShowControls(ctx),
+        trackerCollapsible: Boolean = getTrackerCollapsible(ctx),
+    ) {
         ctx.getSharedPreferences(PREFS, 0).edit()
             .putFloat(KEY_DEFAULT_FPS, defaultFps)
             .putFloat(KEY_SECONDARY_FPS, secondaryFps)
             .putString(KEY_SPEED_BUTTON, button)
             .putBoolean(KEY_SHOW_FPS, showFps)
+            .putFloat(KEY_SPLIT_FRACTION, splitFraction)
+            .putBoolean(KEY_ALWAYS_SHOW_CONTROLS, alwaysShowControls)
+            .putBoolean(KEY_TRACKER_COLLAPSIBLE, trackerCollapsible)
             .apply()
     }
 }

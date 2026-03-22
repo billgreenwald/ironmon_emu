@@ -27,8 +27,12 @@ import androidx.lifecycle.lifecycleScope
 import android.widget.RelativeLayout
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import hh.game.mgba_android.R
 import hh.game.mgba_android.tracker.MemoryBridge
 import hh.game.mgba_android.tracker.TrackerPanel
@@ -85,6 +89,12 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var defaultFps = 60f
     private var secondaryFps = 60f
     private var speedButtonKey = GBAKeys.GBA_KEY_NONE.key
+    // Tracker layout state
+    private var splitFraction = 0.7f
+    private var trackerCollapsible = false
+    private var trackerExpanded by mutableStateOf(true)
+    private var screenWidthPx = 0
+    private var trackerViewRef: ComposeView? = null
     private var templateResult = ArrayList<Pair<Int, Int>>()
     val startForResult =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
@@ -211,9 +221,11 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         // super.onCreate() loads native libs, creates SDL surface, calls setContentView(mLayout)
         super.onCreate(savedInstanceState)
 
-        // ── Tracker: resize SDL surface to 70% width, attach tracker panel at 30% ──
-        val screenWidth = resources.displayMetrics.widthPixels
-        val gameWidth = (screenWidth * 0.7f).toInt()
+        // ── Tracker: resize SDL surface to (splitFraction)% width, attach tracker panel ──
+        splitFraction = EmulatorPreferences.getSplitFraction(this)
+        trackerCollapsible = EmulatorPreferences.getTrackerCollapsible(this)
+        screenWidthPx = resources.displayMetrics.widthPixels
+        val gameWidth = (screenWidthPx * splitFraction).toInt()
 
         mSurface?.layoutParams = RelativeLayout.LayoutParams(
             gameWidth,
@@ -238,6 +250,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
         MemoryBridge.reader = { addr, len -> getMemoryRange(addr, len) }
         TrackerPoller.start(applicationContext, lifecycleScope)
+
+        val panelFraction = 1f - splitFraction
+        val fontScale = panelFraction / 0.3f
 
         val trackerView = ComposeView(this).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
@@ -270,9 +285,14 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                             }
                         }
                     } else null,
+                    fontScale = fontScale,
+                    isCollapsible = trackerCollapsible,
+                    isExpanded = trackerExpanded,
+                    onToggleExpand = { applyTrackerExpansion(!trackerExpanded) },
                 )
             }
         }
+        trackerViewRef = trackerView
         mLayout?.addView(
             trackerView,
             RelativeLayout.LayoutParams(
@@ -297,6 +317,13 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             RelativeLayout.LayoutParams.MATCH_PARENT,
             RelativeLayout.LayoutParams.MATCH_PARENT
         ))
+        // Update the gameZoneBoundary guideline to match the selected split fraction
+        if (overlay is ConstraintLayout) {
+            val constraintSet = ConstraintSet()
+            constraintSet.clone(overlay)
+            constraintSet.setGuidelinePercent(R.id.gameZoneBoundary, splitFraction)
+            constraintSet.applyTo(overlay)
+        }
 
         addGameControler()
         (getSystemService(INPUT_SERVICE) as InputManager)
@@ -524,9 +551,22 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         InputDevice.getDeviceIds().any { isGamepad(it) }
 
     private fun updateOnscreenControls() {
-        val visible = if (hasGamepadConnected()) View.INVISIBLE else View.VISIBLE
+        val alwaysShow = EmulatorPreferences.getAlwaysShowControls(this)
+        val visible = if (alwaysShow || !hasGamepadConnected()) View.VISIBLE else View.INVISIBLE
         findViewById<View>(R.id.padboardInclude)?.visibility = visible
         findViewById<View>(R.id.tools_btn)?.visibility = visible
+    }
+
+    private fun applyTrackerExpansion(expanded: Boolean) {
+        trackerExpanded = expanded
+        val newGameWidth = if (expanded) (screenWidthPx * splitFraction).toInt() else screenWidthPx
+        mSurface?.layoutParams?.width = newGameWidth
+        mSurface?.requestLayout()
+        val tv = trackerViewRef ?: return
+        tv.layoutParams = (tv.layoutParams as RelativeLayout.LayoutParams).apply {
+            leftMargin = newGameWidth
+        }
+        tv.requestLayout()
     }
 
     override fun onInputDeviceAdded(deviceId: Int) { updateOnscreenControls() }

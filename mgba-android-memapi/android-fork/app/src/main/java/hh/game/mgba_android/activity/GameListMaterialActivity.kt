@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -199,10 +201,19 @@ class GameListMaterialActivity : ComponentActivity() {
                             },
                         )
                         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                            if (latestFamilies.isEmpty() && !latestScanning) {
-                                EmptyFamilyHint()
-                            } else {
-                                FamilyList(latestFamilies)
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                if (latestFamilies.isEmpty() && !latestScanning) {
+                                    EmptyFamilyHint()
+                                } else {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        FamilyList(latestFamilies)
+                                    }
+                                }
+                                val ctx2 = this@GameListMaterialActivity
+                                TextButton(
+                                    onClick = { exportLogs(ctx2) },
+                                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp),
+                                ) { Text("⬇ Export Debug Logs", color = Color(0xFF888888), fontSize = 12.sp) }
                             }
                         }
                     }
@@ -222,6 +233,28 @@ class GameListMaterialActivity : ComponentActivity() {
             render()
         }
         viewModel.loadFamilies(this, documentfile)
+    }
+}
+
+fun exportLogs(context: Context) {
+    try {
+        val logLines = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "time"))
+            .inputStream.bufferedReader().readLines()
+        val outDir = context.getExternalFilesDir("logs") ?: return
+        outDir.mkdirs()
+        val file = java.io.File(outDir, "mgba_log_${System.currentTimeMillis()}.txt")
+        file.writeText(logLines.joinToString("\n"))
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context, "${context.packageName}.fileprovider", file
+        )
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Share logs"))
+    } catch (e: Exception) {
+        android.util.Log.e("exportLogs", "Failed to export logs", e)
     }
 }
 
@@ -378,6 +411,9 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     var secondaryFps by remember { mutableStateOf(EmulatorPreferences.getSecondaryFps(context)) }
     var speedButton by remember { mutableStateOf(EmulatorPreferences.getSpeedButton(context)) }
     var showFps by remember { mutableStateOf(EmulatorPreferences.getShowFps(context)) }
+    var splitFraction by remember { mutableStateOf(EmulatorPreferences.getSplitFraction(context)) }
+    var alwaysShowControls by remember { mutableStateOf(EmulatorPreferences.getAlwaysShowControls(context)) }
+    var trackerCollapsible by remember { mutableStateOf(EmulatorPreferences.getTrackerCollapsible(context)) }
     var isCapturing by remember { mutableStateOf(false) }
 
     // Compose AlertDialog creates its own window — the activity's dispatchKeyEvent never fires
@@ -446,7 +482,10 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         false
                     }
             ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 // Show FPS toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -493,12 +532,47 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         border = BorderStroke(1.dp, Color(0xFF888888)),
                     ) { Text("Capture from gamepad", color = unselectedColor, fontSize = 12.sp) }
                 }
+                // ── Game / Tracker split ──────────────────────────────────────
+                Text("Game / Tracker Split", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf("70/30" to 0.7f, "80/20" to 0.8f, "90/10" to 0.9f).forEach { (label, frac) ->
+                        val selected = splitFraction == frac
+                        TextButton(
+                            onClick = { splitFraction = frac },
+                            border = if (selected) BorderStroke(1.dp, selectedColor) else null,
+                        ) { Text(label, color = if (selected) selectedColor else unselectedColor, fontSize = 12.sp) }
+                    }
+                }
+                // ── Always show on-screen controls ───────────────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Always show on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                        Text("Disables auto-hide when gamepad detected", fontSize = 11.sp, color = Color(0xFF666666))
+                    }
+                    Switch(checked = alwaysShowControls, onCheckedChange = { alwaysShowControls = it })
+                }
+                // ── Collapsible tracker panel ─────────────────────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("Collapsible tracker panel", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                    Switch(checked = trackerCollapsible, onCheckedChange = { trackerCollapsible = it })
+                }
             }
             } // end Box
         },
         confirmButton = {
             TextButton(onClick = {
-                EmulatorPreferences.save(context, defaultFps, secondaryFps, speedButton, showFps)
+                EmulatorPreferences.save(
+                    context, defaultFps, secondaryFps, speedButton, showFps,
+                    splitFraction, alwaysShowControls, trackerCollapsible,
+                )
                 onDismiss()
             }) { Text("Save") }
         },
