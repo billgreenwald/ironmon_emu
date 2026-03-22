@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.10] - 2026-03-22
+
+### Fixed
+- 19 Psychic-type moves (Future Sight, Calm Mind, Hypnosis, Agility, Reflect, Light Screen, Rest, Amnesia, Kinesis, Psywave, Meditate, Teleport, Barrier, Role Play, Magic Coat, Skill Swap, Imprison, Cosmic Power, Psycho Boost) were incorrectly showing as Ice type — corrected against Lua tracker `PokemonData.TypeIndexMap` (Psychic=14, Ice=15 in ROM)
+
 ## [1.2.9] - 2026-03-17
 
 ### Added

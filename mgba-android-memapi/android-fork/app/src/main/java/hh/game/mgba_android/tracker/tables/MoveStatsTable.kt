@@ -6,10 +6,10 @@ object MoveStatsTable {
 
     private val DEFAULT = MoveStats(0, 0, 0, 35)
 
-    // Gen III ROM type IDs:
+    // Gen III ROM type IDs (from PokemonData.TypeIndexMap in Lua tracker):
     // 0=Normal, 1=Fighting, 2=Flying, 3=Poison, 4=Ground, 5=Rock,
-    // 6=Bug, 7=Ghost, 8=Steel, 11=Fire, 12=Water, 13=Grass,
-    // 14=Electric, 15=Ice, 16=Psychic, 17=Dragon, 18=Dark
+    // 6=Bug, 7=Ghost, 8=Steel, 9=Unknown/Mystery, 10=Fire, 11=Water,
+    // 12=Grass, 13=Electric, 14=Psychic, 15=Ice, 16=Dragon, 17=Dark
 
     private val moves = arrayOfNulls<MoveStats>(355)
 
@@ -203,17 +203,17 @@ object MoveStatsTable {
         // 94=Psychic
         moves[94]  = MoveStats(90,  100, 14, 10)
         // 95=Hypnosis
-        moves[95]  = MoveStats(0,   60,  15, 20)
+        moves[95]  = MoveStats(0,   60,  14, 20)
         // 96=Meditate
-        moves[96]  = MoveStats(0,   0,   15, 40)
+        moves[96]  = MoveStats(0,   0,   14, 40)
         // 97=Agility
-        moves[97]  = MoveStats(0,   0,   15, 30)
+        moves[97]  = MoveStats(0,   0,   14, 30)
         // 98=Quick Attack
         moves[98]  = MoveStats(40,  100, 0,  30)
         // 99=Rage
         moves[99]  = MoveStats(20,  100, 0,  20)
         // 100=Teleport
-        moves[100] = MoveStats(0,   0,   15, 20)
+        moves[100] = MoveStats(0,   0,   14, 20)
         // 101=Night Shade (fixed)
         moves[101] = MoveStats(1,   100, 7,  15, "—")
         // 102=Mimic
@@ -237,13 +237,13 @@ object MoveStatsTable {
         // 111=Defense Curl
         moves[111] = MoveStats(0,   0,   0,  40)
         // 112=Barrier
-        moves[112] = MoveStats(0,   0,   15, 30)
+        moves[112] = MoveStats(0,   0,   14, 30)
         // 113=Light Screen
-        moves[113] = MoveStats(0,   0,   15, 30)
+        moves[113] = MoveStats(0,   0,   14, 30)
         // 114=Haze
         moves[114] = MoveStats(0,   0,   15, 30)
         // 115=Reflect
-        moves[115] = MoveStats(0,   0,   15, 20)
+        moves[115] = MoveStats(0,   0,   14, 20)
         // 116=Focus Energy
         moves[116] = MoveStats(0,   0,   0,  30)
         // 117=Bide
@@ -279,9 +279,9 @@ object MoveStatsTable {
         // 132=Constrict
         moves[132] = MoveStats(10,  100, 0,  35)
         // 133=Amnesia
-        moves[133] = MoveStats(0,   0,   15, 20)
+        moves[133] = MoveStats(0,   0,   14, 20)
         // 134=Kinesis
-        moves[134] = MoveStats(0,   80,  15, 15)
+        moves[134] = MoveStats(0,   80,  14, 15)
         // 135=Softboiled
         moves[135] = MoveStats(0,   0,   0,  10)
         // 136=Hi Jump Kick
@@ -311,7 +311,7 @@ object MoveStatsTable {
         // 148=Flash
         moves[148] = MoveStats(0,   70,  0,  20)
         // 149=Psywave (fixed)
-        moves[149] = MoveStats(1,   80,  15, 15, "—")
+        moves[149] = MoveStats(1,   80,  14, 15, "—")
         // 150=Splash
         moves[150] = MoveStats(0,   0,   0,  40)
         // 151=Acid Armor
@@ -325,7 +325,7 @@ object MoveStatsTable {
         // 155=Bonemerang
         moves[155] = MoveStats(50,  90,  4,  10)
         // 156=Rest
-        moves[156] = MoveStats(0,   0,   15, 10)
+        moves[156] = MoveStats(0,   0,   14, 10)
         // 157=Rock Slide
         moves[157] = MoveStats(75,  90,  5,  10)
         // 158=Hyper Fang
@@ -509,7 +509,7 @@ object MoveStatsTable {
         // 247=Shadow Ball
         moves[247] = MoveStats(80,  100, 7,  15)
         // 248=Future Sight
-        moves[248] = MoveStats(80,  90,  15, 15)
+        moves[248] = MoveStats(80,  90,  14, 15)
         // 249=Rock Smash
         moves[249] = MoveStats(20,  100, 1,  15)
         // 250=Whirlpool
@@ -557,7 +557,7 @@ object MoveStatsTable {
         // 271=Trick
         moves[271] = MoveStats(0,   100, 14, 10)
         // 272=Role Play
-        moves[272] = MoveStats(0,   0,   15, 10)
+        moves[272] = MoveStats(0,   0,   14, 10)
         // 273=Wish
         moves[273] = MoveStats(0,   0,   0,  10)
         // 274=Assist
@@ -567,7 +567,7 @@ object MoveStatsTable {
         // 276=Superpower
         moves[276] = MoveStats(120, 100, 1,  5)
         // 277=Magic Coat
-        moves[277] = MoveStats(0,   0,   15, 15)
+        moves[277] = MoveStats(0,   0,   14, 15)
         // 278=Recycle
         moves[278] = MoveStats(0,   0,   0,  10)
         // 279=Revenge
@@ -583,9 +583,9 @@ object MoveStatsTable {
         // 284=Eruption (varies)
         moves[284] = MoveStats(1,   100, 10, 5,  ">HP")
         // 285=Skill Swap
-        moves[285] = MoveStats(0,   0,   15, 10)
+        moves[285] = MoveStats(0,   0,   14, 10)
         // 286=Imprison
-        moves[286] = MoveStats(0,   0,   15, 10)
+        moves[286] = MoveStats(0,   0,   14, 10)
         // 287=Refresh
         moves[287] = MoveStats(0,   0,   0,  20)
         // 288=Grudge
@@ -657,7 +657,7 @@ object MoveStatsTable {
         // 321=Tickle
         moves[321] = MoveStats(0,   100, 0,  20)
         // 322=Cosmic Power
-        moves[322] = MoveStats(0,   0,   15, 20)
+        moves[322] = MoveStats(0,   0,   14, 20)
         // 323=Water Spout (varies)
         moves[323] = MoveStats(1,   100, 11, 5,  ">HP")
         // 324=Signal Beam
@@ -707,7 +707,7 @@ object MoveStatsTable {
         // 346=Water Sport
         moves[346] = MoveStats(0,   0,   11, 15)
         // 347=Calm Mind
-        moves[347] = MoveStats(0,   0,   15, 20)
+        moves[347] = MoveStats(0,   0,   14, 20)
         // 348=Leaf Blade
         moves[348] = MoveStats(70,  100, 12, 15)
         // 349=Dragon Dance
@@ -721,7 +721,7 @@ object MoveStatsTable {
         // 353=Doom Desire
         moves[353] = MoveStats(120, 85,  8,  5)
         // 354=Psycho Boost
-        moves[354] = MoveStats(140, 90,  15, 5)
+        moves[354] = MoveStats(140, 90,  14, 5)
     }
 
     fun get(moveId: Int): MoveStats {
