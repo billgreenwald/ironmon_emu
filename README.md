@@ -45,6 +45,8 @@ When a Bluetooth or USB gamepad is connected, the on-screen touch controls autom
 
 ## ROM Families
 
+When you load the app for the first time you should be directed to choose a folder on your device to look in for ROMs.  You can retrigger this process at any time by clicking the folder.   The folder you select is where you should store any ROMs you want the app to load; they can be nested within subdirectories if you want.  The app is designed to be used with the Bulk Generation mode of the randomizer app (either Android based, or the java one on a computer and then you manually transfer the ROMs to your computer).  Once you have a folder with a batch of ROMs in it selected, the app will autoscan and create ROM families from them for you.
+
 The home screen groups your ROMs into **families** rather than listing every file individually. A family is a set of ROMs that were batch generated together (or in later batches) with the ironmon randomizer.  Families are detected by name, and then sequenced by number (i.e. all "FireRed1" "FireRed2" ... will be grouped into a single family called "FireRed". The card shows how many ROMs are in the family and which run you were on last, and when you pick it will automatically start your last played rom.  Quickload is auto tracked per family.
 
 <p align="center">
