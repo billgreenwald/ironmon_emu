@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.13] - 2026-03-23
+
+### Fixed
+- Run count incrementing by 2 instead of 1 for some users — replaced `@Volatile` boolean with `AtomicBoolean.compareAndSet` so only one poll coroutine can claim the game-over transition, preventing a race condition where two concurrent 250ms polls both read `isGameOver=false` before either could write `true`
+
 ## [1.2.12] - 2026-03-23
 
 ### Fixed

@@ -23,6 +23,7 @@ import hh.game.mgba_android.tracker.tables.AbilityTable
 import hh.game.mgba_android.tracker.tables.BstTable
 import hh.game.mgba_android.tracker.tables.MoveNames
 import hh.game.mgba_android.tracker.tables.SpeciesNames
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,8 +51,9 @@ object TrackerPoller {
     // Whether the current wild battle has already been recorded (reset when battle ends)
     private var currentWildBattleRecorded = false
 
-    // Game over state — @Volatile so the main-thread click and Default-dispatcher poll agree
-    @Volatile private var isGameOver = false
+    // Game over state — AtomicBoolean so compareAndSet prevents double-increment
+    // if two poll coroutines both see battle-end before either sets the flag
+    private val isGameOver = AtomicBoolean(false)
 
     // Run persistence
     private var appContext: Context? = null
@@ -59,7 +61,7 @@ object TrackerPoller {
     @Volatile private var runAttempts: Int = 0
 
     fun resetGameOver() {
-        isGameOver = false
+        isGameOver.set(false)
         revealedMovesByKey.clear()
         lastEnemyMoveId = 0
         encountersByRoute.clear()
@@ -76,7 +78,7 @@ object TrackerPoller {
             }
         }
     }
-    fun debugForceGameOver() { isGameOver = true }
+    fun debugForceGameOver() { isGameOver.set(true) }
 
     fun setRunAttempts(n: Int) {
         runAttempts = n
@@ -90,7 +92,7 @@ object TrackerPoller {
     /** Called when the user manually triggers "Next Run" from the tools menu. */
     fun manualNextRun() {
         runAttempts++
-        isGameOver = true
+        isGameOver.set(true)
         val ctx = appContext ?: return
         if (lastGameCode.isEmpty()) return
         val data = RunRepository.load(ctx, lastGameCode)
@@ -243,10 +245,9 @@ object TrackerPoller {
         // ── Game over detection ───────────────────────────────────────────────
         // Matches Lua tracker LeadPokemonFaints condition (most common Ironmon rule):
         // trigger when battle just ended and the lead Pokemon has 0 HP.
-        if (wasBattleActive && !battle.isActive && !isGameOver) {
+        if (wasBattleActive && !battle.isActive && !isGameOver.get()) {
             val lead = party.firstOrNull()
-            if (lead != null && !lead.isAlive) {
-                isGameOver = true
+            if (lead != null && !lead.isAlive && isGameOver.compareAndSet(false, true)) {
                 runAttempts++
                 appContext?.let { ctx ->
                     val data = RunRepository.load(ctx, gameCode)
@@ -257,7 +258,7 @@ object TrackerPoller {
         }
         // Auto-reset if party count drops to 0 (new game started / ROM reset)
         if (count == 0) {
-            isGameOver = false
+            isGameOver.set(false)
             revealedMovesByKey.clear()
             lastEnemyMoveId = 0
             // Do NOT clear encountersByRoute or visitedRoutes here — party is transiently empty at
@@ -289,7 +290,7 @@ object TrackerPoller {
             game = game, romVersion = romVersion, romTitle = romTitle,
             party = party, battle = battle, currentRoute = route,
             stats = stats, bagDetail = bagDetail,
-            isGameOver = isGameOver, runAttempts = runAttempts,
+            isGameOver = isGameOver.get(), runAttempts = runAttempts,
             playerLearnset = playerLearnset, enemyLearnset = enemyLearnset,
             routeEncounters = encountersByRoute.mapValues { it.value.toList() },
             routeVisitOrder = routeVisitOrder.toList(),
