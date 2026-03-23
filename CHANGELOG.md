@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.11] - 2026-03-23
+
+### Changed
+- APK output file renamed to `ironmon_emulator.apk`
+
 ## [1.2.10] - 2026-03-22
 
 ### Added
