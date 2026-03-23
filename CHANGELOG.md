@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.12] - 2026-03-23
+
+### Fixed
+- Collapsible tracker arrow (`◀`/`▶`) was pushed off-screen when the panel collapsed — the game surface now stops 24dp short of the full width so the arrow strip stays visible
+- Arrow direction swapped: `▶` when expanded (tap to collapse), `◀` when collapsed (tap to expand)
+- Removed slide animation on collapse/expand — tracker panel now shows/hides instantly
+
 ## [1.2.11] - 2026-03-23
 
 ### Changed

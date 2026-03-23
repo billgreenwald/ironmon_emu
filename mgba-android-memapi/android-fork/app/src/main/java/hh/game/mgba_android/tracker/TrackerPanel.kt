@@ -122,13 +122,13 @@ fun TrackerPanel(
                         modifier = Modifier.fillMaxHeight(),
                         contentPadding = PaddingValues(0.dp),
                     ) {
-                        Text(if (isExpanded) "◀" else "▶", color = TextSecondary, fontSize = ssp(12))
+                        Text(if (isExpanded) "▶" else "◀", color = TextSecondary, fontSize = ssp(12))
                     }
                 }
-                // Main tracker content
-                AnimatedVisibility(visible = isExpanded, modifier = Modifier.weight(1f).fillMaxHeight()) {
+                // Main tracker content — no animation, instant show/hide
+                if (isExpanded) {
                     Column(
-                        modifier = Modifier.fillMaxSize().background(PanelBg),
+                        modifier = Modifier.weight(1f).fillMaxHeight().background(PanelBg),
                     ) {
                         when (state) {
                             is TrackerState.Disconnected -> StatusText("Loading…")

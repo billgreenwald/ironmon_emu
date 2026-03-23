@@ -559,7 +559,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
     private fun applyTrackerExpansion(expanded: Boolean) {
         trackerExpanded = expanded
-        val newGameWidth = if (expanded) (screenWidthPx * splitFraction).toInt() else screenWidthPx
+        // When collapsed, leave 24dp for the arrow strip so it stays on-screen
+        val arrowPx = (24 * resources.displayMetrics.density).toInt()
+        val newGameWidth = if (expanded) (screenWidthPx * splitFraction).toInt() else screenWidthPx - arrowPx
         mSurface?.layoutParams?.width = newGameWidth
         mSurface?.requestLayout()
         val tv = trackerViewRef ?: return
