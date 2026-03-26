@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.15] - 2026-03-25
+
+### Fixed
+- Route encounters no longer persist into the next run — removing `resetGameOver()` from the GAME OVER banner (the run-count double-increment fix in 1.2.13) had the side effect of stopping route data from being cleared on new runs. `manualNextRun()` now always calls `resetGameOver()` after handling the run count, so encounters and revealed moves are wiped at the start of each new run regardless of how it was triggered.
+
 ## [1.2.14] - 2026-03-25
 
 ### Changed

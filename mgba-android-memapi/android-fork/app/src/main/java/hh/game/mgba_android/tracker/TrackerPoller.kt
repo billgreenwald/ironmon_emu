@@ -90,7 +90,8 @@ object TrackerPoller {
     }
 
     /** Called when the user triggers "Next Run" (banner or tools menu).
-     *  Only increments if game-over detection hasn't already done so. */
+     *  Only increments if game-over detection hasn't already done so.
+     *  Always clears routes/moves and resets the game-over flag for the new run. */
     fun manualNextRun() {
         // getAndSet(true) returns the old value.
         // If it was false, we own this transition — increment.
@@ -103,6 +104,9 @@ object TrackerPoller {
             data.stats.attempts = runAttempts
             RunRepository.save(ctx, lastGameCode, data)
         }
+        // Always clear route encounters and revealed moves for the new run,
+        // and reset isGameOver so the next death can be detected.
+        resetGameOver()
     }
 
     private var pollJob: Job? = null
