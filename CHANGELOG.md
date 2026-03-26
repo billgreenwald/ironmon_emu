@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.14] - 2026-03-25
+
+### Changed
+- Settings dialog: speed-trigger button options reduced to L2, R2, X, and Y only (removed L and R shoulder buttons)
+- Settings dialog: chip rows now wrap to the next line on narrow screens instead of overflowing horizontally (`FlowRow`)
+- Settings dialog: "Show FPS" toggle moved to the bottom of the dialog
+- Settings dialog: "Always show on-screen controls" toggle no longer shows a subtitle — the label alone is sufficient
+- Settings dialog: removed capture-from-gamepad feature (auto-detect / default-trigger buttons) — speed trigger is now set by tapping a labeled chip directly
+
 ## [1.2.13] - 2026-03-25
 
 ### Fixed

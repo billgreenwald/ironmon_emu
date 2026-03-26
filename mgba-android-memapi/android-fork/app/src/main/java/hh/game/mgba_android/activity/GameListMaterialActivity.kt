@@ -8,7 +8,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
-import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResult
@@ -28,6 +27,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -55,14 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.focusable
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -96,40 +90,6 @@ class GameListMaterialActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { _: ActivityResult ->
             checkPermission()
         }
-
-    // Set by SpeedSettingsDialog when capture mode is active; cleared after first mapped button press.
-    internal var captureNextKey: ((String) -> Unit)? = null
-
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val capture = captureNextKey
-        if (capture != null && event.action == KeyEvent.ACTION_DOWN) {
-            val name = gbaKeyNameFromCode(event.keyCode)
-            if (name != null) {
-                captureNextKey = null
-                capture(name)
-                return true
-            }
-        }
-        return super.dispatchKeyEvent(event)
-    }
-
-    private fun gbaKeyNameFromCode(keyCode: Int): String? = when (keyCode) {
-        KeyEvent.KEYCODE_BUTTON_A      -> "A"
-        KeyEvent.KEYCODE_BUTTON_B      -> "B"
-        KeyEvent.KEYCODE_BUTTON_L1     -> "L"
-        KeyEvent.KEYCODE_BUTTON_R1     -> "R"
-        KeyEvent.KEYCODE_BUTTON_SELECT -> "select"
-        KeyEvent.KEYCODE_BUTTON_START  -> "start"
-        KeyEvent.KEYCODE_DPAD_UP       -> "up"
-        KeyEvent.KEYCODE_DPAD_DOWN     -> "down"
-        KeyEvent.KEYCODE_DPAD_LEFT     -> "left"
-        KeyEvent.KEYCODE_BUTTON_X      -> "X"
-        KeyEvent.KEYCODE_BUTTON_Y      -> "Y"
-        KeyEvent.KEYCODE_BUTTON_L2     -> "L2"
-        KeyEvent.KEYCODE_BUTTON_R2     -> "R2"
-        KeyEvent.KEYCODE_DPAD_RIGHT    -> "right"
-        else -> null
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -404,6 +364,7 @@ fun FamilyRow(group: RomFamilyGroup, onClick: () -> Unit, onLongClick: () -> Uni
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -414,34 +375,19 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     var splitFraction by remember { mutableStateOf(EmulatorPreferences.getSplitFraction(context)) }
     var alwaysShowControls by remember { mutableStateOf(EmulatorPreferences.getAlwaysShowControls(context)) }
     var trackerCollapsible by remember { mutableStateOf(EmulatorPreferences.getTrackerCollapsible(context)) }
-    var isCapturing by remember { mutableStateOf(false) }
-
-    // Compose AlertDialog creates its own window — the activity's dispatchKeyEvent never fires
-    // while the dialog is open. We must capture gamepad key events here directly.
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(isCapturing) {
-        if (isCapturing) focusRequester.requestFocus()
-    }
-
     val labelColor = Color(0xFF111111)
     val unselectedColor = Color(0xFF444444)
     val selectedColor = Color(0xFF4090FF)
 
-    // Split all button options into rows so they don't overflow the dialog width
-    val btnRow1 = listOf("none", "A", "B", "L", "R")
-    val btnRow2 = listOf("start", "select", "up", "down", "left", "right")
-    val btnRow3 = listOf("X", "Y", "L2", "R2")
+    val triggerButtons = listOf("L2", "R2", "X", "Y")
 
     @Composable
     fun BtnChip(btn: String) {
         val selected = speedButton == btn
         TextButton(
-            onClick = {
-                speedButton = btn
-                isCapturing = false
-            },
+            onClick = { speedButton = btn },
             border = if (selected) BorderStroke(1.dp, selectedColor) else null,
-        ) { Text(btn.replaceFirstChar { it.uppercase() }, color = if (selected) selectedColor else unselectedColor, fontSize = 12.sp) }
+        ) { Text(btn, color = if (selected) selectedColor else unselectedColor, fontSize = 12.sp) }
     }
 
     AlertDialog(
@@ -450,53 +396,12 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
         },
         title = { Text("Emulator Settings", color = labelColor) },
         text = {
-            Box(
-                modifier = Modifier
-                    .focusRequester(focusRequester)
-                    .focusable()
-                    .onKeyEvent { event: ComposeKeyEvent ->
-                        if (isCapturing && event.type == KeyEventType.KeyDown) {
-                            val name = when (event.nativeKeyEvent.keyCode) {
-                                android.view.KeyEvent.KEYCODE_BUTTON_A      -> "A"
-                                android.view.KeyEvent.KEYCODE_BUTTON_B      -> "B"
-                                android.view.KeyEvent.KEYCODE_BUTTON_L1     -> "L"
-                                android.view.KeyEvent.KEYCODE_BUTTON_R1     -> "R"
-                                android.view.KeyEvent.KEYCODE_BUTTON_SELECT -> "select"
-                                android.view.KeyEvent.KEYCODE_BUTTON_START  -> "start"
-                                android.view.KeyEvent.KEYCODE_DPAD_UP       -> "up"
-                                android.view.KeyEvent.KEYCODE_DPAD_DOWN     -> "down"
-                                android.view.KeyEvent.KEYCODE_DPAD_LEFT     -> "left"
-                                android.view.KeyEvent.KEYCODE_DPAD_RIGHT    -> "right"
-                                android.view.KeyEvent.KEYCODE_BUTTON_X      -> "X"
-                                android.view.KeyEvent.KEYCODE_BUTTON_Y      -> "Y"
-                                android.view.KeyEvent.KEYCODE_BUTTON_L2     -> "L2"
-                                android.view.KeyEvent.KEYCODE_BUTTON_R2     -> "R2"
-                                else -> null
-                            }
-                            if (name != null) {
-                                speedButton = name
-                                isCapturing = false
-                                return@onKeyEvent true
-                            }
-                        }
-                        false
-                    }
-            ) {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Show FPS toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text("Show FPS", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                    Switch(checked = showFps, onCheckedChange = { showFps = it })
-                }
                 Text("Default Speed", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     EmulatorPreferences.speedOptions.forEach { (mult, fps) ->
                         val selected = defaultFps == fps
                         TextButton(
@@ -506,7 +411,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     }
                 }
                 Text("Hold-Button Speed", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     EmulatorPreferences.speedOptions.forEach { (mult, fps) ->
                         val selected = secondaryFps == fps
                         TextButton(
@@ -516,25 +421,12 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     }
                 }
                 Text("Trigger Button", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { btnRow1.forEach { BtnChip(it) } }
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { btnRow2.forEach { BtnChip(it) } }
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { btnRow3.forEach { BtnChip(it) } }
-                if (isCapturing) {
-                    Text(
-                        "Press any button on your gamepad…",
-                        color = Color(0xFFCC8800),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                } else {
-                    TextButton(
-                        onClick = { isCapturing = true },
-                        border = BorderStroke(1.dp, Color(0xFF888888)),
-                    ) { Text("Capture from gamepad", color = unselectedColor, fontSize = 12.sp) }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    triggerButtons.forEach { BtnChip(it) }
                 }
                 // ── Game / Tracker split ──────────────────────────────────────
                 Text("Game / Tracker Split", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     listOf("70/30" to 0.7f, "80/20" to 0.8f, "90/10" to 0.9f).forEach { (label, frac) ->
                         val selected = splitFraction == frac
                         TextButton(
@@ -549,10 +441,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Always show on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                        Text("Disables auto-hide when gamepad detected", fontSize = 11.sp, color = Color(0xFF666666))
-                    }
+                    Text("Always show on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor, modifier = Modifier.weight(1f))
                     Switch(checked = alwaysShowControls, onCheckedChange = { alwaysShowControls = it })
                 }
                 // ── Collapsible tracker panel ─────────────────────────────────
@@ -564,8 +453,16 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     Text("Collapsible tracker panel", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
                     Switch(checked = trackerCollapsible, onCheckedChange = { trackerCollapsible = it })
                 }
+                // ── Show FPS ──────────────────────────────────────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("Show FPS", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                    Switch(checked = showFps, onCheckedChange = { showFps = it })
+                }
             }
-            } // end Box
         },
         confirmButton = {
             TextButton(onClick = {
