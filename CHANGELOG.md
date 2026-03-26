@@ -1,9 +1,10 @@
 # Changelog
 
-## [1.2.13] - 2026-03-23
+## [1.2.13] - 2026-03-25
 
 ### Fixed
-- Run count incrementing by 2 instead of 1 for some users — replaced `@Volatile` boolean with `AtomicBoolean.compareAndSet` so only one poll coroutine can claim the game-over transition, preventing a race condition where two concurrent 250ms polls both read `isGameOver=false` before either could write `true`
+- Run count double-incrementing on death: the GAME OVER banner button was calling `resetGameOver()` (setting `isGameOver=false`) before invoking the quickload, which caused `manualNextRun()` to see a false `isGameOver` and increment a second time. Removed the redundant `resetGameOver()` call — the process is killed by quickload anyway
+- Additional guard: `manualNextRun()` now uses `AtomicBoolean.getAndSet` so it only increments when transitioning from non-game-over state, preventing any remaining double-count edge cases
 
 ## [1.2.12] - 2026-03-23
 

@@ -89,15 +89,20 @@ object TrackerPoller {
         RunRepository.save(ctx, lastGameCode, data)
     }
 
-    /** Called when the user manually triggers "Next Run" from the tools menu. */
+    /** Called when the user triggers "Next Run" (banner or tools menu).
+     *  Only increments if game-over detection hasn't already done so. */
     fun manualNextRun() {
-        runAttempts++
-        isGameOver.set(true)
-        val ctx = appContext ?: return
-        if (lastGameCode.isEmpty()) return
-        val data = RunRepository.load(ctx, lastGameCode)
-        data.stats.attempts = runAttempts
-        RunRepository.save(ctx, lastGameCode, data)
+        // getAndSet(true) returns the old value.
+        // If it was false, we own this transition — increment.
+        // If it was already true (died normally), detection already incremented — skip.
+        if (!isGameOver.getAndSet(true)) {
+            runAttempts++
+            val ctx = appContext ?: return
+            if (lastGameCode.isEmpty()) return
+            val data = RunRepository.load(ctx, lastGameCode)
+            data.stats.attempts = runAttempts
+            RunRepository.save(ctx, lastGameCode, data)
+        }
     }
 
     private var pollJob: Job? = null

@@ -186,7 +186,6 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
                 modifier = Modifier
                     .background(Color(0xFF7B0020), RoundedCornerShape(4.dp))
                     .clickable {
-                        TrackerPoller.resetGameOver()
                         onQuickload?.invoke()
                     }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
