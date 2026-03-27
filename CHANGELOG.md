@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.0] - 2026-03-27
+
+### Added
+- **Route encounter detail sheet** — tapping any discovered wild Pokémon sprite in the Routes tab opens a bottom sheet showing the Pokémon's sprite, name, types, base stats (HP/Atk/Def/SpA/SpD/Spe), BST, evolution info, and both abilities. Tapping the type chip row opens the Type Defense sheet; tapping an ability name opens the Ability detail sheet. Undiscovered `?` slots remain non-tappable.
+
 ## [1.2.15] - 2026-03-25
 
 ### Fixed

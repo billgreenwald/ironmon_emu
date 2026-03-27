@@ -142,4 +142,20 @@ object EvolutionLevel {
 
     /** Returns the level at which [speciesId] evolves, or 0 if no level-based evolution. */
     fun get(speciesId: Int): Int = TABLE[speciesId] ?: 0
+
+    // Gen III internal species IDs that evolve via friendship
+    // Sources: PokemonData.lua Evolutions.FRIEND entries + idNatToInternal map
+    private val FRIENDSHIP_EVOS = setOf(
+        42,   // Golbat → Crobat
+        113,  // Chansey → Blissey
+        172,  // Pichu → Pikachu
+        173,  // Cleffa → Clefairy
+        174,  // Igglybuff → Jigglypuff
+        175,  // Togepi → Togetic
+        350,  // Azurill → Marill (internal ID 350 = national 298, from idNatToInternal)
+    )
+
+    /** Returns "FRIEND" if [speciesId] evolves via friendship, null otherwise. */
+    fun getMethod(speciesId: Int): String? =
+        if (speciesId in FRIENDSHIP_EVOS) "FRIEND" else null
 }

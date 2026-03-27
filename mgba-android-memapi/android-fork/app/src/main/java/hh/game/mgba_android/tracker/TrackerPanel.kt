@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skydoves.landscapist.glide.GlideImage
 import hh.game.mgba_android.tracker.data.BagDetailInfo
+import hh.game.mgba_android.tracker.data.DataHelper
 import hh.game.mgba_android.tracker.data.GameStats
 import hh.game.mgba_android.tracker.data.LearnsetInfo
 import hh.game.mgba_android.tracker.models.*
@@ -436,6 +437,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
 
         // Learnset row + BST + evo level (Lua: "Moves X/Y (nextLevel)")
         LearnsetRow(learnset, pokemon.level, pokemon.bst, EvolutionLevel.get(pokemon.speciesId),
+            evoMethod = EvolutionLevel.getMethod(pokemon.speciesId),
             onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null)
 
         Spacer(Modifier.height(4.dp))
@@ -509,6 +511,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
 private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Unit = {}) {
     val isHoenn = state.game == GameVersion.RUBY || state.game == GameVersion.SAPPHIRE || state.game == GameVersion.EMERALD
     val currentMapId = state.currentRoute?.mapLayoutId
+    var selectedRouteSpecies by remember { mutableStateOf<Int?>(null) }
 
     // Show every route the player has physically stepped onto — encounter/trainer data fills in naturally.
     val allMapIds: Set<Int> = state.visitedRoutes
@@ -594,7 +597,9 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
                         Row(modifier = Modifier.fillMaxWidth()) {
                             rowSlots.forEach { speciesId ->
                                 Column(
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable(enabled = speciesId > 0) { selectedRouteSpecies = speciesId },
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
                                     if (speciesId > 0) {
@@ -645,6 +650,10 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
             }
             Spacer(Modifier.height(8.dp))
         }
+    }
+
+    selectedRouteSpecies?.let { sid ->
+        RouteMonSheet(sid, onDismiss = { selectedRouteSpecies = null })
     }
 }
 
@@ -717,6 +726,7 @@ private fun EnemyView(
         Spacer(Modifier.height(2.dp))
         // Learnset row + BST + evo level below header row (Lua: "Moves X/Y (nextLevel)")
         LearnsetRow(learnset, enemy.level, enemy.bst, EvolutionLevel.get(enemy.speciesId),
+            evoMethod = EvolutionLevel.getMethod(enemy.speciesId),
             onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null)
 
         Spacer(Modifier.height(4.dp))
@@ -1046,7 +1056,7 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, isStab: Boolean = 
 // Shows learned/total counts + next move level (tappable), evo level, BST right-aligned.
 // Next move level turns yellow when 1 level away; evo level turns yellow when ≤2 away.
 @Composable
-private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, evoLevel: Int = 0, onLearnsetTap: (() -> Unit)? = null) {
+private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, evoLevel: Int = 0, evoMethod: String? = null, onLearnsetTap: (() -> Unit)? = null) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -1081,6 +1091,10 @@ private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, ev
             val evoColor = if (evoSoon) Color(0xFFFFEB3B) else TextSecondary
             Text("Evo ", color = TextSecondary, fontSize = ssp(12))
             Text("Lv.$evoLevel", color = evoColor, fontSize = ssp(12), fontWeight = FontWeight.Bold)
+            Text("  ", color = TextSecondary, fontSize = ssp(12))
+        } else if (evoMethod != null) {
+            Text("Evo ", color = TextSecondary, fontSize = ssp(12))
+            Text(evoMethod, color = TextSecondary, fontSize = ssp(12), fontWeight = FontWeight.Bold)
             Text("  ", color = TextSecondary, fontSize = ssp(12))
         }
         Text("BST ", color = TextSecondary, fontSize = ssp(12))
@@ -1247,6 +1261,132 @@ fun TypeDefenseSheet(type1: Int, type2: Int, onDismiss: () -> Unit) {
             }
             Spacer(Modifier.height(16.dp))
         }
+    }
+}
+
+// ── Route encounter detail sheet ──────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RouteMonSheet(speciesId: Int, onDismiss: () -> Unit) {
+    var baseStatBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var showDefenseSheet by remember { mutableStateOf(false) }
+    var showAbilitySheet by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(speciesId) {
+        val addr = TrackerPoller.currentAddresses ?: return@LaunchedEffect
+        baseStatBytes = MemoryBridge.readBytes(
+            addr.baseStatsTable + speciesId * DataHelper.BASE_STATS_ENTRY_SIZE,
+            DataHelper.BASE_STATS_ENTRY_SIZE,
+        )
+    }
+
+    val bytes = baseStatBytes
+    val hp    = bytes?.get(DataHelper.BASE_STATS_HP)?.toInt()?.and(0xFF) ?: 0
+    val atk   = bytes?.get(DataHelper.BASE_STATS_ATK)?.toInt()?.and(0xFF) ?: 0
+    val def   = bytes?.get(DataHelper.BASE_STATS_DEF)?.toInt()?.and(0xFF) ?: 0
+    val spe   = bytes?.get(DataHelper.BASE_STATS_SPE)?.toInt()?.and(0xFF) ?: 0
+    val spa   = bytes?.get(DataHelper.BASE_STATS_SPA)?.toInt()?.and(0xFF) ?: 0
+    val spd   = bytes?.get(DataHelper.BASE_STATS_SPD)?.toInt()?.and(0xFF) ?: 0
+    val type1 = bytes?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0
+    val type2 = bytes?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: type1
+    val ab1   = bytes?.get(DataHelper.BASE_STATS_ABILITY1)?.toInt()?.and(0xFF) ?: 0
+    val ab2   = bytes?.get(DataHelper.BASE_STATS_ABILITY2)?.toInt()?.and(0xFF) ?: 0
+    val bst   = BstTable.bst(speciesId)
+
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+
+            // ── Header: sprite + name + types ──────────────────────────────
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                GlideImage(
+                    imageModel = { "file:///android_asset/sprites/$speciesId.gif" },
+                    modifier = Modifier.size(56.dp),
+                    failure = {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("#$speciesId", color = TextSecondary, fontSize = ssp(12))
+                        }
+                    },
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        SpeciesNames.get(speciesId),
+                        color = TextPrimary, fontSize = ssp(22), fontWeight = FontWeight.Bold,
+                    )
+                    if (bytes != null) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.clickable { showDefenseSheet = true },
+                        ) {
+                            TypeChip(type1)
+                            if (type2 != type1) TypeChip(type2)
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // ── Evolution + BST ────────────────────────────────────────────
+            LearnsetRow(
+                learnset = null,
+                currentLevel = 0,
+                bst = bst,
+                evoLevel = EvolutionLevel.get(speciesId),
+                evoMethod = EvolutionLevel.getMethod(speciesId),
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── Base stats ─────────────────────────────────────────────────
+            if (bytes != null) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    listOf("HP" to hp, "Atk" to atk, "Def" to def,
+                           "SpA" to spa, "SpD" to spd, "Spe" to spe)
+                        .forEach { (label, value) ->
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text(label, color = TextSecondary, fontSize = ssp(11))
+                                Text("$value", color = TextPrimary, fontSize = ssp(14),
+                                    fontWeight = FontWeight.Bold)
+                            }
+                        }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // ── Abilities ──────────────────────────────────────────────
+                val ab1Name = AbilityTable.name(ab1)
+                val ab2Name = AbilityTable.name(ab2)
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "Ability: $ab1Name",
+                        color = TextPrimary, fontSize = ssp(14),
+                        modifier = Modifier.weight(1f).clickable { showAbilitySheet = ab1 },
+                    )
+                    if (ab2 != 0 && ab2 != ab1) {
+                        Text(
+                            "/ $ab2Name",
+                            color = TextSecondary, fontSize = ssp(14),
+                            modifier = Modifier.clickable { showAbilitySheet = ab2 },
+                        )
+                    }
+                }
+            } else {
+                Text("Loading...", color = TextSecondary, fontSize = ssp(13))
+            }
+
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+
+    if (showDefenseSheet && bytes != null) {
+        TypeDefenseSheet(type1, type2, onDismiss = { showDefenseSheet = false })
+    }
+    showAbilitySheet?.let { abilityId ->
+        AbilityDetailSheet(abilityId, onDismiss = { showAbilitySheet = null })
     }
 }
 

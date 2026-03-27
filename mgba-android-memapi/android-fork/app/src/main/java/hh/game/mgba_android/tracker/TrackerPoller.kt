@@ -38,6 +38,9 @@ object TrackerPoller {
     private val _state = MutableStateFlow<TrackerState>(TrackerState.Disconnected)
     val state: StateFlow<TrackerState> = _state
 
+    @Volatile var currentAddresses: GameAddresses? = null
+        private set
+
     // Revealed enemy moves: key = speciesId * 1000L + level, persists across battles within a run
     private val revealedMovesByKey = mutableMapOf<Long, MutableList<Int>>()
     private var lastEnemyMoveId: Int = 0     // last value of gBattleResults+0x24
@@ -152,6 +155,7 @@ object TrackerPoller {
 
         val addresses = DataHelper.addressesFor(game, romVersion, gameCode)
             ?: return TrackerState.NoGameLoaded
+        currentAddresses = addresses
 
         // ── Run persistence: load attempt count + route encounters when game code changes ─────────
         if (gameCode != lastGameCode) {

@@ -79,6 +79,12 @@ object DataHelper {
 
     // ── Base stats ROM (28 bytes/species) ────────────────────────────────────
     const val BASE_STATS_ENTRY_SIZE: Int = 28
+    const val BASE_STATS_HP:         Int = 0
+    const val BASE_STATS_ATK:        Int = 1
+    const val BASE_STATS_DEF:        Int = 2
+    const val BASE_STATS_SPE:        Int = 3   // Speed is byte 3 in Gen III struct
+    const val BASE_STATS_SPA:        Int = 4
+    const val BASE_STATS_SPD:        Int = 5
     const val BASE_STATS_TYPE1:      Int = 6
     const val BASE_STATS_TYPE2:      Int = 7
     const val BASE_STATS_GENDER_RATIO: Int = 16
