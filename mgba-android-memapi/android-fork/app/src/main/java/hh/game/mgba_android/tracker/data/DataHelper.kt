@@ -24,6 +24,7 @@ data class GameAddresses(
     val saveBlock1Ptr: Long,
     val saveBlock1IsPointer: Boolean = true,  // true = dereference pointer; false = use address directly (Ruby/Sapphire)
     val gameStatsOffset: Int,    // byte offset within SaveBlock1 to game stats array
+    val gameFlagsOffset: Int,    // byte offset within SaveBlock1 to game flags array (trainer defeat bits)
     // SaveBlock2 (for XOR key used to decrypt game stats)
     // saveBlock2Ptr == 0L means no encryption (Ruby/Sapphire per Lua tracker)
     val saveBlock2Ptr: Long,
@@ -36,6 +37,8 @@ data class GameAddresses(
     val bagPocket_Berries_size: Int,
     // gTrainerBattleOpponent_A (u16): opponent trainer class index; 0 = wild (Lua tracker)
     val trainerBattleOpponent: Long = 0L,
+    // gBattlerPartyIndexes: u8 array; [0]=playerSlot, [2]=enemySlot (Lua: Battle.Combatants.LeftOther)
+    val gBattlerPartyIndexes: Long = 0L,
 )
 
 object DataHelper {
@@ -134,6 +137,7 @@ object DataHelper {
         saveBlock1Ptr       = 0x03005008L,
         saveBlock1IsPointer = true,
         gameStatsOffset     = 0x1200,
+        gameFlagsOffset     = 0xEE0,        // gameFlagsOffset (all FR/LG variants)
         saveBlock2Ptr       = 0x0300500CL,  // gSaveBlock2ptr (English FR/LG)
         encryptionKeyOffset = 0xF20,        // EncryptionKeyOffset (all FR/LG variants)
         // Bag offsets from Lua tracker: Pokemon FireRed v1.0.json (same for all FR/LG)
@@ -142,6 +146,7 @@ object DataHelper {
         bagPocket_Berries_offset = 0x54C,
         bagPocket_Berries_size  = 0x2B,     // 43 slots
         trainerBattleOpponent   = 0x020386AEL,  // gTrainerBattleOpponent_A (English FR/LG)
+        gBattlerPartyIndexes    = 0x02023BCEL,  // gBattlerPartyIndexes (English FR/LG all versions)
     )
 
     // FireRed English v1.1 (BPRE, version byte 1)
@@ -192,6 +197,7 @@ object DataHelper {
         saveBlock1Ptr       = 0x02025734L,  // gSaveBlock1 — direct address, not a pointer
         saveBlock1IsPointer = false,
         gameStatsOffset     = 0x1540,
+        gameFlagsOffset     = 0x1220,       // gameFlagsOffset (all Ruby/Sapphire variants)
         saveBlock2Ptr       = 0L,           // No encryption for Ruby/Sapphire
         encryptionKeyOffset = 0,
         // Bag offsets from Lua tracker: Pokemon Ruby v1.0.json
@@ -200,6 +206,7 @@ object DataHelper {
         bagPocket_Berries_offset = 0x740,
         bagPocket_Berries_size  = 0x2E,     // 46 slots
         trainerBattleOpponent   = 0x0202FF5EL,  // gTrainerBattleOpponent_A
+        gBattlerPartyIndexes    = 0x02024A6AL,  // gBattlerPartyIndexes (Ruby/Sapphire all versions)
     )
 
     // Ruby v1.1 / v1.2
@@ -242,6 +249,7 @@ object DataHelper {
         saveBlock1Ptr       = 0x03005D8CL,
         saveBlock1IsPointer = true,
         gameStatsOffset     = 0x159C,
+        gameFlagsOffset     = 0x1270,       // gameFlagsOffset from Emerald.json
         saveBlock2Ptr       = 0x03005D90L, // gSaveBlock2ptr from Emerald.json
         encryptionKeyOffset = 0xAC,        // EncryptionKeyOffset from Emerald.json
         // Bag offsets from Lua tracker: Pokemon Emerald.json
@@ -250,6 +258,7 @@ object DataHelper {
         bagPocket_Berries_offset = 0x790,
         bagPocket_Berries_size  = 0x2E,     // 46 slots
         trainerBattleOpponent   = 0x02038BCAL,  // gTrainerBattleOpponent_A from Emerald.json
+        gBattlerPartyIndexes    = 0x0202406EL,  // gBattlerPartyIndexes from Emerald.json
     )
 
     /**
@@ -263,7 +272,7 @@ object DataHelper {
             gameCode == "BPRI" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824D864L, saveBlock2Ptr = 0x03004F5CL) // Italian
             gameCode == "BPRF" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824EBD4L, saveBlock2Ptr = 0x03004F5CL) // French
             gameCode == "BPRD" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824EBD4L, saveBlock2Ptr = 0x03004F5CL) // German (approx)
-            gameCode == "BPRJ" -> FIRE_RED_V10.copy(baseStatsTable = 0x0821118CL, saveBlock2Ptr = 0x0300504CL, trainerBattleOpponent = 0x0203860EL) // Japanese
+            gameCode == "BPRJ" -> FIRE_RED_V10.copy(baseStatsTable = 0x0821118CL, saveBlock2Ptr = 0x0300504CL, trainerBattleOpponent = 0x0203860EL, gBattlerPartyIndexes = 0x02023B2EL) // Japanese
             romVersion >= 1 -> FIRE_RED_V11
             else -> FIRE_RED_V10
         }

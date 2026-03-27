@@ -42,6 +42,7 @@ ironmon_emu/
 | Game over not triggering | `TrackerPoller` lead HP check | [`tracker_poller.md`](claude_docs/tracker_poller.md) |
 | Wrong route name | `RouteReader.kt` + `RouteNames.kt` | [`data_readers.md`](claude_docs/data_readers.md) |
 | Wrong steps/battles/centers | `StatsReader.kt` + XOR decrypt | [`data_readers.md`](claude_docs/data_readers.md) |
+| Trainer counts wrong / missing | `TrainerFlagReader.kt` + `TrainerRouteTable.kt`; verify `gameFlagsOffset` in `DataHelper` | [`data_readers.md`](claude_docs/data_readers.md) |
 | Wrong bag items/quantities | `BagReader.kt` + XOR decrypt | [`data_readers.md`](claude_docs/data_readers.md) |
 | Wrong learnset moves | `LearnsetReader.kt` + `levelUpLearnsets` address | [`data_readers.md`](claude_docs/data_readers.md) |
 | UI not rendering / layout broken | `TrackerPanel.kt` + `activity_game.xml` | [`tracker_panel.md`](claude_docs/tracker_panel.md), [`game_activity_layout.md`](claude_docs/game_activity_layout.md) |

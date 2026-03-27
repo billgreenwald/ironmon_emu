@@ -31,7 +31,7 @@ object LearnsetReader {
     private const val MAX_MOVES    = 100   // failsafe, matches Lua tracker
 
     fun read(speciesId: Int, currentLevel: Int, addresses: GameAddresses): LearnsetInfo? {
-        if (speciesId !in 1..386) return null
+        if (speciesId !in 1..411) return null
 
         // Step 1: read the 4-byte GBA pointer for this species
         val ptrBytes = MemoryBridge.readBytes(

@@ -1,10 +1,12 @@
 package hh.game.mgba_android.tracker
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -22,8 +24,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skydoves.landscapist.glide.GlideImage
@@ -73,6 +78,12 @@ private val TYPE_COLORS = mapOf(
 
 private fun typeColor(typeId: Int) = TYPE_COLORS[typeId] ?: Color(0xFF888888)
 
+// ── Font scaling ──────────────────────────────────────────────────────────────
+private val LocalTrackerFontScale = staticCompositionLocalOf { 1f }
+
+@Composable private fun ssp(n: Int): TextUnit = (n * LocalTrackerFontScale.current).sp
+@Composable private fun ssp(n: Float): TextUnit = (n * LocalTrackerFontScale.current).sp
+
 // ── Move category (Gen III: type-based, matching MoveData.lua lines 103–119) ─
 // Gen III move category split: physical = types 0–8, special = types 10–17
 // Source: PokemonData.TypeIndexMap in Lua tracker (0x0A=Fire is special, no type 9 in base stats)
@@ -81,16 +92,62 @@ private val SPECIAL_TYPES  = setOf(10, 11, 12, 13, 14, 15, 16, 17)
 
 // ── Main entry point ─────────────────────────────────────────────────────────
 @Composable
-fun TrackerPanel(state: TrackerState, onQuickload: (() -> Unit)? = null) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PanelBg),
-    ) {
-        when (state) {
-            is TrackerState.Disconnected -> StatusText("Loading…")
-            is TrackerState.NoGameLoaded -> StatusText("No supported game loaded")
-            is TrackerState.Active       -> ActivePanel(state, onQuickload)
+fun TrackerPanel(
+    state: TrackerState,
+    onQuickload: (() -> Unit)? = null,
+    fontScale: Float = 1f,
+    isCollapsible: Boolean = false,
+    isExpanded: Boolean = true,
+    onToggleExpand: (() -> Unit)? = null,
+) {
+    CompositionLocalProvider(LocalTrackerFontScale provides fontScale) {
+        if (isCollapsible) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                // Arrow toggle strip on the left edge
+                Box(
+                    modifier = Modifier
+                        .width(24.dp)
+                        .fillMaxHeight()
+                        .background(HeaderBg)
+                        .pointerInput(isExpanded) {
+                            detectHorizontalDragGestures { _, dragAmount ->
+                                if (dragAmount > 20f && !isExpanded) onToggleExpand?.invoke()
+                                else if (dragAmount < -20f && isExpanded) onToggleExpand?.invoke()
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TextButton(
+                        onClick = { onToggleExpand?.invoke() },
+                        modifier = Modifier.fillMaxHeight(),
+                        contentPadding = PaddingValues(0.dp),
+                    ) {
+                        Text(if (isExpanded) "▶" else "◀", color = TextSecondary, fontSize = ssp(12))
+                    }
+                }
+                // Main tracker content — no animation, instant show/hide
+                if (isExpanded) {
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxHeight().background(PanelBg),
+                    ) {
+                        when (state) {
+                            is TrackerState.Disconnected -> StatusText("Loading…")
+                            is TrackerState.NoGameLoaded -> StatusText("No supported game loaded")
+                            is TrackerState.Active       -> ActivePanel(state, onQuickload)
+                        }
+                    }
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize().background(PanelBg),
+            ) {
+                when (state) {
+                    is TrackerState.Disconnected -> StatusText("Loading…")
+                    is TrackerState.NoGameLoaded -> StatusText("No supported game loaded")
+                    is TrackerState.Active       -> ActivePanel(state, onQuickload)
+                }
+            }
         }
     }
 }
@@ -98,7 +155,7 @@ fun TrackerPanel(state: TrackerState, onQuickload: (() -> Unit)? = null) {
 @Composable
 private fun StatusText(msg: String) {
     Text(
-        text = msg, color = TextSecondary, fontSize = 14.sp,
+        text = msg, color = TextSecondary, fontSize = ssp(14),
         modifier = Modifier.padding(12.dp),
     )
 }
@@ -110,6 +167,7 @@ private fun StatusText(msg: String) {
 @Composable
 private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) {
     val statMarkings: SnapshotStateMap<Pair<Int, String>, Int> = remember { mutableStateMapOf() }
+    var galleryRoute by remember { mutableStateOf<String?>(null) }
 
     PanelHeader(state)
 
@@ -123,28 +181,46 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("GAME OVER", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("GAME OVER", color = Color.White, fontSize = ssp(14), fontWeight = FontWeight.Bold)
             Box(
                 modifier = Modifier
                     .background(Color(0xFF7B0020), RoundedCornerShape(4.dp))
                     .clickable {
-                        TrackerPoller.resetGameOver()
                         onQuickload?.invoke()
                     }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("Run ${state.runAttempts + 1} →", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Run ${state.runAttempts + 1} →", color = Color.White, fontSize = ssp(12), fontWeight = FontWeight.Bold)
             }
         }
     }
 
-    // Route name
-    state.currentRoute?.let {
-        Text(
-            text = it.name, color = AccentBlue, fontSize = 14.sp,
+    // Route name + trainer count
+    state.currentRoute?.let { route ->
+        val images = ImageAssetMap.MAP[route.name]
+        val hasImages = images != null && (images.routeMaps.isNotEmpty() || images.hiddenItems.isNotEmpty())
+        val trainerCount = state.trainerCounts[route.mapLayoutId]
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 10.dp),
-        )
+        ) {
+            Text(
+                text = if (hasImages) "${route.name} ↗" else route.name,
+                color = AccentBlue,
+                fontSize = ssp(14),
+                modifier = if (hasImages) Modifier.clickable { galleryRoute = route.name } else Modifier,
+            )
+            if (trainerCount != null) {
+                val (defeated, total) = trainerCount
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Trainers: $defeated/$total",
+                    color = if (defeated >= total) Color(0xFF4CAF50) else TextSecondary,
+                    fontSize = ssp(12),
+                )
+            }
+        }
     }
 
     // Three-tab pager: MY MON | ROUTE | OPPONENT
@@ -162,7 +238,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
         ) {
             Text(
                 "MY MON",
-                fontSize = 11.sp,
+                fontSize = ssp(11),
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp),
             )
@@ -173,7 +249,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
         ) {
             Text(
                 "OPPONENT",
-                fontSize = 11.sp,
+                fontSize = ssp(11),
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp),
             )
@@ -184,7 +260,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
         ) {
             Text(
                 "ROUTES",
-                fontSize = 11.sp,
+                fontSize = ssp(11),
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp),
             )
@@ -216,7 +292,14 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
                     StatusText("Not in battle")
                 }
             }
-            else -> RouteView(state)
+            else -> RouteView(state, onOpenGallery = { galleryRoute = it })
+        }
+    }
+
+    // Gallery overlay — shown as a full-screen Dialog above game + tracker
+    galleryRoute?.let { name ->
+        ImageAssetMap.MAP[name]?.let { images ->
+            GalleryOverlay(routeName = name, routeImages = images, onDismiss = { galleryRoute = null })
         }
     }
 }
@@ -231,18 +314,18 @@ private fun PanelHeader(state: TrackerState.Active) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "IRONMON", color = AccentRed, fontSize = 10.sp,
-            fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
+            text = "IRONMON", color = AccentRed, fontSize = ssp(10),
+            fontWeight = FontWeight.Bold, letterSpacing = ssp(1),
         )
         Spacer(Modifier.weight(1f))
         Text(
             text = "${state.game.displayName.removePrefix("Pokémon ")} v1.${state.romVersion}",
-            color = TextSecondary, fontSize = 9.sp,
+            color = TextSecondary, fontSize = ssp(9),
         )
         Spacer(Modifier.width(6.dp))
         Text(
             text = "Run ${state.runAttempts + 1}",
-            color = AccentRed, fontSize = 9.sp, fontWeight = FontWeight.Bold,
+            color = AccentRed, fontSize = ssp(9), fontWeight = FontWeight.Bold,
         )
     }
 }
@@ -273,7 +356,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
                 modifier = Modifier.size(48.dp),
                 failure = {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("#${pokemon.speciesId}", color = TextSecondary, fontSize = 10.sp)
+                        Text("#${pokemon.speciesId}", color = TextSecondary, fontSize = ssp(10))
                     }
                 },
             )
@@ -291,13 +374,13 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
                             if (pokemon.isShiny) append(" ✦")
                             if (pokemon.hasPokerus) append(" ✚")
                         },
-                        color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                        color = TextPrimary, fontSize = ssp(14), fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f),
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                     StatusBadge(pokemon.statusCondition)
                     Spacer(Modifier.width(4.dp))
-                    Text("Lv.${pokemon.level}", color = TextSecondary, fontSize = 13.sp)
+                    Text("Lv.${pokemon.level}", color = TextSecondary, fontSize = ssp(13))
                 }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -312,7 +395,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
                 if (bagDetail != null && bagDetail.hpHealCount > 0) {
                     Text(
                         text = "Heals: %.0f%% HP (%d)".format(bagDetail.hpHealPercent, bagDetail.hpHealCount),
-                        color = TextSecondary, fontSize = 11.sp,
+                        color = TextSecondary, fontSize = ssp(11),
                         modifier = Modifier.clickable { showBagSheet = true },
                     )
                 }
@@ -326,9 +409,9 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("%,d steps".format(gs.steps), color = TextSecondary, fontSize = 11.sp)
-                Text("${gs.totalBattles} battles", color = TextSecondary, fontSize = 11.sp)
-                Text("${gs.pokemonCenterVisits} centers", color = TextSecondary, fontSize = 11.sp)
+                Text("%,d steps".format(gs.steps), color = TextSecondary, fontSize = ssp(11))
+                Text("${gs.totalBattles} battles", color = TextSecondary, fontSize = ssp(11))
+                Text("${gs.pokemonCenterVisits} centers", color = TextSecondary, fontSize = ssp(11))
             }
         }
 
@@ -337,7 +420,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         val abilityName = AbilityTable.name(pokemon.abilityId)
         Text(
             text = "Ability: $abilityName",
-            color = TextPrimary, fontSize = 14.sp,
+            color = TextPrimary, fontSize = ssp(14),
             modifier = Modifier.clickable { showAbilitySheet = true },
         )
 
@@ -345,11 +428,11 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         val natureMod = NatureTable.modifier(pokemon.nature)
         Text(
             text = "Nature: ${nature.name}${if (natureMod.isNotEmpty()) " ($natureMod)" else ""}",
-            color = TextSecondary, fontSize = 12.sp,
+            color = TextSecondary, fontSize = ssp(12),
         )
 
         val itemName = if (pokemon.heldItemId > 0) ItemTable.get(pokemon.heldItemId) else "None"
-        Text(text = "Item: $itemName", color = TextSecondary, fontSize = 12.sp)
+        Text(text = "Item: $itemName", color = TextSecondary, fontSize = ssp(12))
 
         // Learnset row + BST + evo level (Lua: "Moves X/Y (nextLevel)")
         LearnsetRow(learnset, pokemon.level, pokemon.bst, EvolutionLevel.get(pokemon.speciesId),
@@ -374,8 +457,8 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
                             else
                                 "$delta" to Color(0xFFFF6B6B)
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(stageLabels[i], color = TextSecondary, fontSize = 9.sp)
-                                Text(stageText, color = stageColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(stageLabels[i], color = TextSecondary, fontSize = ssp(9))
+                                Text(stageText, color = stageColor, fontSize = ssp(11), fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -423,23 +506,29 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
 // Shows all wild Pokemon encountered this run, organized by route.
 // Matches Lua tracker Tracker.Data.encounterTable discovery mechanic.
 @Composable
-private fun RouteView(state: TrackerState.Active) {
+private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Unit = {}) {
     val isHoenn = state.game == GameVersion.RUBY || state.game == GameVersion.SAPPHIRE || state.game == GameVersion.EMERALD
     val currentMapId = state.currentRoute?.mapLayoutId
 
-    // Pre-filter to routes that have at least one encounter — avoid early returns inside Compose lambdas
-    val allMapIds = state.routeEncounters.keys
-        .filter { state.routeEncounters[it]?.isNotEmpty() == true }
-    val routesWithEncounters = buildList {
-        // Current route first (if it has encounters)
+    // Show every route the player has physically stepped onto — encounter/trainer data fills in naturally.
+    val allMapIds: Set<Int> = state.visitedRoutes
+
+    // Build ordered list: current route first, rest sorted numerically.
+    // Show current route even with no encounters yet if it has defined wild slots.
+    // Other routes show only once they have encounters or trainers recorded.
+    val orderedMapIds = buildList {
         currentMapId?.let { cur ->
-            state.routeEncounters[cur]?.takeIf { it.isNotEmpty() }?.let { add(cur to it) }
+            if (cur in allMapIds &&
+                (state.routeEncounters[cur]?.isNotEmpty() == true ||
+                    state.trainerCounts[cur] != null ||
+                    RouteEncounterSlots.get(cur, isHoenn) > 0)
+            ) add(cur)
         }
-        // Remaining routes sorted numerically
         allMapIds
             .filter { it != currentMapId }
+            .filter { state.routeEncounters[it]?.isNotEmpty() == true || state.trainerCounts[it] != null }
             .sorted()
-            .forEach { mapId -> add(mapId to state.routeEncounters[mapId]!!) }
+            .forEach { add(it) }
     }
 
     Column(
@@ -448,79 +537,105 @@ private fun RouteView(state: TrackerState.Active) {
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        if (routesWithEncounters.isEmpty()) {
+        if (orderedMapIds.isEmpty()) {
             Spacer(Modifier.height(12.dp))
             Text(
                 "No encounters recorded yet.\nWild battles will appear here.",
-                color = TextSecondary, fontSize = 13.sp,
+                color = TextSecondary, fontSize = ssp(13),
                 modifier = Modifier.padding(4.dp),
             )
         } else {
-            routesWithEncounters.forEach { (mapId, encounters) ->
+            orderedMapIds.forEach { mapId ->
                 val routeName = RouteNames.get(mapId, isHoenn)
                 val isCurrent = mapId == currentMapId
+                val encounters = state.routeEncounters[mapId] ?: emptyList()
+                val trainerCount = state.trainerCounts[mapId]  // (defeated, total) or null
 
-                // Route header
+                // Route header with optional trainer count
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 6.dp, bottom = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    val routeImages = ImageAssetMap.MAP[routeName]
+                    val hasImages = routeImages != null && (routeImages.routeMaps.isNotEmpty() || routeImages.hiddenItems.isNotEmpty())
                     Text(
-                        text = routeName,
+                        text = if (hasImages) "$routeName ↗" else routeName,
                         color = if (isCurrent) AccentBlue else TextSecondary,
-                        fontSize = 12.sp,
+                        fontSize = ssp(12),
                         fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).then(
+                            if (hasImages) Modifier.clickable { onOpenGallery(routeName) } else Modifier
+                        ),
                     )
+                    if (trainerCount != null) {
+                        val (defeated, total) = trainerCount
+                        Text(
+                            text = "($defeated/$total)",
+                            color = if (defeated == total) Color(0xFF66BB6A) else TextSecondary,
+                            fontSize = ssp(11),
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
                     if (isCurrent) {
-                        Text("◄", color = AccentBlue, fontSize = 10.sp)
+                        Text("◄", color = AccentBlue, fontSize = ssp(10),
+                            modifier = Modifier.padding(start = 4.dp))
                     }
                 }
 
-                // Species grid: pad to the route's defined encounter slot count (from
-                // RouteData.lua), showing "?" for undiscovered slots like the Lua tracker.
                 val definedSlots = RouteEncounterSlots.get(mapId, isHoenn)
                 val totalSlots = maxOf(encounters.size, definedSlots)
-                val slots = List(totalSlots) { i -> if (i < encounters.size) encounters[i] else -1 }
-                slots.chunked(3).forEach { rowSlots ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        rowSlots.forEach { speciesId ->
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                if (speciesId > 0) {
-                                    GlideImage(
-                                        imageModel = { "file:///android_asset/sprites/$speciesId.gif" },
-                                        modifier = Modifier.size(36.dp),
-                                        failure = {
-                                            Box(
-                                                Modifier.size(36.dp).background(CardBg, RoundedCornerShape(4.dp)),
-                                                contentAlignment = Alignment.Center,
-                                            ) { Text("#$speciesId", color = TextSecondary, fontSize = 8.sp) }
-                                        },
-                                    )
-                                    Text(
-                                        text = SpeciesNames.get(speciesId),
-                                        color = TextPrimary, fontSize = 9.sp,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    )
-                                } else {
-                                    // Undiscovered slot — "?" like Lua tracker
-                                    Box(
-                                        Modifier.size(36.dp).background(Color(0xFF1E2A3A), RoundedCornerShape(4.dp)),
-                                        contentAlignment = Alignment.Center,
-                                    ) { Text("?", color = Color(0xFF445566), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-                                    Text("???", color = Color(0xFF445566), fontSize = 9.sp)
+                if (totalSlots > 0) {
+                    // Species grid: pad to the route's defined encounter slot count (from
+                    // RouteData.lua), showing "?" for undiscovered slots like the Lua tracker.
+                    val slots = List(totalSlots) { i -> if (i < encounters.size) encounters[i] else -1 }
+                    slots.chunked(3).forEach { rowSlots ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            rowSlots.forEach { speciesId ->
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    if (speciesId > 0) {
+                                        GlideImage(
+                                            imageModel = { "file:///android_asset/sprites/$speciesId.gif" },
+                                            modifier = Modifier.size(36.dp),
+                                            failure = {
+                                                Box(
+                                                    Modifier.size(36.dp).background(CardBg, RoundedCornerShape(4.dp)),
+                                                    contentAlignment = Alignment.Center,
+                                                ) { Text("#$speciesId", color = TextSecondary, fontSize = ssp(8)) }
+                                            },
+                                        )
+                                        Text(
+                                            text = SpeciesNames.get(speciesId),
+                                            color = TextPrimary, fontSize = ssp(9),
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        )
+                                    } else {
+                                        // Undiscovered slot — "?" like Lua tracker
+                                        Box(
+                                            Modifier.size(36.dp).background(Color(0xFF1E2A3A), RoundedCornerShape(4.dp)),
+                                            contentAlignment = Alignment.Center,
+                                        ) { Text("?", color = Color(0xFF445566), fontSize = ssp(18), fontWeight = FontWeight.Bold) }
+                                        Text("???", color = Color(0xFF445566), fontSize = ssp(9))
+                                    }
                                 }
                             }
+                            // Pad row to 3 if last row is short
+                            val padding = 3 - rowSlots.size
+                            if (padding > 0) { repeat(padding) { Spacer(Modifier.weight(1f)) } }
                         }
-                        // Pad row to 3 if last row is short
-                        val padding = 3 - rowSlots.size
-                        if (padding > 0) { repeat(padding) { Spacer(Modifier.weight(1f)) } }
                     }
+                } else {
+                    // Trainer-only location — no wild Pokémon defined
+                    Text(
+                        text = "── no wild Pokémon ──",
+                        color = Color(0xFF445566),
+                        fontSize = ssp(11),
+                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp),
+                    )
                 }
 
                 Divider(
@@ -573,7 +688,7 @@ private fun EnemyView(
                 modifier = Modifier.size(48.dp),
                 failure = {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("#${enemy.speciesId}", color = TextSecondary, fontSize = 12.sp)
+                        Text("#${enemy.speciesId}", color = TextSecondary, fontSize = ssp(12))
                     }
                 },
             )
@@ -582,11 +697,11 @@ private fun EnemyView(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = enemy.name,
-                        color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                        color = TextPrimary, fontSize = ssp(22), fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f),
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
-                    Text("Lv.${enemy.level}", color = TextSecondary, fontSize = 16.sp)
+                    Text("Lv.${enemy.level}", color = TextSecondary, fontSize = ssp(16))
                 }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -611,15 +726,15 @@ private fun EnemyView(
             Column {
                 Text(
                     text = if (battle.isWild) "WILD" else "TRAINER",
-                    color = AccentRed, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                    color = AccentRed, fontSize = ssp(14), fontWeight = FontWeight.Bold,
                 )
                 if (!battle.isWild && battle.trainerOpponentId != 0) {
-                    Text("Trainer #${battle.trainerOpponentId}", color = TextSecondary, fontSize = 11.sp)
+                    Text("Trainer #${battle.trainerOpponentId}", color = TextSecondary, fontSize = ssp(11))
                 }
             }
             if (battle.weather != Weather.NONE) {
                 Spacer(Modifier.width(6.dp))
-                Text(battle.weather.displayName, color = AccentBlue, fontSize = 14.sp)
+                Text(battle.weather.displayName, color = AccentBlue, fontSize = ssp(14))
             }
         }
 
@@ -627,10 +742,10 @@ private fun EnemyView(
         if (battle.playerReflect > 0 || battle.playerLightScreen > 0 ||
             battle.enemySpikes > 0 || battle.playerSafeguard > 0) {
             Spacer(Modifier.height(2.dp))
-            if (battle.playerReflect > 0)     Text("Reflect (${battle.playerReflect}t)", color = TextSecondary, fontSize = 12.sp)
-            if (battle.playerLightScreen > 0) Text("Light Screen (${battle.playerLightScreen}t)", color = TextSecondary, fontSize = 12.sp)
-            if (battle.enemySpikes > 0)       Text("Spikes ×${battle.enemySpikes}", color = TextSecondary, fontSize = 12.sp)
-            if (battle.playerSafeguard > 0)   Text("Safeguard (${battle.playerSafeguard}t)", color = TextSecondary, fontSize = 12.sp)
+            if (battle.playerReflect > 0)     Text("Reflect (${battle.playerReflect}t)", color = TextSecondary, fontSize = ssp(12))
+            if (battle.playerLightScreen > 0) Text("Light Screen (${battle.playerLightScreen}t)", color = TextSecondary, fontSize = ssp(12))
+            if (battle.enemySpikes > 0)       Text("Spikes ×${battle.enemySpikes}", color = TextSecondary, fontSize = ssp(12))
+            if (battle.playerSafeguard > 0)   Text("Safeguard (${battle.playerSafeguard}t)", color = TextSecondary, fontSize = ssp(12))
         }
 
         // Revealed moves
@@ -638,7 +753,7 @@ private fun EnemyView(
             Spacer(Modifier.height(4.dp))
             Divider(color = Color(0xFF303050), thickness = 0.5.dp)
             Spacer(Modifier.height(4.dp))
-            Text("Revealed Moves:", color = TextSecondary, fontSize = 13.sp)
+            Text("Revealed Moves:", color = TextSecondary, fontSize = ssp(13))
             Spacer(Modifier.height(2.dp))
             enemy.revealedMoveIds.forEach { moveId ->
                 val stats = MoveStatsTable.get(moveId)
@@ -670,7 +785,7 @@ private fun EnemyView(
                     )
                     Spacer(Modifier.width(4.dp))
                     val ppText = enemy.ppByMoveId[moveId]?.let { " (${it}PP)" } ?: ""
-                    Text(MoveNames.get(moveId) + ppText, color = TextPrimary, fontSize = 14.sp)
+                    Text(MoveNames.get(moveId) + ppText, color = TextPrimary, fontSize = ssp(14))
                 }
             }
         }
@@ -680,7 +795,7 @@ private fun EnemyView(
         Spacer(Modifier.height(4.dp))
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
         Spacer(Modifier.height(4.dp))
-        Text("Stat Markings:", color = TextSecondary, fontSize = 13.sp)
+        Text("Stat Markings:", color = TextSecondary, fontSize = ssp(13))
         Spacer(Modifier.height(4.dp))
 
         // Row 1: Atk | Def | SpA  (3 entries)
@@ -748,7 +863,7 @@ private fun StatMarkingCell(label: String, state: Int, onTap: () -> Unit, modifi
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(label, color = TextSecondary, fontSize = 11.sp)
+        Text(label, color = TextSecondary, fontSize = ssp(11))
         Box(
             modifier = Modifier
                 .background(Color(0xFF2A3550), RoundedCornerShape(4.dp))
@@ -757,7 +872,7 @@ private fun StatMarkingCell(label: String, state: Int, onTap: () -> Unit, modifi
                 .defaultMinSize(minWidth = 32.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text, color = color, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(text, color = color, fontSize = ssp(14), fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -784,8 +899,8 @@ private fun StatCell(label: String, value: Int, nature: NatureInfo, statIdx: Int
         else                                          -> TextPrimary
     }
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label,   color = TextSecondary, fontSize = 11.sp)
-        Text("$value", color = valueColor,   fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(label,   color = TextSecondary, fontSize = ssp(11))
+        Text("$value", color = valueColor,   fontSize = ssp(14), fontWeight = FontWeight.Bold)
     }
 }
 
@@ -845,10 +960,11 @@ private fun MoveTable(moves: List<MoveData>, battle: BattleState, stabTypes: Set
     // Column header
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(18.dp))  // category icon column
-        Text("Move", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
-        Text("Pwr", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(34.dp))
-        Text("Eff", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(28.dp))
-        Text("PP",  color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(28.dp))
+        Text("Move", color = TextSecondary, fontSize = ssp(12), modifier = Modifier.weight(1f))
+        Text("Pwr", color = TextSecondary, fontSize = ssp(12), textAlign = TextAlign.Center, modifier = Modifier.width(28.dp))
+        Text("Eff", color = TextSecondary, fontSize = ssp(12), textAlign = TextAlign.Center, modifier = Modifier.width(22.dp))
+        Text("Acc", color = TextSecondary, fontSize = ssp(12), textAlign = TextAlign.Center, modifier = Modifier.width(28.dp))
+        Text("PP",  color = TextSecondary, fontSize = ssp(12), textAlign = TextAlign.Center, modifier = Modifier.width(24.dp))
     }
     Spacer(Modifier.height(2.dp))
     moves.forEach { move ->
@@ -887,35 +1003,41 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, isStab: Boolean = 
             Text(
                 text = move.moveName,
                 color = if (isStab) Color(0xFF4CAF50) else TextPrimary,
-                fontSize = 14.sp,
+                fontSize = ssp(13),
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         }
         // Power
         Text(
-            text = if (move.power > 0) "${move.power}" else "—",
-            color = TextSecondary, fontSize = 14.sp,
-            modifier = Modifier.width(34.dp),
+            text = MoveStatsTable.get(move.moveId).displayPower ?: if (move.power > 0) "${move.power}" else "—",
+            color = TextSecondary, fontSize = ssp(13), textAlign = TextAlign.Center,
+            modifier = Modifier.width(28.dp),
         )
         // Effectiveness arrows
         val (effText, effColor) = when (effectiveness) {
             null  -> "" to TextSecondary
             0.0f  -> "✕"  to Color(0xFF888888)
-            0.25f -> "▼▼" to Color(0xFFFF4444)
-            0.5f  -> "▼"  to Color(0xFFFF8866)
+            0.25f -> "⇊"  to Color(0xFFFF4444)
+            0.5f  -> "↓"  to Color(0xFFFF8866)
             1.0f  -> ""   to TextSecondary
-            2.0f  -> "▲"  to Color(0xFF66CC44)
-            4.0f  -> "▲▲" to Color(0xFF00DD44)
+            2.0f  -> "↑"  to Color(0xFF66CC44)
+            4.0f  -> "⇈"  to Color(0xFF00DD44)
             else  -> ""   to TextSecondary
         }
         Text(
-            text = effText, color = effColor, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+            text = effText, color = effColor, fontSize = ssp(13), fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center, modifier = Modifier.width(22.dp),
+        )
+        // Accuracy
+        Text(
+            text = if (move.accuracy > 0) "${move.accuracy}" else "—",
+            color = TextSecondary, fontSize = ssp(13), textAlign = TextAlign.Center,
             modifier = Modifier.width(28.dp),
         )
         // PP
         Text(
-            text = "${move.pp}", color = TextSecondary, fontSize = 14.sp,
-            modifier = Modifier.width(28.dp),
+            text = "${move.pp}", color = TextSecondary, fontSize = ssp(13),
+            textAlign = TextAlign.Center, modifier = Modifier.width(24.dp),
         )
     }
 }
@@ -932,7 +1054,7 @@ private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, ev
         if (learnset != null) {
             Text(
                 text = "Moves ${learnset.learnedCount}/${learnset.totalCount}",
-                color = TextSecondary, fontSize = 12.sp,
+                color = TextSecondary, fontSize = ssp(12),
             )
             if (!learnset.allLearned) {
                 Spacer(Modifier.width(4.dp))
@@ -944,7 +1066,7 @@ private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, ev
                     Modifier.weight(1f)
                 Text(
                     text = "(Lv.${learnset.nextMoveLevel})",
-                    color = levelColor, fontSize = 12.sp,
+                    color = levelColor, fontSize = ssp(12),
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = tapMod,
                 )
@@ -957,12 +1079,12 @@ private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, ev
         if (evoLevel > 0) {
             val evoSoon = currentLevel >= evoLevel - 2
             val evoColor = if (evoSoon) Color(0xFFFFEB3B) else TextSecondary
-            Text("Evo ", color = TextSecondary, fontSize = 12.sp)
-            Text("Lv.$evoLevel", color = evoColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text("  ", color = TextSecondary, fontSize = 12.sp)
+            Text("Evo ", color = TextSecondary, fontSize = ssp(12))
+            Text("Lv.$evoLevel", color = evoColor, fontSize = ssp(12), fontWeight = FontWeight.Bold)
+            Text("  ", color = TextSecondary, fontSize = ssp(12))
         }
-        Text("BST ", color = TextSecondary, fontSize = 12.sp)
-        Text("$bst", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("BST ", color = TextSecondary, fontSize = ssp(12))
+        Text("$bst", color = TextPrimary, fontSize = ssp(12), fontWeight = FontWeight.Bold)
     }
 }
 
@@ -983,7 +1105,7 @@ private fun HpBar(pct: Float, current: Int, max: Int) {
             modifier = Modifier.weight(1f).height(3.dp).clip(RoundedCornerShape(2.dp)),
         )
         Spacer(Modifier.width(4.dp))
-        Text("$current/$max", color = TextSecondary, fontSize = 12.sp)
+        Text("$current/$max", color = TextSecondary, fontSize = ssp(12))
     }
 }
 
@@ -998,7 +1120,7 @@ private fun TypeChip(typeId: Int, small: Boolean = false) {
         Text(
             text = name,
             color = Color.White,
-            fontSize = if (small) 11.sp else 14.sp,
+            fontSize = if (small) ssp(11) else ssp(14),
             fontWeight = FontWeight.SemiBold,
         )
     }
@@ -1017,7 +1139,7 @@ private fun hpColor(pct: Float): Color = when {
 fun LearnsetSheet(learnset: LearnsetInfo, currentLevel: Int, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
         Column(Modifier.padding(16.dp)) {
-            Text("Level-up Moves", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Level-up Moves", color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1032,7 +1154,7 @@ fun LearnsetSheet(learnset: LearnsetInfo, currentLevel: Int, onDismiss: () -> Un
                     Text(
                         text = "Lv.$lvl",
                         color = color,
-                        fontSize = 13.sp,
+                        fontSize = ssp(13),
                         fontWeight = if (lvl == learnset.nextMoveLevel) FontWeight.Bold else FontWeight.Normal,
                     )
                 }
@@ -1049,22 +1171,22 @@ fun MoveDetailSheet(move: MoveData, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(move.moveName, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                Text(move.moveName, color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f))
                 TypeChip(move.moveType)
             }
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Power: ${if (move.power > 0) move.power.toString() else "—"}",
-                    color = TextSecondary, fontSize = 13.sp)
+                Text("Power: ${MoveStatsTable.get(move.moveId).displayPower ?: if (move.power > 0) move.power.toString() else "—"}",
+                    color = TextSecondary, fontSize = ssp(13))
                 Text("Acc: ${if (move.accuracy > 0) "${move.accuracy}%" else "—"}",
-                    color = TextSecondary, fontSize = 13.sp)
-                Text("PP: ${move.pp}", color = TextSecondary, fontSize = 13.sp)
+                    color = TextSecondary, fontSize = ssp(13))
+                Text("PP: ${move.pp}", color = TextSecondary, fontSize = ssp(13))
             }
             val desc = MoveDescTable.get(move.moveId)
             if (desc.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                Text(desc, color = TextSecondary, fontSize = 12.sp)
+                Text(desc, color = TextSecondary, fontSize = ssp(12))
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -1078,9 +1200,9 @@ fun AbilityDetailSheet(abilityId: Int, onDismiss: () -> Unit) {
     val info = AbilityTable.get(abilityId)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
         Column(Modifier.padding(16.dp)) {
-            Text(info.name, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(info.name, color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
-            Text(info.desc, color = TextSecondary, fontSize = 13.sp)
+            Text(info.desc, color = TextSecondary, fontSize = ssp(13))
             Spacer(Modifier.height(16.dp))
         }
     }
@@ -1092,14 +1214,14 @@ fun AbilityDetailSheet(abilityId: Int, onDismiss: () -> Unit) {
 fun TypeDefenseSheet(type1: Int, type2: Int, onDismiss: () -> Unit) {
     val chart = TypeChart.defenseChart(type1, type2)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
             Row {
-                Text("Type Defenses: ", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Type Defenses: ", color = TextPrimary, fontSize = ssp(14), fontWeight = FontWeight.Bold)
                 TypeChip(type1); Spacer(Modifier.width(4.dp))
                 if (type2 != type1) TypeChip(type2)
             }
             Spacer(Modifier.height(8.dp))
-            chart.entries.sortedBy { it.value }.forEach { (typeId, mult) ->
+            chart.entries.filter { it.value != 1.0f }.sortedBy { it.value }.forEach { (typeId, mult) ->
                 val multStr = when (mult) {
                     0.0f  -> "0×"
                     0.25f -> "¼×"
@@ -1120,7 +1242,7 @@ fun TypeDefenseSheet(type1: Int, type2: Int, onDismiss: () -> Unit) {
                 ) {
                     TypeChip(typeId)
                     Spacer(Modifier.weight(1f))
-                    Text(multStr, color = multColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(multStr, color = multColor, fontSize = ssp(13), fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -1147,7 +1269,7 @@ private fun StatusBadge(status: Int) {
             .background(color.copy(alpha = 0.85f), RoundedCornerShape(3.dp))
             .padding(horizontal = 4.dp, vertical = 1.dp),
     ) {
-        Text(label, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = Color.White, fontSize = ssp(10), fontWeight = FontWeight.Bold)
     }
 }
 
@@ -1157,13 +1279,13 @@ private fun StatusBadge(status: Int) {
 fun IVStatSheet(pokemon: PokemonData, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
         Column(Modifier.padding(16.dp)) {
-            Text("Stats Detail", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Stats Detail", color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
-                Text("Stat", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text("IV",  color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(36.dp))
-                Text("EV",  color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(44.dp))
+                Text("Stat", color = TextSecondary, fontSize = ssp(12), modifier = Modifier.weight(1f))
+                Text("IV",  color = TextSecondary, fontSize = ssp(12), modifier = Modifier.width(36.dp))
+                Text("EV",  color = TextSecondary, fontSize = ssp(12), modifier = Modifier.width(44.dp))
             }
             Spacer(Modifier.height(4.dp))
 
@@ -1177,20 +1299,20 @@ fun IVStatSheet(pokemon: PokemonData, onDismiss: () -> Unit) {
             )
             statRows.forEach { (label, iv, ev) ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                    Text(label, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                    Text("$iv", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.width(36.dp))
-                    Text("$ev", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.width(44.dp))
+                    Text(label, color = TextPrimary, fontSize = ssp(13), modifier = Modifier.weight(1f))
+                    Text("$iv", color = TextSecondary, fontSize = ssp(13), modifier = Modifier.width(36.dp))
+                    Text("$ev", color = TextSecondary, fontSize = ssp(13), modifier = Modifier.width(44.dp))
                 }
             }
 
             Spacer(Modifier.height(6.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
-                Text("Friendship:", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Text("${pokemon.friendship} / 255", color = TextPrimary, fontSize = 13.sp)
+                Text("Friendship:", color = TextSecondary, fontSize = ssp(13), modifier = Modifier.weight(1f))
+                Text("${pokemon.friendship} / 255", color = TextPrimary, fontSize = ssp(13))
             }
             Spacer(Modifier.height(4.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Hidden Power:", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text("Hidden Power:", color = TextSecondary, fontSize = ssp(13), modifier = Modifier.weight(1f))
                 TypeChip(pokemon.hiddenPowerType)
             }
 
@@ -1205,7 +1327,7 @@ fun IVStatSheet(pokemon: PokemonData, onDismiss: () -> Unit) {
 fun BagDetailSheet(detail: BagDetailInfo, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
         Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
-            Text("Bag Detail", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Bag Detail", color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
 
             BagSection("HP Items", detail.hpItems)
@@ -1222,12 +1344,12 @@ fun BagDetailSheet(detail: BagDetailInfo, onDismiss: () -> Unit) {
 private fun BagSection(title: String, items: List<hh.game.mgba_android.tracker.data.BagItemEntry>) {
     if (items.isEmpty()) return
     Spacer(Modifier.height(8.dp))
-    Text(title, color = AccentBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+    Text(title, color = AccentBlue, fontSize = ssp(13), fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(4.dp))
     items.forEach { entry ->
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
-            Text(entry.name, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            Text("×${entry.quantity}", color = TextSecondary, fontSize = 13.sp)
+            Text(entry.name, color = TextPrimary, fontSize = ssp(13), modifier = Modifier.weight(1f))
+            Text("×${entry.quantity}", color = TextSecondary, fontSize = ssp(13))
         }
     }
 }

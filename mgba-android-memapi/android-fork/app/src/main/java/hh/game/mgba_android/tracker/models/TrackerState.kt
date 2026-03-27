@@ -29,6 +29,10 @@ sealed class TrackerState {
         // Route encounter tracking: mapLayoutId → list of seen species IDs (in encounter order)
         val routeEncounters: Map<Int, List<Int>> = emptyMap(),
         val routeVisitOrder: List<Int> = emptyList(),
+        // Trainer defeat counts: mapLayoutId → (defeated, total) — read live from SaveBlock1
+        val trainerCounts: Map<Int, Pair<Int, Int>> = emptyMap(),
+        // Routes the player has physically entered this run
+        val visitedRoutes: Set<Int> = emptySet(),
     ) : TrackerState() {
         val leadPokemon: PokemonData? get() = party.firstOrNull()
     }

@@ -7,9 +7,18 @@ Jetpack Compose UI for the 30% right-side tracker panel. Collects `TrackerPoller
 
 ## Entry Point
 ```kotlin
-@Composable fun TrackerPanel(state: TrackerState, onQuickload: (() -> Unit)?)
+@Composable fun TrackerPanel(
+    state: TrackerState,
+    onQuickload: (() -> Unit)? = null,
+    fontScale: Float = 1f,           // scales all sp values; = panelFraction / 0.3f
+    isCollapsible: Boolean = false,  // shows ◀/▶ arrow strip + AnimatedVisibility
+    isExpanded: Boolean = true,
+    onToggleExpand: (() -> Unit)? = null,
+)
 ```
-Added programmatically to `GameActivity` as a `ComposeView` at `leftMargin = gameWidth (70%)`.
+Added programmatically to `GameActivity` as a `ComposeView` at `leftMargin = gameWidth`.
+
+Font scaling uses `LocalTrackerFontScale` (CompositionLocal) + `@Composable fun ssp(n: Int): TextUnit` helper — all hardcoded sp values in the file call `ssp(N)` instead of `N.sp`.
 
 ## Layout Structure
 - **Header bar:** ROM title, "Run N" badge, quickload button
