@@ -53,6 +53,7 @@ extern "C" {
 
 //extern char* _fragmentShader;
 //extern char* _vertexShader;
+extern int g_stall_count;
 static void mSDLDeinit(struct mSDLRenderer* renderer);
 
 static void mSDLDeinit(struct mSDLRenderer* renderer);
@@ -537,8 +538,15 @@ void muteVolume(bool mute){
 extern "C"
 JNIEXPORT void JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_Forward(JNIEnv *env, jobject thiz, jfloat speed) {
+    __android_log_print(ANDROID_LOG_INFO, "mGBA_Perf", "Forward: fpsTarget=%.1f", speed);
     thread.impl->sync.fpsTarget = speed;
     thread.core->reloadConfigOption(thread.core, NULL, NULL);
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_hh_game_mgba_1android_activity_GameActivity_getStallCount(JNIEnv *env, jobject thiz) {
+    return g_stall_count;
 }
 
 extern "C"

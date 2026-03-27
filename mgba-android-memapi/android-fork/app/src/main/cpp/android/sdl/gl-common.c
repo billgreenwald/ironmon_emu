@@ -1,8 +1,10 @@
 #include "main.h"
 
 #include <mgba/core/version.h>
+#include <time.h>
 
 float g_fps = 0.0f;
+int g_stall_count = 0;
 
 void mSDLGLDoViewport(int w, int h, struct VideoBackend* v) {
 	v->resized(v, w, h);
@@ -29,7 +31,15 @@ void mSDLGLCommonSwap(struct VideoBackend* context) {
         LOGD("Swappy Warning: Invalid EGL Display (%p) or Surface (%p). Fallback to SDL Swap.", dpy, surf);
         SDL_GL_SwapWindow(renderer->window);
     } else {
+        struct timespec t0, t1;
+        clock_gettime(CLOCK_MONOTONIC, &t0);
         SwappyGL_swap(dpy, surf);
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        long elapsed_us = (t1.tv_sec - t0.tv_sec) * 1000000L + (t1.tv_nsec - t0.tv_nsec) / 1000L;
+        if (elapsed_us > 33000) {
+            g_stall_count++;
+            __android_log_print(ANDROID_LOG_WARN, "mGBA_Perf", "Frame stall: %ld us (stall #%d)", elapsed_us, g_stall_count);
+        }
         // SDL_GL_SwapWindow(renderer->window); // Disabled to prevent double swap
     }
     

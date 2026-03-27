@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.1] - 2026-03-27
+
+### Added
+- **Turbo mode performance logging** — when fast-forward is active, per-frame swap timing is measured via `clock_gettime(CLOCK_MONOTONIC)` around `SwappyGL_swap()`; any frame taking >33ms logs a `mGBA_Perf` warning with duration and cumulative stall count. FPS divergence (actual < 80% of target) and thermal headroom (API 29+, threshold < 0.5) are also logged every 500ms from the FPS coroutine. Run `adb logcat -s mGBA_Perf` to observe. Stall count is also exposed via `getStallCount()` JNI for future UI display.
+
 ## [1.3.0] - 2026-03-27
 
 ### Added

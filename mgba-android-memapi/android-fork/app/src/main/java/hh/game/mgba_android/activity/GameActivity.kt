@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.util.Log
 import android.util.TypedValue
 import android.hardware.input.InputManager
@@ -342,6 +343,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         if (defaultFps != 60f) {
             lifecycleScope.launch {
                 TrackerPoller.state.first { it is TrackerState.Active }
+                setFPS = defaultFps
                 Forward(defaultFps)
             }
         }
@@ -460,7 +462,19 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         fpsText.visibility = if (EmulatorPreferences.getShowFps(this)) View.VISIBLE else View.GONE
         lifecycleScope.launch(Dispatchers.Main) {
             while (runFPS) {
-                fpsText.text = "FPS: %.1f".format(getFPS())
+                val actual = getFPS()
+                fpsText.text = "FPS: %.1f".format(actual)
+                val target = setFPS
+                if (target > 60f && actual < target * 0.8f) {
+                    Log.w("mGBA_Perf", "FPS below target: actual=%.1f target=%.1f stalls=%d".format(actual, target, getStallCount()))
+                }
+                if (Build.VERSION.SDK_INT >= 29) {
+                    val pm = getSystemService(PowerManager::class.java)
+                    val headroom = pm.getThermalHeadroom(1)
+                    if (headroom < 0.5f) {
+                        Log.w("mGBA_Perf", "Thermal throttle imminent: headroom=%.2f".format(headroom))
+                    }
+                }
                 delay(500)
             }
         }
@@ -624,13 +638,13 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     onNativeKeyDown(gbaKey)
-                    if (gbaKey == speedButtonKey && secondaryFps != defaultFps) Forward(secondaryFps)
+                    if (gbaKey == speedButtonKey && secondaryFps != defaultFps) { setFPS = secondaryFps; Forward(secondaryFps) }
                     handled = true
                 }
 
                 KeyEvent.ACTION_UP -> {
                     onNativeKeyUp(gbaKey)
-                    if (gbaKey == speedButtonKey && secondaryFps != defaultFps) Forward(defaultFps)
+                    if (gbaKey == speedButtonKey && secondaryFps != defaultFps) { setFPS = defaultFps; Forward(defaultFps) }
                     handled = true
                 }
 
@@ -747,12 +761,12 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     onNativeKeyDown(keyText)
-                    if (keyText == speedButtonKey && secondaryFps != defaultFps) Forward(secondaryFps)
+                    if (keyText == speedButtonKey && secondaryFps != defaultFps) { setFPS = secondaryFps; Forward(secondaryFps) }
                 }
 
                 MotionEvent.ACTION_UP -> {
                     onNativeKeyUp(keyText)
-                    if (keyText == speedButtonKey && secondaryFps != defaultFps) Forward(defaultFps)
+                    if (keyText == speedButtonKey && secondaryFps != defaultFps) { setFPS = defaultFps; Forward(defaultFps) }
                 }
             }
             true
@@ -801,6 +815,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     external fun ResumeGame()
     external fun TakeScreenshot(path: String)
     external fun Forward(speed: Float)
+    external fun getStallCount(): Int
     external fun Mute(mute: Boolean)
     external fun getMemoryBlock(): ArrayList<CoreMemoryBlock>
     external fun writeMem(address: Int, value: Int)
