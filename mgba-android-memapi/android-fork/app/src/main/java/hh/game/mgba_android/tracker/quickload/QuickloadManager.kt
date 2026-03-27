@@ -15,7 +15,7 @@ import com.anggrayudi.storage.file.getAbsolutePath
 import com.anggrayudi.storage.file.openOutputStream
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.CancellationException
 import java.io.File
 
 object QuickloadManager {
@@ -141,28 +141,35 @@ object QuickloadManager {
      */
     suspend fun advanceToNext(context: Context): String? {
         val nextPath = getNextRomPath(context)
+        // does not have next ROM - attempt to overwrite with Randomizer service
         if (nextPath == null) {
             val currentPath = currentFamily?.absolutePath
-            val currentFile = currentPath?.let { DocumentFile.fromFile(File(it)) }
-            if (connected) {
+            if (connected && currentPath != null) {
+                val currentFile = DocumentFile.fromFile(File(currentPath))
                 val message = Message.obtain().apply {
                     obj = currentFile?.uri
                     replyTo = replyMessenger
                 }
-                try {
+                return try {
                     serviceMessenger!!.send(message)
                     withTimeout(10_000L) {
+                        val data = replyChannel.receive()
                         currentFile?.openOutputStream(context, append = false)?.use {
-                            it.write(replyChannel.receive())
+                            it.write(data)
                         }
                     }
+                    val nextNumber = getLastNumber(context, currentFamily!!.prefix) + 1
+                    setCurrentNumber(context, nextNumber)
+                    currentPath
                 } catch (e: RemoteException) {
                     Log.e("Quickload", "Failed to send message!", e)
-                } catch (e: TimeoutCancellationException) {
+                    null
+                } catch (e: CancellationException) {
                     Log.e("Quickload", "Request timed out!", e)
+                    null
                 }
             }
-            return currentPath
+            return null
         }
         val nextFileName = nextPath.substringAfterLast('/')
         val nextFamily = RomFamilyUtils.parseFamily(nextFileName, nextPath)
@@ -184,7 +191,11 @@ object QuickloadManager {
     }
 
     private fun saveLastNumber(context: Context, prefix: String, number: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit().putInt(familyKey(prefix), number).apply()
+        val saved = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putInt(familyKey(prefix), number)
+                .commit() // must use commit so that the update is saved before the app restarts
+        if (!saved) {
+            Log.e("Quickload", "Failed to update last number!")
+        }
     }
 }
