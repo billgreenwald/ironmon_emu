@@ -999,10 +999,20 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                 else -> ""
             }
         )
+        var keyDown = false
         this.setOnTouchListener { v, event ->
             when (event.action) {
-                MotionEvent.ACTION_DOWN -> onNativeKeyDown(keyText)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onNativeKeyUp(keyText)
+                MotionEvent.ACTION_DOWN -> {
+                    keyDown = true
+                    onNativeKeyDown(keyText)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (keyDown) { keyDown = false; onNativeKeyUp(keyText) }
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val outside = event.x < 0 || event.y < 0 || event.x > v.width || event.y > v.height
+                    if (outside && keyDown) { keyDown = false; onNativeKeyUp(keyText) }
+                }
             }
             true
         }
