@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.5] - 2026-03-28
+
+### Fixed
+- **Crash on ROM load** — `ResumeGame()` was being called from `onWindowFocusChanged` on initial launch before the mGBA core thread was initialized, causing SIGSEGV (null pointer dereference in `mCoreThreadContinue → pthread_mutex_lock`). Fix: `ResumeGame()` is now only scheduled when returning from background (after the core has been started and paused at least once), not on the initial activity start.
+
 ## [1.3.4] - 2026-03-28
 
 ### Added

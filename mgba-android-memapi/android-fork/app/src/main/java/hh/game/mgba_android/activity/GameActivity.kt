@@ -87,6 +87,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var runFPS = true
     private var setFPS = 60f
     private var resumePending = false
+    private var hasEverBeenPaused = false  // guard: don't call ResumeGame() before mCoreThread is ready
     private var isMute = false
     private var defaultFps = 60f
     private var secondaryFps = 60f
@@ -673,6 +674,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
     override fun onPause() {
         super.onPause()
+        hasEverBeenPaused = true
         resumePending = false
         PauseGame()
     }
@@ -699,7 +701,10 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         // ResumeGame() is deferred to onWindowFocusChanged to avoid racing SDL surface readiness.
         // SDL requires mHasFocus=true (set on focus grant) before nativeResume() unblocks the
         // render thread. Calling ResumeGame() here would wake the mGBA core before SDL is ready.
-        resumePending = true
+        // Only schedule ResumeGame() if the core has been started and paused at least once —
+        // on initial launch mCoreThread is not yet initialized and calling mCoreThreadContinue
+        // on a null pointer causes SIGSEGV (fault addr 0x14 = mutex offset in mCoreThread).
+        if (hasEverBeenPaused) resumePending = true
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
