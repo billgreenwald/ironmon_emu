@@ -899,21 +899,23 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     }
 
     private fun addGameControler() {
-        val defs = listOf(
-            R.id.rBtn to "R", R.id.lBtn to "L", R.id.aBtn to "A", R.id.bBtn to "B",
-            R.id.selectBtn to "select", R.id.startBtn to "start",
-            R.id.upBtn to "up", R.id.downBtn to "down",
-            R.id.leftBtn to "left", R.id.rightBtn to "right",
-        )
+        // Action buttons: simple independent per-finger press/release (supports multi-touch)
+        listOf(R.id.rBtn to "R", R.id.lBtn to "L", R.id.aBtn to "A", R.id.bBtn to "B",
+               R.id.selectBtn to "select", R.id.startBtn to "start")
+            .forEach { (id, name) -> findViewById<View>(id).setActionKeyListener(getKey(name)) }
+
+        // D-pad: drag-across tracking (slide between directions)
+        val dpadDefs = listOf(R.id.upBtn to "up", R.id.downBtn to "down",
+                              R.id.leftBtn to "left", R.id.rightBtn to "right")
         gbaButtonViews.clear()
-        defs.forEach { (id, name) ->
+        dpadDefs.forEach { (id, name) ->
             val v: View = findViewById(id)
             gbaButtonViews.add(v to getKey(name))
         }
-        gbaButtonViews.forEach { (v, _) -> v.setGBAKeyListener() }
+        gbaButtonViews.forEach { (v, _) -> v.setDpadKeyListener() }
     }
 
-    private fun findButtonKeyAt(absX: Float, absY: Float): Int? {
+    private fun findDpadKeyAt(absX: Float, absY: Float): Int? {
         val loc = IntArray(2)
         return gbaButtonViews.firstOrNull { (btn, _) ->
             btn.getLocationOnScreen(loc)
@@ -997,39 +999,39 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         return handled || super.dispatchGenericMotionEvent(ev)
     }
 
-    private fun View.setGBAKeyListener() {
-        val myKey = getKey(
-            when (this.id) {
-                R.id.upBtn -> "up"
-                R.id.downBtn -> "down"
-                R.id.leftBtn -> "left"
-                R.id.rightBtn -> "right"
-                R.id.rBtn -> "R"
-                R.id.lBtn -> "L"
-                R.id.aBtn -> "A"
-                R.id.bBtn -> "B"
-                R.id.selectBtn -> "select"
-                R.id.startBtn -> "start"
-                else -> ""
+    // Simple press/release — each finger is independent (multi-touch safe)
+    private fun View.setActionKeyListener(key: Int) {
+        setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> onNativeKeyDown(key)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onNativeKeyUp(key)
             }
-        )
+            true
+        }
+    }
+
+    // D-pad drag — one touch slides between directions; dragActiveKey scoped to d-pad only
+    private fun View.setDpadKeyListener() {
+        val myKey = gbaButtonViews.firstOrNull { it.first === this }?.second ?: return
         val screenLoc = IntArray(2)
-        this.setOnTouchListener { v, event ->
+        setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    dragActiveKey?.let { onNativeKeyUp(it) }  // safety: clear any stale key
+                    dragActiveKey?.let { onNativeKeyUp(it) }
                     dragActiveKey = myKey
                     onNativeKeyDown(myKey)
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    dragActiveKey?.let { onNativeKeyUp(it) }
-                    dragActiveKey = null
+                    if (dragActiveKey == myKey) {
+                        dragActiveKey = null
+                        onNativeKeyUp(myKey)
+                    }
                 }
                 MotionEvent.ACTION_MOVE -> {
                     v.getLocationOnScreen(screenLoc)
                     val absX = screenLoc[0] + event.x
                     val absY = screenLoc[1] + event.y
-                    val newKey = findButtonKeyAt(absX, absY)
+                    val newKey = findDpadKeyAt(absX, absY)
                     if (newKey != dragActiveKey) {
                         dragActiveKey?.let { onNativeKeyUp(it) }
                         dragActiveKey = newKey
