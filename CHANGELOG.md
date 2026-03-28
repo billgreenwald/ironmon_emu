@@ -3,13 +3,14 @@
 ## [1.3.8] - 2026-03-28
 
 ### Added
-- **Controls opacity slider** — Tools → Settings now includes a seekbar (0–100%) to adjust on-screen controls transparency; default 70%
-- **Controls scale slider** — Tools → Settings now includes a seekbar (50–150%) to resize the on-screen controls; default 100%
-- **Close ROM** option in Tools menu — shows a "Return to game list?" confirmation dialog and returns to the ROM browser via `finish()`
+- **Controls opacity slider** — Emulator Settings dialog (accessible from ROM list and in-game Tools → Settings) now includes a slider (0–100%) to adjust on-screen controls transparency; default 70%
+- **Controls scale slider** — Emulator Settings dialog now includes a slider (50–150%) to resize the on-screen controls; default 100%
+- **Close ROM** option in Tools menu — shows a "Return to game list?" confirmation dialog; terminates the process cleanly so the ROM list is fully responsive
 - **Crash log** — unhandled exceptions are appended to `crash_log.txt` in the app's external files directory for easier debugging (`adb pull` to retrieve)
 
 ### Fixed
 - **D-pad direction stuck** — if Android delivered `ACTION_CANCEL` instead of `ACTION_UP` (e.g. finger slides off button, gesture conflict, notification pull-down), the GBA key stayed pressed. `ACTION_CANCEL` is now treated the same as `ACTION_UP`
+- **App non-responsive after Close ROM** — `finish()` alone left the SDL/mGBA core thread alive; now calls `killProcess()` after finish, matching the quickload pattern
 
 ## [1.3.7] - 2026-03-28
 

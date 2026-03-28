@@ -462,7 +462,10 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                         9 -> AlertDialog.Builder(this)
                             .setTitle("Close ROM")
                             .setMessage("Return to game list?")
-                            .setPositiveButton("Close") { _, _ -> finish() }
+                            .setPositiveButton("Close") { _, _ ->
+                                finish()
+                                android.os.Process.killProcess(android.os.Process.myPid())
+                            }
                             .setNegativeButton("Cancel", null)
                             .show()
                     }

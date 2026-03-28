@@ -49,6 +49,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -394,6 +395,8 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     var splitFraction by remember { mutableStateOf(EmulatorPreferences.getSplitFraction(context)) }
     var alwaysShowControls by remember { mutableStateOf(EmulatorPreferences.getAlwaysShowControls(context)) }
     var trackerCollapsible by remember { mutableStateOf(EmulatorPreferences.getTrackerCollapsible(context)) }
+    var controlsAlpha by remember { mutableStateOf(EmulatorPreferences.getControlsAlpha(context)) }
+    var controlsScale by remember { mutableStateOf(EmulatorPreferences.getControlsScale(context)) }
     val labelColor = Color(0xFF111111)
     val unselectedColor = Color(0xFF444444)
     val selectedColor = Color(0xFF4090FF)
@@ -494,6 +497,28 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         enabled = !isOverlaySplit,
                     )
                 }
+                // ── Controls Opacity ──────────────────────────────────────────
+                Text(
+                    "Controls Opacity: ${(controlsAlpha * 100).toInt()}%",
+                    fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor,
+                )
+                Slider(
+                    value = controlsAlpha,
+                    onValueChange = { controlsAlpha = it },
+                    valueRange = 0f..1f,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                // ── Controls Scale ────────────────────────────────────────────
+                Text(
+                    "Controls Scale: ${((controlsScale - 0.5f) * 100).toInt() + 50}%",
+                    fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor,
+                )
+                Slider(
+                    value = controlsScale,
+                    onValueChange = { controlsScale = it },
+                    valueRange = 0.5f..1.5f,
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 // ── Show FPS ──────────────────────────────────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -511,6 +536,8 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     context, defaultFps, secondaryFps, "none", showFps,
                     splitFraction, alwaysShowControls, trackerCollapsible,
                 )
+                EmulatorPreferences.setControlsAlpha(context, controlsAlpha)
+                EmulatorPreferences.setControlsScale(context, controlsScale)
                 onDismiss()
             }) { Text("Save") }
         },
