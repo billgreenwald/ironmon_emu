@@ -98,6 +98,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var defaultFps = 60f
     private var secondaryFps = 60f
     private val actionBindings = HashMap<BindableAction, Int>()
+    // Button drag-across tracking
+    private val gbaButtonViews = mutableListOf<Pair<View, Int>>()  // view → key code
+    private var dragActiveKey: Int? = null
     // Tracker layout state
     private var splitFraction = 0.7f
     private var trackerCollapsible = false
@@ -896,16 +899,27 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     }
 
     private fun addGameControler() {
-        findViewById<ImageView>(R.id.rBtn).setGBAKeyListener()
-        findViewById<ImageView>(R.id.lBtn).setGBAKeyListener()
-        findViewById<ImageView>(R.id.aBtn).setGBAKeyListener()
-        findViewById<ImageView>(R.id.bBtn).setGBAKeyListener()
-        findViewById<ImageView>(R.id.selectBtn).setGBAKeyListener()
-        findViewById<ImageView>(R.id.startBtn).setGBAKeyListener()
-        findViewById<ImageView>(R.id.upBtn).setGBAKeyListener()
-        findViewById<ImageView>(R.id.downBtn).setGBAKeyListener()
-        findViewById<ImageView>(R.id.leftBtn).setGBAKeyListener()
-        findViewById<ImageView>(R.id.rightBtn).setGBAKeyListener()
+        val defs = listOf(
+            R.id.rBtn to "R", R.id.lBtn to "L", R.id.aBtn to "A", R.id.bBtn to "B",
+            R.id.selectBtn to "select", R.id.startBtn to "start",
+            R.id.upBtn to "up", R.id.downBtn to "down",
+            R.id.leftBtn to "left", R.id.rightBtn to "right",
+        )
+        gbaButtonViews.clear()
+        defs.forEach { (id, name) ->
+            val v: View = findViewById(id)
+            gbaButtonViews.add(v to getKey(name))
+        }
+        gbaButtonViews.forEach { (v, _) -> v.setGBAKeyListener() }
+    }
+
+    private fun findButtonKeyAt(absX: Float, absY: Float): Int? {
+        val loc = IntArray(2)
+        return gbaButtonViews.firstOrNull { (btn, _) ->
+            btn.getLocationOnScreen(loc)
+            absX >= loc[0] && absX < loc[0] + btn.width &&
+            absY >= loc[1] && absY < loc[1] + btn.height
+        }?.second
     }
 
 
@@ -984,7 +998,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     }
 
     private fun View.setGBAKeyListener() {
-        var keyText = getKey(
+        val myKey = getKey(
             when (this.id) {
                 R.id.upBtn -> "up"
                 R.id.downBtn -> "down"
@@ -999,19 +1013,28 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                 else -> ""
             }
         )
-        var keyDown = false
+        val screenLoc = IntArray(2)
         this.setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    keyDown = true
-                    onNativeKeyDown(keyText)
+                    dragActiveKey?.let { onNativeKeyUp(it) }  // safety: clear any stale key
+                    dragActiveKey = myKey
+                    onNativeKeyDown(myKey)
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (keyDown) { keyDown = false; onNativeKeyUp(keyText) }
+                    dragActiveKey?.let { onNativeKeyUp(it) }
+                    dragActiveKey = null
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val outside = event.x < 0 || event.y < 0 || event.x > v.width || event.y > v.height
-                    if (outside && keyDown) { keyDown = false; onNativeKeyUp(keyText) }
+                    v.getLocationOnScreen(screenLoc)
+                    val absX = screenLoc[0] + event.x
+                    val absY = screenLoc[1] + event.y
+                    val newKey = findButtonKeyAt(absX, absY)
+                    if (newKey != dragActiveKey) {
+                        dragActiveKey?.let { onNativeKeyUp(it) }
+                        dragActiveKey = newKey
+                        newKey?.let { onNativeKeyDown(it) }
+                    }
                 }
             }
             true

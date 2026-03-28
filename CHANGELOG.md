@@ -9,7 +9,7 @@
 - **Crash log** — unhandled exceptions are appended to `crash_log.txt` in the app's external files directory for easier debugging (`adb pull` to retrieve)
 
 ### Fixed
-- **D-pad direction stuck on drag-off** — touch events are captured by the pressed view, so `ACTION_CANCEL` alone wasn't enough. Now also monitors `ACTION_MOVE` coordinates; if the finger leaves the button bounds while held, the key is released immediately
+- **D-pad/button drag** — finger now tracks across buttons: sliding from one button to another releases the first and fires the second in real time; sliding off into empty space releases with no new press. Uses per-frame hit-testing of all 10 buttons against absolute screen coordinates
 - **App non-responsive after Close ROM** — `finish()` alone left the SDL/mGBA core thread alive; now calls `killProcess()` after finish, matching the quickload pattern
 
 ## [1.3.7] - 2026-03-28
