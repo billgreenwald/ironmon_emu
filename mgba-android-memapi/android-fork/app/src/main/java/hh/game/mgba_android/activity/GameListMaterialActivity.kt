@@ -38,6 +38,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,6 +79,7 @@ import hh.game.mgba_android.tracker.quickload.QuickloadManager
 import hh.game.mgba_android.tracker.quickload.RomFamilyGroup
 import hh.game.mgba_android.tracker.quickload.RomFamilyUtils
 import hh.game.mgba_android.utils.EmulatorPreferences
+import kotlin.math.abs
 
 
 class GameListMaterialActivity : ComponentActivity() {
@@ -364,7 +368,7 @@ fun FamilyRow(group: RomFamilyGroup, onClick: () -> Unit, onLongClick: () -> Uni
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -425,14 +429,30 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     triggerButtons.forEach { BtnChip(it) }
                 }
                 // ── Game / Tracker split ──────────────────────────────────────
-                Text("Game / Tracker Split", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf("70/30" to 0.7f, "80/20" to 0.8f, "90/10" to 0.9f).forEach { (label, frac) ->
-                        val selected = splitFraction == frac
-                        TextButton(
-                            onClick = { splitFraction = frac },
-                            border = if (selected) BorderStroke(1.dp, selectedColor) else null,
-                        ) { Text(label, color = if (selected) selectedColor else unselectedColor, fontSize = 12.sp) }
+                val splitFractions = listOf(1.0f, 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f, 0.2f, 0.1f, 0.0f)
+                val splitLabels = listOf(
+                    "100% / 0% (Game Overlay)", "90% / 10%", "80% / 20%", "70% / 30%",
+                    "60% / 40%", "50% / 50%", "40% / 60%", "30% / 70%", "20% / 80%", "10% / 90%",
+                    "0% / 100% (Tracker Overlay)"
+                )
+                var splitExpanded by remember { mutableStateOf(false) }
+                val currentSplitIdx = splitFractions.indexOfFirst { abs(it - splitFraction) < 0.01f }.let { if (it < 0) 3 else it }
+                ExposedDropdownMenuBox(expanded = splitExpanded, onExpandedChange = { splitExpanded = it }) {
+                    OutlinedTextField(
+                        value = splitLabels[currentSplitIdx],
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Game % / Tracker %", color = labelColor) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = splitExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    )
+                    ExposedDropdownMenu(expanded = splitExpanded, onDismissRequest = { splitExpanded = false }) {
+                        splitFractions.forEachIndexed { i, f ->
+                            DropdownMenuItem(
+                                text = { Text(splitLabels[i]) },
+                                onClick = { splitFraction = f; splitExpanded = false }
+                            )
+                        }
                     }
                 }
                 // ── Always show on-screen controls ───────────────────────────
@@ -444,14 +464,17 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     Text("Always show on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor, modifier = Modifier.weight(1f))
                     Switch(checked = alwaysShowControls, onCheckedChange = { alwaysShowControls = it })
                 }
-                // ── Collapsible tracker panel ─────────────────────────────────
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text("Collapsible tracker panel", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                    Switch(checked = trackerCollapsible, onCheckedChange = { trackerCollapsible = it })
+                // ── Collapsible tracker panel (hidden in overlay modes) ───────
+                val isOverlaySplit = splitFraction == 0.0f || splitFraction == 1.0f
+                if (!isOverlaySplit) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text("Collapsible tracker panel", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                        Switch(checked = trackerCollapsible, onCheckedChange = { trackerCollapsible = it })
+                    }
                 }
                 // ── Show FPS ──────────────────────────────────────────────────
                 Row(

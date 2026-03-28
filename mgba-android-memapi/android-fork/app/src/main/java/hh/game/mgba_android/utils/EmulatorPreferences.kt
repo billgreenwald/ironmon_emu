@@ -39,6 +39,10 @@ object EmulatorPreferences {
     fun getSplitFraction(ctx: Context): Float = ctx.getSharedPreferences(PREFS, 0)
         .getFloat(KEY_SPLIT_FRACTION, 0.7f)
 
+    fun setSplitFraction(ctx: Context, value: Float) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putFloat(KEY_SPLIT_FRACTION, value).apply()
+    }
+
     fun getAlwaysShowControls(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
         .getBoolean(KEY_ALWAYS_SHOW_CONTROLS, false)
 

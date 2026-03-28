@@ -95,6 +95,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var splitFraction = 0.7f
     private var trackerCollapsible = false
     private var trackerExpanded by mutableStateOf(true)
+    private var trackerFontScale by mutableStateOf(1.0f)
+    private var effectiveCollapsible by mutableStateOf(false)
     private var screenWidthPx = 0
     private var trackerViewRef: ComposeView? = null
     private var templateResult = ArrayList<Pair<Int, Int>>()
@@ -227,7 +229,17 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         splitFraction = EmulatorPreferences.getSplitFraction(this)
         trackerCollapsible = EmulatorPreferences.getTrackerCollapsible(this)
         screenWidthPx = resources.displayMetrics.widthPixels
-        val gameWidth = (screenWidthPx * splitFraction).toInt()
+        val isOverlay = splitFraction == 0.0f || splitFraction == 1.0f
+        effectiveCollapsible = trackerCollapsible || isOverlay
+        trackerFontScale = computeFontScale(splitFraction)
+        trackerExpanded = splitFraction != 1.0f  // game-overlay mode starts collapsed
+        val arrowPx = (24 * resources.displayMetrics.density).toInt()
+        val gameWidth = if (isOverlay) screenWidthPx else (screenWidthPx * splitFraction).toInt()
+        val trackerLeft = when {
+            isOverlay && !trackerExpanded -> screenWidthPx - arrowPx
+            isOverlay -> 0
+            else -> gameWidth
+        }
 
         mSurface?.layoutParams = RelativeLayout.LayoutParams(
             gameWidth,
@@ -252,9 +264,6 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
         MemoryBridge.reader = { addr, len -> getMemoryRange(addr, len) }
         TrackerPoller.start(applicationContext, lifecycleScope)
-
-        val panelFraction = 1f - splitFraction
-        val fontScale = panelFraction / 0.3f
 
         val trackerView = ComposeView(this).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
@@ -287,8 +296,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                             }
                         }
                     } else null,
-                    fontScale = fontScale,
-                    isCollapsible = trackerCollapsible,
+                    fontScale = trackerFontScale,
+                    isCollapsible = effectiveCollapsible,
                     isExpanded = trackerExpanded,
                     onToggleExpand = { applyTrackerExpansion(!trackerExpanded) },
                 )
@@ -300,7 +309,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             RelativeLayout.LayoutParams(
                 RelativeLayout.LayoutParams.MATCH_PARENT,
                 RelativeLayout.LayoutParams.MATCH_PARENT,
-            ).apply { leftMargin = gameWidth },
+            ).apply { leftMargin = trackerLeft },
         )
         // ── End tracker setup ──────────────────────────────────────────────────
 
@@ -363,7 +372,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         
         // Initialize Tools Button
         findViewById<View>(R.id.tools_btn).setOnClickListener {
-            val options = arrayOf("Shaders", "Memory Tools", "Save State", "Load State", "Cheats", "Sound", "Next Run →")
+            val options = arrayOf("Shaders", "Memory Tools", "Save State", "Load State", "Cheats", "Sound", "Next Run →", "Tracker Size")
             AlertDialog.Builder(this)
                 .setTitle("Tools")
                 .setItems(options) { _, which ->
@@ -454,6 +463,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                                 Toast.makeText(this, "Quickload not available", Toast.LENGTH_SHORT).show()
                             }
                         }
+                        7 -> showTrackerSizeDialog()
                     }
                 }
                 .show()
@@ -574,16 +584,77 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
     private fun applyTrackerExpansion(expanded: Boolean) {
         trackerExpanded = expanded
-        // When collapsed, leave 24dp for the arrow strip so it stays on-screen
         val arrowPx = (24 * resources.displayMetrics.density).toInt()
-        val newGameWidth = if (expanded) (screenWidthPx * splitFraction).toInt() else screenWidthPx - arrowPx
+        val isOverlay = splitFraction == 0.0f || splitFraction == 1.0f
+        val newGameWidth = when {
+            isOverlay -> screenWidthPx
+            expanded -> (screenWidthPx * splitFraction).toInt()
+            else -> screenWidthPx - arrowPx
+        }
+        val newTrackerLeft = when {
+            isOverlay && expanded -> 0
+            isOverlay -> screenWidthPx - arrowPx
+            else -> newGameWidth
+        }
         mSurface?.layoutParams?.width = newGameWidth
         mSurface?.requestLayout()
         val tv = trackerViewRef ?: return
         tv.layoutParams = (tv.layoutParams as RelativeLayout.LayoutParams).apply {
-            leftMargin = newGameWidth
+            leftMargin = newTrackerLeft
         }
         tv.requestLayout()
+    }
+
+    private fun computeFontScale(fraction: Float): Float {
+        val trackerFrac = 1f - fraction.coerceIn(0f, 1f)
+        return if (trackerFrac < 0.05f) 1.0f else trackerFrac / 0.3f
+    }
+
+    private fun applyTrackerSize(newFraction: Float) {
+        splitFraction = newFraction
+        EmulatorPreferences.setSplitFraction(this, newFraction)
+        val isOverlay = newFraction == 0.0f || newFraction == 1.0f
+        effectiveCollapsible = trackerCollapsible || isOverlay
+        trackerFontScale = computeFontScale(newFraction)
+        trackerExpanded = newFraction != 1.0f  // game-overlay mode starts collapsed
+
+        val arrowPx = (24 * resources.displayMetrics.density).toInt()
+        val gameWidth = if (isOverlay) screenWidthPx else (screenWidthPx * newFraction).toInt()
+        val trackerLeft = when {
+            isOverlay && !trackerExpanded -> screenWidthPx - arrowPx
+            isOverlay -> 0
+            else -> gameWidth
+        }
+        mSurface?.layoutParams?.width = gameWidth
+        mSurface?.requestLayout()
+        val tv = trackerViewRef ?: return
+        tv.layoutParams = (tv.layoutParams as RelativeLayout.LayoutParams).apply { leftMargin = trackerLeft }
+        tv.requestLayout()
+        // Update gameZoneBoundary guideline so dpad/tools_btn stay in game zone
+        val overlayView = mLayout?.let { it.getChildAt(it.childCount - 1) }
+        if (overlayView is ConstraintLayout) {
+            val cs = ConstraintSet()
+            cs.clone(overlayView)
+            cs.setGuidelinePercent(R.id.gameZoneBoundary, if (isOverlay) 1.0f else newFraction)
+            cs.applyTo(overlayView)
+        }
+    }
+
+    private fun showTrackerSizeDialog() {
+        val fractions = floatArrayOf(1.0f, 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f, 0.2f, 0.1f, 0.0f)
+        val labels = arrayOf(
+            "100% / 0% (Game Overlay)", "90% / 10%", "80% / 20%", "70% / 30% (Default)",
+            "60% / 40%", "50% / 50%", "40% / 60%", "30% / 70%", "20% / 80%", "10% / 90%",
+            "0% / 100% (Tracker Overlay)"
+        )
+        val currentIdx = fractions.indexOfFirst { Math.abs(it - splitFraction) < 0.01f }.let { if (it < 0) 3 else it }
+        AlertDialog.Builder(this)
+            .setTitle("Tracker Size (Game% / Tracker%)")
+            .setSingleChoiceItems(labels, currentIdx) { dlg, which ->
+                dlg.dismiss()
+                applyTrackerSize(fractions[which])
+            }
+            .show()
     }
 
     override fun onInputDeviceAdded(deviceId: Int) { updateOnscreenControls() }

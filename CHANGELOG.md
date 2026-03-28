@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.4] - 2026-03-28
+
+### Added
+- **Tracker Size dropdown** in Tools menu — choose any 10%-increment split from 100%/0% to 0%/100% without restarting the game; change takes effect immediately
+- **Overlay mode** for 100%/0% (Game Overlay) and 0%/100% (Tracker Overlay) splits — both panels go full-screen and the tracker toggle arrow slides the panel on/off-screen
+- **Settings dialog dropdown** — the 3-chip Game/Tracker split selector is replaced with a full 11-option dropdown; the "Collapsible tracker panel" toggle is hidden in overlay modes (forced on automatically)
+- Font scale now adjusts proportionally as tracker width changes (scales up for wider tracker panels)
+
 ## [1.3.3] - 2026-03-27
 
 ### Changed
