@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.3.8] - 2026-03-28
+
+### Added
+- **Controls opacity slider** — Tools → Settings now includes a seekbar (0–100%) to adjust on-screen controls transparency; default 70%
+- **Controls scale slider** — Tools → Settings now includes a seekbar (50–150%) to resize the on-screen controls; default 100%
+- **Close ROM** option in Tools menu — shows a "Return to game list?" confirmation dialog and returns to the ROM browser via `finish()`
+- **Crash log** — unhandled exceptions are appended to `crash_log.txt` in the app's external files directory for easier debugging (`adb pull` to retrieve)
+
+### Fixed
+- **D-pad direction stuck** — if Android delivered `ACTION_CANCEL` instead of `ACTION_UP` (e.g. finger slides off button, gesture conflict, notification pull-down), the GBA key stayed pressed. `ACTION_CANCEL` is now treated the same as `ACTION_UP`
+
 ## [1.3.7] - 2026-03-28
 
 ### Fixed

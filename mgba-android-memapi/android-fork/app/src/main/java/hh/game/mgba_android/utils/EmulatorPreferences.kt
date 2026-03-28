@@ -12,6 +12,8 @@ object EmulatorPreferences {
     private const val KEY_SPLIT_FRACTION     = "pref_split_fraction"
     private const val KEY_ALWAYS_SHOW_CONTROLS = "pref_always_show_controls"
     private const val KEY_TRACKER_COLLAPSIBLE  = "pref_tracker_collapsible"
+    private const val KEY_CONTROLS_ALPHA       = "pref_controls_alpha"
+    private const val KEY_CONTROLS_SCALE       = "pref_controls_scale"
 
     val speedOptions = listOf(1 to 60f, 2 to 120f, 3 to 180f, 4 to 240f)
     // All mappable GBA inputs (matches getKey() string names)
@@ -48,6 +50,20 @@ object EmulatorPreferences {
 
     fun getTrackerCollapsible(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
         .getBoolean(KEY_TRACKER_COLLAPSIBLE, false)
+
+    fun getControlsAlpha(ctx: Context): Float = ctx.getSharedPreferences(PREFS, 0)
+        .getFloat(KEY_CONTROLS_ALPHA, 0.7f)
+
+    fun setControlsAlpha(ctx: Context, value: Float) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putFloat(KEY_CONTROLS_ALPHA, value).apply()
+    }
+
+    fun getControlsScale(ctx: Context): Float = ctx.getSharedPreferences(PREFS, 0)
+        .getFloat(KEY_CONTROLS_SCALE, 1.0f)
+
+    fun setControlsScale(ctx: Context, value: Float) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putFloat(KEY_CONTROLS_SCALE, value).apply()
+    }
 
     fun getBinding(ctx: Context, action: BindableAction): Int {
         val prefs = ctx.getSharedPreferences(PREFS, 0)

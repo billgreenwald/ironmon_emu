@@ -15,9 +15,14 @@ import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.View
 import android.view.WindowManager
+import android.widget.ArrayAdapter
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.SeekBar
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import hh.game.mgba_android.utils.EmulatorPreferences
@@ -212,6 +217,15 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val defaultExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            try {
+                val f = File(getExternalFilesDir(null), "crash_log.txt")
+                f.appendText("${java.util.Date()}: ${t.name}\n${e.stackTraceToString()}\n\n")
+            } catch (_: Exception) {}
+            defaultExceptionHandler?.uncaughtException(t, e)
+        }
+
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         mFullscreenModeActive = false
@@ -339,6 +353,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         }
 
         addGameControler()
+        applyControlsStyle()
         (getSystemService(INPUT_SERVICE) as InputManager)
             .registerInputDeviceListener(this, null)
         updateOnscreenControls()
@@ -376,7 +391,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         
         // Initialize Tools Button
         findViewById<View>(R.id.tools_btn).setOnClickListener {
-            val options = arrayOf("Shaders", "Memory Tools", "Save State", "Load State", "Cheats", "Sound", "Next Run →", "Tracker Size")
+            val options = arrayOf("Shaders", "Memory Tools", "Save State", "Load State", "Cheats", "Sound", "Next Run →", "Tracker Size", "Settings", "Close ROM")
             AlertDialog.Builder(this)
                 .setTitle("Tools")
                 .setItems(options) { _, which ->
@@ -443,6 +458,13 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                         }
                         6 -> doNextRun()
                         7 -> showTrackerSizeDialog()
+                        8 -> showSettingsDialog()
+                        9 -> AlertDialog.Builder(this)
+                            .setTitle("Close ROM")
+                            .setMessage("Return to game list?")
+                            .setPositiveButton("Close") { _, _ -> finish() }
+                            .setNegativeButton("Cancel", null)
+                            .show()
                     }
                 }
                 .show()
@@ -634,6 +656,96 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                 dlg.dismiss()
                 applyTrackerSize(fractions[which])
             }
+            .show()
+    }
+
+    private fun applyControlsStyle() {
+        val padboard = findViewById<View>(R.id.padboardInclude)
+        padboard?.alpha = EmulatorPreferences.getControlsAlpha(this)
+        val scale = EmulatorPreferences.getControlsScale(this)
+        padboard?.scaleX = scale
+        padboard?.scaleY = scale
+    }
+
+    private fun showSettingsDialog() {
+        val ctx = this
+        val scrollView = ScrollView(ctx)
+        val container = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (16 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad, pad, pad)
+        }
+        scrollView.addView(container)
+
+        val opacityLabel = TextView(ctx)
+        container.addView(opacityLabel)
+        val opacityBar = SeekBar(ctx).apply {
+            max = 100
+            progress = (EmulatorPreferences.getControlsAlpha(ctx) * 100).toInt()
+        }
+        opacityLabel.text = "Controls Opacity: ${opacityBar.progress}%"
+        opacityBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) {
+                opacityLabel.text = "Controls Opacity: $p%"
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
+        })
+        container.addView(opacityBar)
+
+        val scaleLabel = TextView(ctx)
+        container.addView(scaleLabel)
+        val scaleBar = SeekBar(ctx).apply {
+            max = 100  // 0 → 50%, 100 → 150%
+            progress = ((EmulatorPreferences.getControlsScale(ctx) - 0.5f) * 100).toInt()
+        }
+        scaleLabel.text = "Controls Scale: ${scaleBar.progress + 50}%"
+        scaleBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) {
+                scaleLabel.text = "Controls Scale: ${p + 50}%"
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
+        })
+        container.addView(scaleBar)
+
+        val showFpsCheck = CheckBox(ctx).apply {
+            text = "Show FPS"
+            isChecked = EmulatorPreferences.getShowFps(ctx)
+        }
+        container.addView(showFpsCheck)
+
+        val speedLabel = TextView(ctx).apply { text = "Speed Button:" }
+        container.addView(speedLabel)
+        val speedSpinner = Spinner(ctx)
+        val speedAdapter = ArrayAdapter(ctx, android.R.layout.simple_spinner_item, EmulatorPreferences.buttonOptions)
+        speedAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        speedSpinner.adapter = speedAdapter
+        val currentSpeed = EmulatorPreferences.getSpeedButton(ctx)
+        val speedIdx = EmulatorPreferences.buttonOptions.indexOf(currentSpeed).let { if (it < 0) 0 else it }
+        speedSpinner.setSelection(speedIdx)
+        container.addView(speedSpinner)
+
+        AlertDialog.Builder(ctx)
+            .setTitle("Settings")
+            .setView(scrollView)
+            .setPositiveButton("OK") { _, _ ->
+                val alpha = opacityBar.progress / 100f
+                val scale = (scaleBar.progress + 50) / 100f
+                EmulatorPreferences.setControlsAlpha(ctx, alpha)
+                EmulatorPreferences.setControlsScale(ctx, scale)
+                EmulatorPreferences.save(
+                    ctx,
+                    defaultFps = EmulatorPreferences.getDefaultFps(ctx),
+                    secondaryFps = EmulatorPreferences.getSecondaryFps(ctx),
+                    button = speedSpinner.selectedItem as String,
+                    showFps = showFpsCheck.isChecked,
+                )
+                applyControlsStyle()
+                findViewById<TextView>(R.id.fps_text)?.visibility =
+                    if (showFpsCheck.isChecked) View.VISIBLE else View.GONE
+            }
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
@@ -887,7 +999,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         this.setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> onNativeKeyDown(keyText)
-                MotionEvent.ACTION_UP   -> onNativeKeyUp(keyText)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onNativeKeyUp(keyText)
             }
             true
         }
