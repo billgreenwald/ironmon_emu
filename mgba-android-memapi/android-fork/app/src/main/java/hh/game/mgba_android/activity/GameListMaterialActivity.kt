@@ -476,17 +476,23 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     Text("Always show on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor, modifier = Modifier.weight(1f))
                     Switch(checked = alwaysShowControls, onCheckedChange = { alwaysShowControls = it })
                 }
-                // ── Collapsible tracker panel (hidden in overlay modes) ───────
+                // ── Collapsible tracker panel (forced on in overlay modes) ────
                 val isOverlaySplit = splitFraction == 0.0f || splitFraction == 1.0f
-                if (!isOverlaySplit) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text("Collapsible tracker panel", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                        Switch(checked = trackerCollapsible, onCheckedChange = { trackerCollapsible = it })
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        "Collapsible tracker panel",
+                        fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                        color = if (isOverlaySplit) Color(0xFFAAAAAA) else labelColor,
+                    )
+                    Switch(
+                        checked = if (isOverlaySplit) true else trackerCollapsible,
+                        onCheckedChange = { if (!isOverlaySplit) trackerCollapsible = it },
+                        enabled = !isOverlaySplit,
+                    )
                 }
                 // ── Show FPS ──────────────────────────────────────────────────
                 Row(
