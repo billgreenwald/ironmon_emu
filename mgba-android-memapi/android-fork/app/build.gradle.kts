@@ -14,8 +14,8 @@ android {
         applicationId = "hh.game.mgba_android"
         minSdk = 22
         targetSdk = 34
-        versionCode = 34
-        versionName = "1.3.6"
+        versionCode = 35
+        versionName = "1.3.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

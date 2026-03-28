@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.7] - 2026-03-28
+
+### Fixed
+- **Xiaomi/MIUI phantom gamepad** — virtual input devices registered by MIUI were falsely detected as gamepads, hiding on-screen controls on Xiaomi devices at launch. Fixed by skipping virtual devices (`InputDevice.isVirtual`) in gamepad detection.
+
 ## [1.3.6] - 2026-03-28
 
 ### Added

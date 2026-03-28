@@ -546,6 +546,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     // ── Gamepad detection ──────────────────────────────────────────────────────
     private fun isGamepad(deviceId: Int): Boolean {
         val device = InputDevice.getDevice(deviceId) ?: return false
+        if (device.isVirtual) return false
         val src = device.sources
         return (src and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||
                (src and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
