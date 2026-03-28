@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.2] - 2026-03-27
+
+### Fixed
+- Release signing configured — APKs are now signed with a stable release keystore instead of the per-machine debug keystore, fixing "application appears to be invalid" on Samsung Knox / flagship devices when sideloading
+
 ## [1.3.1] - 2026-03-27
 
 ### Added

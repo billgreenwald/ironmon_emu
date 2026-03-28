@@ -86,6 +86,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
     private var runFPS = true
     private var setFPS = 60f
+    private var resumePending = false
     private var isMute = false
     private var defaultFps = 60f
     private var secondaryFps = 60f
@@ -601,6 +602,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
     override fun onPause() {
         super.onPause()
+        resumePending = false
         PauseGame()
     }
 
@@ -612,18 +614,29 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             val parentDir = File(gamePath).parentFile
             // Use the same gameNum logic as onCreate
             val gameNum = intent.getStringExtra("cheat") ?: File(gamePath).nameWithoutExtension
-            
+
             // Unified Cheat Reloading
             var cheatRefPath = getExternalFilesDir("cheats")?.absolutePath + "/$gameNum.cheats"
             val gameDirCheat = File(parentDir, "$gameNum.cheats") // Priority to game dir
             if (gameDirCheat.exists()) cheatRefPath = gameDirCheat.absolutePath
-            
+
             // Process (Reload AR DS, Update .cht file)
-            // Note: Updated .cht file might not be re-read by core without restart, 
+            // Note: Updated .cht file might not be re-read by core without restart,
             // but AR DS cheats are updated immediately via JNI.
             processCheatsAndGetNativePath(cheatRefPath)
          }
-        ResumeGame()
+        // ResumeGame() is deferred to onWindowFocusChanged to avoid racing SDL surface readiness.
+        // SDL requires mHasFocus=true (set on focus grant) before nativeResume() unblocks the
+        // render thread. Calling ResumeGame() here would wake the mGBA core before SDL is ready.
+        resumePending = true
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && resumePending) {
+            resumePending = false
+            ResumeGame()
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {

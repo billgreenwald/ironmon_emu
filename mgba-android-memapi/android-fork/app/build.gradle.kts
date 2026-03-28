@@ -14,8 +14,8 @@ android {
         applicationId = "hh.game.mgba_android"
         minSdk = 22
         targetSdk = 34
-        versionCode = 29
-        versionName = "1.3.1"
+        versionCode = 30
+        versionName = "1.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -38,6 +38,19 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val propsFile = rootProject.file("signing.properties")
+            if (propsFile.exists()) {
+                val props = org.jetbrains.kotlin.konan.properties.loadProperties(propsFile.absolutePath)
+                storeFile = rootProject.file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Memory API server enabled in debug builds only.
@@ -49,6 +62,7 @@ android {
             }
         }
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

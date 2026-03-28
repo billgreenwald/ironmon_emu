@@ -17,6 +17,10 @@ local.properties
 # Scripts with embedded API keys
 download_imgur_items.py
 
+# Release signing (never commit these)
+keystore/
+signing.properties
+
 # IDE
 .idea/
 *.iml
