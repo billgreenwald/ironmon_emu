@@ -49,6 +49,22 @@ object EmulatorPreferences {
     fun getTrackerCollapsible(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
         .getBoolean(KEY_TRACKER_COLLAPSIBLE, false)
 
+    fun getBinding(ctx: Context, action: BindableAction): Int {
+        val prefs = ctx.getSharedPreferences(PREFS, 0)
+        // One-time migration: convert old pref_speed_button string → raw Android keyCode
+        if (action == BindableAction.SPEED_HOLD && !prefs.contains(action.prefKey)) {
+            val old = prefs.getString(KEY_SPEED_BUTTON, "none") ?: "none"
+            val migrated = getKey(old)
+            prefs.edit().putInt(action.prefKey, migrated).apply()
+            return migrated
+        }
+        return prefs.getInt(action.prefKey, -1)
+    }
+
+    fun setBinding(ctx: Context, action: BindableAction, keyCode: Int) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putInt(action.prefKey, keyCode).apply()
+    }
+
     fun save(
         ctx: Context,
         defaultFps: Float,

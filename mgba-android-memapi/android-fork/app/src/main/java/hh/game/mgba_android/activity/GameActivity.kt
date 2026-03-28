@@ -48,6 +48,7 @@ import hh.game.mgba_android.fragment.OnMemSearchListener
 import hh.game.mgba_android.fragment.PopDialogFragment
 import hh.game.mgba_android.memory.CoreMemoryBlock
 import hh.game.mgba_android.utils.CheatUtils
+import hh.game.mgba_android.utils.BindableAction
 import hh.game.mgba_android.utils.GBAKeys
 import hh.game.mgba_android.utils.Gametype
 import hh.game.mgba_android.utils.controllerUtil.getDirectionPressed
@@ -91,7 +92,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var isMute = false
     private var defaultFps = 60f
     private var secondaryFps = 60f
-    private var speedButtonKey = GBAKeys.GBA_KEY_NONE.key
+    private val actionBindings = HashMap<BindableAction, Int>()
     // Tracker layout state
     private var splitFraction = 0.7f
     private var trackerCollapsible = false
@@ -349,7 +350,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         // Load speed preferences — apply default FPS only after emulator core is live
         defaultFps = EmulatorPreferences.getDefaultFps(this)
         secondaryFps = EmulatorPreferences.getSecondaryFps(this)
-        speedButtonKey = getKey(EmulatorPreferences.getSpeedButton(this))
+        BindableAction.entries.forEach { action ->
+            actionBindings[action] = EmulatorPreferences.getBinding(this, action)
+        }
         setFPS = defaultFps
         if (defaultFps != 60f) {
             lifecycleScope.launch {
@@ -438,32 +441,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                             EmulatorPreferences.setMuted(this, isMute)
                             Toast.makeText(this, if (isMute) "Sound Off" else "Sound On", Toast.LENGTH_SHORT).show()
                         }
-                        6 -> {
-                            if (QuickloadManager.canQuickload()) {
-                                TrackerPoller.manualNextRun()
-                                lifecycleScope.launch(Dispatchers.IO) {
-                                    val nextPath = QuickloadManager.advanceToNext(applicationContext)
-                                    if (nextPath != null) {
-                                        withContext(Dispatchers.Main) {
-                                            val next = Intent(this@GameActivity, GameActivity::class.java).apply {
-                                                putExtra("gamepath", nextPath)
-                                                val cheat = this@GameActivity.intent.getStringExtra("cheat")
-                                                if (cheat != null) putExtra("cheat", cheat)
-                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                                            }
-                                            startActivity(next)
-                                            android.os.Process.killProcess(android.os.Process.myPid())
-                                        }
-                                    } else {
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(this@GameActivity, "No next ROM found", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            } else {
-                                Toast.makeText(this, "Quickload not available", Toast.LENGTH_SHORT).show()
-                            }
-                        }
+                        6 -> doNextRun()
                         7 -> showTrackerSizeDialog()
                     }
                 }
@@ -698,6 +676,10 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             // but AR DS cheats are updated immediately via JNI.
             processCheatsAndGetNativePath(cheatRefPath)
          }
+        // Reload action bindings in case user changed them in settings while paused
+        BindableAction.entries.forEach { action ->
+            actionBindings[action] = EmulatorPreferences.getBinding(this, action)
+        }
         // ResumeGame() is deferred to onWindowFocusChanged to avoid racing SDL surface readiness.
         // SDL requires mHasFocus=true (set on focus grant) before nativeResume() unblocks the
         // render thread. Calling ResumeGame() here would wake the mGBA core before SDL is ready.
@@ -715,28 +697,83 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         }
     }
 
+    private fun doNextRun() {
+        if (QuickloadManager.canQuickload()) {
+            TrackerPoller.manualNextRun()
+            lifecycleScope.launch(Dispatchers.IO) {
+                val nextPath = QuickloadManager.advanceToNext(applicationContext)
+                if (nextPath != null) {
+                    withContext(Dispatchers.Main) {
+                        val next = Intent(this@GameActivity, GameActivity::class.java).apply {
+                            putExtra("gamepath", nextPath)
+                            val cheat = this@GameActivity.intent.getStringExtra("cheat")
+                            if (cheat != null) putExtra("cheat", cheat)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        }
+                        startActivity(next)
+                        android.os.Process.killProcess(android.os.Process.myPid())
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@GameActivity, "No next ROM found", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } else {
+            Toast.makeText(this, "Quickload not available", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         return super.onKeyDown(keyCode, event)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-//        Game controler
         var handled = false
-        var gbaKey = getKey(event.keyCode)
+
+        // GBA game controls
+        val gbaKey = getKey(event.keyCode)
         if (gbaKey != GBAKeys.GBA_KEY_NONE.key) {
             when (event.action) {
-                KeyEvent.ACTION_DOWN -> {
-                    onNativeKeyDown(gbaKey)
-                    if (gbaKey == speedButtonKey && secondaryFps != defaultFps) { setFPS = secondaryFps; Forward(secondaryFps) }
+                KeyEvent.ACTION_DOWN -> { onNativeKeyDown(gbaKey); handled = true }
+                KeyEvent.ACTION_UP   -> { onNativeKeyUp(gbaKey);   handled = true }
+            }
+        }
+
+        // Action bindings (raw keyCode comparison)
+        val speedKey = actionBindings[BindableAction.SPEED_HOLD] ?: -1
+        if (speedKey != -1 && event.keyCode == speedKey && secondaryFps != defaultFps) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> { setFPS = secondaryFps; Forward(secondaryFps); handled = true }
+                KeyEvent.ACTION_UP   -> { setFPS = defaultFps;   Forward(defaultFps);   handled = true }
+            }
+        }
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            val kc = event.keyCode
+            when {
+                kc != -1 && kc == (actionBindings[BindableAction.QUICK_SAVE] ?: -1) -> {
+                    QuickSaveState()
+                    Toast.makeText(this, getString(R.string.state_saved), Toast.LENGTH_SHORT).show()
                     handled = true
                 }
-
-                KeyEvent.ACTION_UP -> {
-                    onNativeKeyUp(gbaKey)
-                    if (gbaKey == speedButtonKey && secondaryFps != defaultFps) { setFPS = defaultFps; Forward(defaultFps) }
+                kc != -1 && kc == (actionBindings[BindableAction.QUICK_LOAD] ?: -1) -> {
+                    QuickLoadState()
+                    Toast.makeText(this, getString(R.string.state_loaded), Toast.LENGTH_SHORT).show()
                     handled = true
                 }
-
+                kc != -1 && kc == (actionBindings[BindableAction.TRACKER_TOGGLE] ?: -1) -> {
+                    applyTrackerExpansion(!trackerExpanded); handled = true
+                }
+                kc != -1 && kc == (actionBindings[BindableAction.NEXT_RUN] ?: -1) -> {
+                    doNextRun(); handled = true
+                }
+                kc != -1 && kc == (actionBindings[BindableAction.MUTE] ?: -1) -> {
+                    isMute = !isMute
+                    Mute(isMute)
+                    EmulatorPreferences.setMuted(this, isMute)
+                    Toast.makeText(this, if (isMute) "Sound Off" else "Sound On", Toast.LENGTH_SHORT).show()
+                    handled = true
+                }
             }
         }
         return handled || super.dispatchKeyEvent(event)
@@ -848,15 +885,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         )
         this.setOnTouchListener { v, event ->
             when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    onNativeKeyDown(keyText)
-                    if (keyText == speedButtonKey && secondaryFps != defaultFps) { setFPS = secondaryFps; Forward(secondaryFps) }
-                }
-
-                MotionEvent.ACTION_UP -> {
-                    onNativeKeyUp(keyText)
-                    if (keyText == speedButtonKey && secondaryFps != defaultFps) { setFPS = defaultFps; Forward(defaultFps) }
-                }
+                MotionEvent.ACTION_DOWN -> onNativeKeyDown(keyText)
+                MotionEvent.ACTION_UP   -> onNativeKeyUp(keyText)
             }
             true
         }

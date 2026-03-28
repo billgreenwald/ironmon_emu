@@ -58,3 +58,24 @@ fun getKey(key: Int): Int =
         KeyEvent.KEYCODE_BUTTON_R2 -> GBAKeys.GBA_KEY_R2
         else -> GBAKeys.GBA_KEY_NONE
     }.key
+
+fun getKeyDisplayName(keyCode: Int): String = when (keyCode) {
+    KeyEvent.KEYCODE_BUTTON_L1     -> "L1"
+    KeyEvent.KEYCODE_BUTTON_R1     -> "R1"
+    KeyEvent.KEYCODE_BUTTON_L2     -> "L2"
+    KeyEvent.KEYCODE_BUTTON_R2     -> "R2"
+    KeyEvent.KEYCODE_BUTTON_A      -> "A"
+    KeyEvent.KEYCODE_BUTTON_B      -> "B"
+    KeyEvent.KEYCODE_BUTTON_X      -> "X"
+    KeyEvent.KEYCODE_BUTTON_Y      -> "Y"
+    KeyEvent.KEYCODE_BUTTON_START  -> "Start"
+    KeyEvent.KEYCODE_BUTTON_SELECT -> "Select"
+    KeyEvent.KEYCODE_BUTTON_THUMBL -> "L3"
+    KeyEvent.KEYCODE_BUTTON_THUMBR -> "R3"
+    KeyEvent.KEYCODE_DPAD_UP       -> "D-Up"
+    KeyEvent.KEYCODE_DPAD_DOWN     -> "D-Down"
+    KeyEvent.KEYCODE_DPAD_LEFT     -> "D-Left"
+    KeyEvent.KEYCODE_DPAD_RIGHT    -> "D-Right"
+    -1                             -> "None"
+    else                           -> "Key($keyCode)"
+}

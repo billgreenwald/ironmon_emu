@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.6] - 2026-03-28
+
+### Added
+- **General button binding system** — Settings dialog now has a "Set Keybindings" button that opens a dedicated Key Bindings dialog. All six emulator actions (Fast Forward Hold, Save State, Load State, Tracker Open/Close, Next Run, Mute Toggle) can be bound to any physical controller button via live capture: tap an action row, press a button on the controller, binding is saved. Save/Cancel at the bottom. Bindings persist across sessions.
+- **One-time migration** — existing "Trigger Button" preference (L2/R2/X/Y chip) is automatically migrated to the new Fast Forward binding on first launch; no manual re-binding needed.
+
+### Removed
+- Removed the 4-chip "Trigger Button" selector from the Settings dialog (superseded by Key Bindings).
+
 ## [1.3.5] - 2026-03-28
 
 ### Fixed

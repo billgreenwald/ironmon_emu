@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -78,7 +79,22 @@ import hh.game.mgba_android.activity.ui.theme.Mgba_AndroidTheme
 import hh.game.mgba_android.tracker.quickload.QuickloadManager
 import hh.game.mgba_android.tracker.quickload.RomFamilyGroup
 import hh.game.mgba_android.tracker.quickload.RomFamilyUtils
+import android.view.KeyEvent
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.Divider
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.nativeKeyCode
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.window.Dialog
+import hh.game.mgba_android.utils.BindableAction
 import hh.game.mgba_android.utils.EmulatorPreferences
+import hh.game.mgba_android.utils.getKeyDisplayName
 import kotlin.math.abs
 
 
@@ -374,7 +390,6 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     var defaultFps by remember { mutableStateOf(EmulatorPreferences.getDefaultFps(context)) }
     var secondaryFps by remember { mutableStateOf(EmulatorPreferences.getSecondaryFps(context)) }
-    var speedButton by remember { mutableStateOf(EmulatorPreferences.getSpeedButton(context)) }
     var showFps by remember { mutableStateOf(EmulatorPreferences.getShowFps(context)) }
     var splitFraction by remember { mutableStateOf(EmulatorPreferences.getSplitFraction(context)) }
     var alwaysShowControls by remember { mutableStateOf(EmulatorPreferences.getAlwaysShowControls(context)) }
@@ -382,17 +397,6 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     val labelColor = Color(0xFF111111)
     val unselectedColor = Color(0xFF444444)
     val selectedColor = Color(0xFF4090FF)
-
-    val triggerButtons = listOf("L2", "R2", "X", "Y")
-
-    @Composable
-    fun BtnChip(btn: String) {
-        val selected = speedButton == btn
-        TextButton(
-            onClick = { speedButton = btn },
-            border = if (selected) BorderStroke(1.dp, selectedColor) else null,
-        ) { Text(btn, color = if (selected) selectedColor else unselectedColor, fontSize = 12.sp) }
-    }
 
     AlertDialog(
         onDismissRequest = {
@@ -424,9 +428,17 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         ) { Text("${mult}x", color = if (selected) selectedColor else unselectedColor) }
                     }
                 }
-                Text("Trigger Button", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    triggerButtons.forEach { BtnChip(it) }
+                // ── Keybindings ───────────────────────────────────────────────
+                var showKeyBindings by remember { mutableStateOf(false) }
+                TextButton(
+                    onClick = { showKeyBindings = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.dp, selectedColor),
+                ) {
+                    Text("Set Keybindings", color = selectedColor, fontSize = 13.sp)
+                }
+                if (showKeyBindings) {
+                    KeyBindingsDialog(onDismiss = { showKeyBindings = false })
                 }
                 // ── Game / Tracker split ──────────────────────────────────────
                 val splitFractions = listOf(1.0f, 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f, 0.2f, 0.1f, 0.0f)
@@ -490,7 +502,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
         confirmButton = {
             TextButton(onClick = {
                 EmulatorPreferences.save(
-                    context, defaultFps, secondaryFps, speedButton, showFps,
+                    context, defaultFps, secondaryFps, "none", showFps,
                     splitFraction, alwaysShowControls, trackerCollapsible,
                 )
                 onDismiss()
@@ -500,6 +512,124 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
             TextButton(onClick = { onDismiss() }) { Text("Cancel") }
         },
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun KeyBindingsDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val bindings = remember {
+        mutableStateMapOf<BindableAction, Int>().also { map ->
+            BindableAction.entries.forEach { a ->
+                map[a] = EmulatorPreferences.getBinding(context, a)
+            }
+        }
+    }
+    var capturingFor by remember { mutableStateOf<BindableAction?>(null) }
+    val focusRequester = remember { FocusRequester() }
+
+    val labelColor  = Color(0xFF111111)
+    val accentColor = Color(0xFF4090FF)
+    val mutedColor  = Color(0xFF888888)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .onKeyEvent { keyEvent ->
+                    val capturing = capturingFor ?: return@onKeyEvent false
+                    if (keyEvent.type == KeyEventType.KeyDown) {
+                        val kc = keyEvent.key.nativeKeyCode
+                        when {
+                            kc == KeyEvent.KEYCODE_BACK -> { capturingFor = null }
+                            kc != KeyEvent.KEYCODE_VOLUME_UP &&
+                            kc != KeyEvent.KEYCODE_VOLUME_DOWN &&
+                            kc != KeyEvent.KEYCODE_VOLUME_MUTE -> {
+                                bindings[capturing] = kc
+                                capturingFor = null
+                            }
+                        }
+                        true
+                    } else false
+                }
+                .focusRequester(focusRequester)
+                .focusable()
+        ) {
+            Surface(shape = MaterialTheme.shapes.medium, tonalElevation = 8.dp) {
+                Column(modifier = Modifier.width(320.dp)) {
+                    Text(
+                        "Button Bindings",
+                        fontWeight = FontWeight.Bold, fontSize = 16.sp,
+                        color = labelColor,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                    Divider()
+                    Column(
+                        modifier = Modifier
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        BindableAction.entries.forEach { action ->
+                            val keyCode = bindings[action] ?: -1
+                            val isCapturing = capturingFor == action
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    action.label,
+                                    color = labelColor, fontSize = 13.sp,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                when {
+                                    isCapturing -> {
+                                        Text("Press a button...", color = accentColor, fontSize = 12.sp)
+                                    }
+                                    keyCode != -1 -> {
+                                        TextButton(
+                                            onClick = { capturingFor = action },
+                                            border = BorderStroke(1.dp, accentColor),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                        ) {
+                                            Text(getKeyDisplayName(keyCode), color = accentColor, fontSize = 11.sp)
+                                        }
+                                        IconButton(
+                                            onClick = { bindings[action] = -1 },
+                                            modifier = Modifier.size(28.dp),
+                                        ) {
+                                            Text("✕", color = mutedColor, fontSize = 12.sp)
+                                        }
+                                    }
+                                    else -> {
+                                        TextButton(
+                                            onClick = { capturingFor = action },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                        ) {
+                                            Text("Tap to bind", color = mutedColor, fontSize = 11.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Divider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(onClick = onDismiss) { Text("Cancel") }
+                        TextButton(onClick = {
+                            bindings.forEach { (action, kc) ->
+                                EmulatorPreferences.setBinding(context, action, kc)
+                            }
+                            onDismiss()
+                        }) { Text("Save") }
+                    }
+                }
+            }
+        }
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    }
 }
 
 @Composable
