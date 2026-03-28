@@ -653,7 +653,19 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
     }
 
     selectedRouteSpecies?.let { sid ->
-        RouteMonSheet(sid, onDismiss = { selectedRouteSpecies = null })
+        val enemy = state.battle.enemy
+        val revealedMoveIds = if (enemy?.speciesId == sid) enemy.revealedMoveIds else emptyList()
+        val ppByMoveId = if (enemy?.speciesId == sid) enemy.ppByMoveId else emptyMap()
+        val encounterRoutes = state.routeEncounters.entries
+            .filter { sid in it.value }
+            .map { RouteNames.get(it.key, isHoenn) }
+        RouteMonSheet(
+            speciesId = sid,
+            revealedMoveIds = revealedMoveIds,
+            ppByMoveId = ppByMoveId,
+            encounterRoutes = encounterRoutes,
+            onDismiss = { selectedRouteSpecies = null },
+        )
     }
 }
 
@@ -1267,10 +1279,16 @@ fun TypeDefenseSheet(type1: Int, type2: Int, onDismiss: () -> Unit) {
 // ── Route encounter detail sheet ──────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RouteMonSheet(speciesId: Int, onDismiss: () -> Unit) {
+private fun RouteMonSheet(
+    speciesId: Int,
+    revealedMoveIds: List<Int>,
+    ppByMoveId: Map<Int, Int>,
+    encounterRoutes: List<String>,
+    onDismiss: () -> Unit,
+) {
     var baseStatBytes by remember { mutableStateOf<ByteArray?>(null) }
     var showDefenseSheet by remember { mutableStateOf(false) }
-    var showAbilitySheet by remember { mutableStateOf<Int?>(null) }
+    var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
 
     LaunchedEffect(speciesId) {
         val addr = TrackerPoller.currentAddresses ?: return@LaunchedEffect
@@ -1281,16 +1299,8 @@ private fun RouteMonSheet(speciesId: Int, onDismiss: () -> Unit) {
     }
 
     val bytes = baseStatBytes
-    val hp    = bytes?.get(DataHelper.BASE_STATS_HP)?.toInt()?.and(0xFF) ?: 0
-    val atk   = bytes?.get(DataHelper.BASE_STATS_ATK)?.toInt()?.and(0xFF) ?: 0
-    val def   = bytes?.get(DataHelper.BASE_STATS_DEF)?.toInt()?.and(0xFF) ?: 0
-    val spe   = bytes?.get(DataHelper.BASE_STATS_SPE)?.toInt()?.and(0xFF) ?: 0
-    val spa   = bytes?.get(DataHelper.BASE_STATS_SPA)?.toInt()?.and(0xFF) ?: 0
-    val spd   = bytes?.get(DataHelper.BASE_STATS_SPD)?.toInt()?.and(0xFF) ?: 0
     val type1 = bytes?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0
     val type2 = bytes?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: type1
-    val ab1   = bytes?.get(DataHelper.BASE_STATS_ABILITY1)?.toInt()?.and(0xFF) ?: 0
-    val ab2   = bytes?.get(DataHelper.BASE_STATS_ABILITY2)?.toInt()?.and(0xFF) ?: 0
     val bst   = BstTable.bst(speciesId)
 
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
@@ -1327,7 +1337,7 @@ private fun RouteMonSheet(speciesId: Int, onDismiss: () -> Unit) {
 
             Spacer(Modifier.height(4.dp))
 
-            // ── Evolution + BST ────────────────────────────────────────────
+            // ── BST + evo ──────────────────────────────────────────────────
             LearnsetRow(
                 learnset = null,
                 currentLevel = 0,
@@ -1336,46 +1346,47 @@ private fun RouteMonSheet(speciesId: Int, onDismiss: () -> Unit) {
                 evoMethod = EvolutionLevel.getMethod(speciesId),
             )
 
-            Spacer(Modifier.height(8.dp))
+            // ── Encounter routes (journal entry) ───────────────────────────
+            if (encounterRoutes.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Wild on: ${encounterRoutes.joinToString(", ")}",
+                    color = TextSecondary, fontSize = ssp(12),
+                )
+            }
 
-            // ── Base stats ─────────────────────────────────────────────────
-            if (bytes != null) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    listOf("HP" to hp, "Atk" to atk, "Def" to def,
-                           "SpA" to spa, "SpD" to spd, "Spe" to spe)
-                        .forEach { (label, value) ->
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Text(label, color = TextSecondary, fontSize = ssp(11))
-                                Text("$value", color = TextPrimary, fontSize = ssp(14),
-                                    fontWeight = FontWeight.Bold)
-                            }
-                        }
-                }
-
+            // ── Revealed moves ─────────────────────────────────────────────
+            if (revealedMoveIds.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-
-                // ── Abilities ──────────────────────────────────────────────
-                val ab1Name = AbilityTable.name(ab1)
-                val ab2Name = AbilityTable.name(ab2)
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        "Ability: $ab1Name",
-                        color = TextPrimary, fontSize = ssp(14),
-                        modifier = Modifier.weight(1f).clickable { showAbilitySheet = ab1 },
-                    )
-                    if (ab2 != 0 && ab2 != ab1) {
-                        Text(
-                            "/ $ab2Name",
-                            color = TextSecondary, fontSize = ssp(14),
-                            modifier = Modifier.clickable { showAbilitySheet = ab2 },
-                        )
+                Divider(color = Color(0xFF303050), thickness = 0.5.dp)
+                Spacer(Modifier.height(4.dp))
+                Text("Revealed Moves:", color = TextSecondary, fontSize = ssp(13))
+                Spacer(Modifier.height(2.dp))
+                revealedMoveIds.forEach { moveId ->
+                    val stats = MoveStatsTable.get(moveId)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showMoveSheet = MoveData(
+                                    moveId   = moveId,
+                                    moveName = MoveNames.get(moveId),
+                                    pp       = stats.pp,
+                                    maxPp    = stats.pp,
+                                    power    = stats.power,
+                                    accuracy = stats.accuracy,
+                                    moveType = stats.type,
+                                )
+                            }
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.size(8.dp).background(typeColor(stats.type), CircleShape))
+                        Spacer(Modifier.width(4.dp))
+                        val ppText = ppByMoveId[moveId]?.let { " (${it}PP)" } ?: ""
+                        Text(MoveNames.get(moveId) + ppText, color = TextPrimary, fontSize = ssp(14))
                     }
                 }
-            } else {
-                Text("Loading...", color = TextSecondary, fontSize = ssp(13))
             }
 
             Spacer(Modifier.height(16.dp))
@@ -1385,8 +1396,8 @@ private fun RouteMonSheet(speciesId: Int, onDismiss: () -> Unit) {
     if (showDefenseSheet && bytes != null) {
         TypeDefenseSheet(type1, type2, onDismiss = { showDefenseSheet = false })
     }
-    showAbilitySheet?.let { abilityId ->
-        AbilityDetailSheet(abilityId, onDismiss = { showAbilitySheet = null })
+    showMoveSheet?.let { move ->
+        MoveDetailSheet(move, onDismiss = { showMoveSheet = null })
     }
 }
 

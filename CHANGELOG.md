@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.3] - 2026-03-27
+
+### Changed
+- Route encounter detail sheet simplified to match opponent tab info only: removed individual base stats (HP/Atk/Def/SpA/SpD/Spe) and abilities
+- Route encounter sheet now shows which route(s) the Pokémon was seen on ("Wild on: Route 1, Route 22")
+- Route encounter sheet now shows revealed moves (tappable for move detail) when the sheet is opened mid-battle against that species
+
 ## [1.3.2] - 2026-03-27
 
 ### Fixed
