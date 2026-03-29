@@ -4,7 +4,7 @@
 
 ### Added
 - **ROM Family Mode** — each ROM family can now be set to **Batch** (existing behavior: advance through numbered ROMs sequentially) or **UPR** (a single unmodified ROM that gets re-randomized via UPR-Android on every "Next Run"). Switch modes by long-pressing a family card and choosing Family Mode in the settings dialog.
-- **UPR-Android integration** — when a family is in UPR mode (or when a batch is exhausted), the tracker binds to the Universal Pokémon Randomizer service (`ly.mens.rndpkmn`) and randomizes the current ROM in-place before reloading. Requires UPR-Android to be installed.
+- **UPR-Android integration** — when a family is in UPR mode (or when a batch is exhausted), the tracker binds to UPR-Android's `OverwriteService` (`ly.mens.rndpkmn`), receives the randomized ROM as shared memory, writes it back to disk, and reloads. Requires UPR-Android installed with a version that exposes `OverwriteService`. Requires Android 8.1+ (API 27) for SharedMemory support.
 - **Randomizer status indicator** — the ROM list footer now shows "✓ Randomizer installed" (green) or "✗ Randomizer not installed" (grey) so users can tell at a glance whether UPR mode will work.
 - **Single-ROM families now appear in the ROM list** — previously only families with 2+ numbered ROMs were shown; a single un-numbered ROM now gets its own family card, enabling UPR-mode solo play.
 - **Mode chips on family cards** — every family card shows a blue **BATCH** or orange **UPR** badge so the current mode is always visible at a glance. UPR cards also show "UPR · re-randomized each run" as a subtitle.

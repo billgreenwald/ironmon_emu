@@ -200,7 +200,7 @@ class GameListMaterialActivity : ComponentActivity() {
                                     } catch (_: PackageManager.NameNotFoundException) { false }
                                 }
                                 Text(
-                                    text = if (randomizerInstalled) "✓ Randomizer installed" else "✗ Randomizer not installed",
+                                    text = if (randomizerInstalled) "✓ Randomizer installed" else "✗ Randomizer not installed — only premade ROMs supported",
                                     color = if (randomizerInstalled) Color(0xFF44BB44) else Color(0xFF888888),
                                     fontSize = 11.sp,
                                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 2.dp),
