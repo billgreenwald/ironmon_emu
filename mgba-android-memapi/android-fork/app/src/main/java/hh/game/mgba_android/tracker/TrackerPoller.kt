@@ -432,10 +432,21 @@ object TrackerPoller {
             } else null
         } else null
 
-        // ── Player stat stages (gBattleMons slot 0, offset 0x18, 7 bytes) ─────
-        // [Atk, Def, SpA, SpD, Spe, Acc, Eva]; 6 = neutral
-        val playerStatStages = MemoryBridge.readBytes(addresses.battleMons + 0x18L, 7)
-            ?.let { b -> IntArray(7) { b[it].toInt() and 0xFF } }
+        // ── Player stat stages (gBattleMons slot 0, offset 0x18, 8 bytes) ─────
+        // Memory layout per Lua Battle.lua: [HP, Atk, Def, Spe, SpA, SpD, Acc, Eva]
+        // We reorder to display as:         [Atk, Def, SpA, SpD, Spe, Acc, Eva]
+        val playerStatStages = MemoryBridge.readBytes(addresses.battleMons + 0x18L, 8)
+            ?.let { b ->
+                intArrayOf(
+                    b[1].toInt() and 0xFF,  // Atk
+                    b[2].toInt() and 0xFF,  // Def
+                    b[4].toInt() and 0xFF,  // SpA
+                    b[5].toInt() and 0xFF,  // SpD
+                    b[3].toInt() and 0xFF,  // Spe
+                    b[6].toInt() and 0xFF,  // Acc
+                    b[7].toInt() and 0xFF,  // Eva
+                )
+            }
 
         // ── Trainer opponent ID ───────────────────────────────────────────────
         val trainerOpponentId = if (!isWild && addresses.trainerBattleOpponent != 0L)

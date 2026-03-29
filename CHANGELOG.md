@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.1] - 2026-03-29
+
+### Fixed
+- **Battle stat boost labels were wrong** — stat stages read from `gBattleMons+0x18` were off-by-one (byte 0 is HP, not Atk) and Spe/SpA were swapped. Now reads all 8 bytes and remaps to the correct `[Atk, Def, SpA, SpD, Spe, Acc, Eva]` display order per the Lua tracker source.
+
 ## [2.0.0] - 2026-03-28
 
 ### Added
