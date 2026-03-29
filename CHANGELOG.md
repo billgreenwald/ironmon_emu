@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.5] - 2026-03-29
+
+### Added
+- **Hide on-screen collapse button** — new toggle in Settings, visible only when "Collapsible tracker panel" is on. When enabled, the ◀/▶ arrow strip is removed from the tracker edge; collapse/expand is then driven exclusively by the "Tracker Open/Close" key binding. A hint below the toggle reminds you to bind the key. When collapsed without the button, the tracker slides fully off-screen (no stub remains).
+
 ## [2.0.4] - 2026-03-29
 
 ### Fixed

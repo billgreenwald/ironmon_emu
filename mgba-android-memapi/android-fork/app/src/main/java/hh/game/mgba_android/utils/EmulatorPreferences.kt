@@ -12,6 +12,7 @@ object EmulatorPreferences {
     private const val KEY_SPLIT_FRACTION     = "pref_split_fraction"
     private const val KEY_ALWAYS_SHOW_CONTROLS = "pref_always_show_controls"
     private const val KEY_TRACKER_COLLAPSIBLE  = "pref_tracker_collapsible"
+    private const val KEY_HIDE_COLLAPSE_BUTTON = "pref_hide_collapse_button"
     private const val KEY_CONTROLS_ALPHA       = "pref_controls_alpha"
     private const val KEY_CONTROLS_SCALE       = "pref_controls_scale"
 
@@ -50,6 +51,9 @@ object EmulatorPreferences {
 
     fun getTrackerCollapsible(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
         .getBoolean(KEY_TRACKER_COLLAPSIBLE, false)
+
+    fun getHideCollapseButton(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
+        .getBoolean(KEY_HIDE_COLLAPSE_BUTTON, false)
 
     fun getControlsAlpha(ctx: Context): Float = ctx.getSharedPreferences(PREFS, 0)
         .getFloat(KEY_CONTROLS_ALPHA, 0.7f)
@@ -90,6 +94,7 @@ object EmulatorPreferences {
         splitFraction: Float = getSplitFraction(ctx),
         alwaysShowControls: Boolean = getAlwaysShowControls(ctx),
         trackerCollapsible: Boolean = getTrackerCollapsible(ctx),
+        hideCollapseButton: Boolean = getHideCollapseButton(ctx),
     ) {
         ctx.getSharedPreferences(PREFS, 0).edit()
             .putFloat(KEY_DEFAULT_FPS, defaultFps)
@@ -99,6 +104,7 @@ object EmulatorPreferences {
             .putFloat(KEY_SPLIT_FRACTION, splitFraction)
             .putBoolean(KEY_ALWAYS_SHOW_CONTROLS, alwaysShowControls)
             .putBoolean(KEY_TRACKER_COLLAPSIBLE, trackerCollapsible)
+            .putBoolean(KEY_HIDE_COLLAPSE_BUTTON, hideCollapseButton)
             .apply()
     }
 }

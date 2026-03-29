@@ -104,6 +104,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     // Tracker layout state
     private var splitFraction = 0.7f
     private var trackerCollapsible = false
+    private var hideCollapseButton = false
     private var trackerExpanded by mutableStateOf(true)
     private var trackerFontScale by mutableStateOf(1.0f)
     private var effectiveCollapsible by mutableStateOf(false)
@@ -247,12 +248,13 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         // ── Tracker: resize SDL surface to (splitFraction)% width, attach tracker panel ──
         splitFraction = EmulatorPreferences.getSplitFraction(this)
         trackerCollapsible = EmulatorPreferences.getTrackerCollapsible(this)
+        hideCollapseButton = EmulatorPreferences.getHideCollapseButton(this)
         screenWidthPx = resources.displayMetrics.widthPixels
         val isOverlay = splitFraction == 0.0f || splitFraction == 1.0f
         effectiveCollapsible = trackerCollapsible || isOverlay
         trackerFontScale = computeFontScale(splitFraction)
         trackerExpanded = splitFraction != 1.0f  // game-overlay mode starts collapsed
-        val arrowPx = (24 * resources.displayMetrics.density).toInt()
+        val arrowPx = if (hideCollapseButton) 0 else (24 * resources.displayMetrics.density).toInt()
         val gameWidth = if (isOverlay) screenWidthPx else (screenWidthPx * splitFraction).toInt()
         val trackerLeft = when {
             isOverlay && !trackerExpanded -> screenWidthPx - arrowPx
@@ -294,7 +296,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                         { loadNextRom() }
                     } else null,
                     fontScale = trackerFontScale,
-                    isCollapsible = effectiveCollapsible,
+                    isCollapsible = effectiveCollapsible && !hideCollapseButton,
                     isExpanded = trackerExpanded,
                     onToggleExpand = { applyTrackerExpansion(!trackerExpanded) },
                 )
@@ -570,7 +572,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
     private fun applyTrackerExpansion(expanded: Boolean) {
         trackerExpanded = expanded
-        val arrowPx = (24 * resources.displayMetrics.density).toInt()
+        val arrowPx = if (hideCollapseButton) 0 else (24 * resources.displayMetrics.density).toInt()
         val isOverlay = splitFraction == 0.0f || splitFraction == 1.0f
         val newGameWidth = when {
             isOverlay -> screenWidthPx
@@ -604,7 +606,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         trackerFontScale = computeFontScale(newFraction)
         trackerExpanded = newFraction != 1.0f  // game-overlay mode starts collapsed
 
-        val arrowPx = (24 * resources.displayMetrics.density).toInt()
+        val arrowPx = if (hideCollapseButton) 0 else (24 * resources.displayMetrics.density).toInt()
         val gameWidth = if (isOverlay) screenWidthPx else (screenWidthPx * newFraction).toInt()
         val trackerLeft = when {
             isOverlay && !trackerExpanded -> screenWidthPx - arrowPx

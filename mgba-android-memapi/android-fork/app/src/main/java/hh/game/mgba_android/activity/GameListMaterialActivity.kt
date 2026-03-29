@@ -438,6 +438,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     var splitFraction by remember { mutableStateOf(EmulatorPreferences.getSplitFraction(context)) }
     var alwaysShowControls by remember { mutableStateOf(EmulatorPreferences.getAlwaysShowControls(context)) }
     var trackerCollapsible by remember { mutableStateOf(EmulatorPreferences.getTrackerCollapsible(context)) }
+    var hideCollapseButton by remember { mutableStateOf(EmulatorPreferences.getHideCollapseButton(context)) }
     var controlsAlpha by remember { mutableStateOf(EmulatorPreferences.getControlsAlpha(context)) }
     var controlsScale by remember { mutableStateOf(EmulatorPreferences.getControlsScale(context)) }
     val labelColor = Color(0xFF111111)
@@ -540,6 +541,29 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         enabled = !isOverlaySplit,
                     )
                 }
+                // ── Hide on-screen collapse button (only when collapsible is on) ──
+                if (trackerCollapsible || isOverlaySplit) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Hide on-screen collapse button",
+                                fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor,
+                            )
+                            Text(
+                                "Bind \"Tracker Open/Close\" in Key Bindings to collapse/expand",
+                                fontSize = 11.sp, color = Color(0xFF888888),
+                            )
+                        }
+                        Switch(
+                            checked = hideCollapseButton,
+                            onCheckedChange = { hideCollapseButton = it },
+                        )
+                    }
+                }
                 // ── Controls Opacity ──────────────────────────────────────────
                 Text(
                     "Controls Opacity: ${(controlsAlpha * 100).toInt()}%",
@@ -577,7 +601,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
             TextButton(onClick = {
                 EmulatorPreferences.save(
                     context, defaultFps, secondaryFps, "none", showFps,
-                    splitFraction, alwaysShowControls, trackerCollapsible,
+                    splitFraction, alwaysShowControls, trackerCollapsible, hideCollapseButton,
                 )
                 EmulatorPreferences.setControlsAlpha(context, controlsAlpha)
                 EmulatorPreferences.setControlsScale(context, controlsScale)
