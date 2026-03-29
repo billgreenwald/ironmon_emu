@@ -672,10 +672,20 @@ extern float g_fps;
 extern "C"
 JNIEXPORT void JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_initSwappy(JNIEnv *env, jobject thiz) {
-    SwappyGL_init(env, thiz);
-    SwappyGL_setSwapIntervalNS(16742707L); // 59.7275 fps (actual GBA framerate)
-    SwappyGL_setAutoSwapInterval(false);  // fixed interval — GBA is always 59.7275fps
-    SwappyGL_setAutoPipelineMode(true);   // pipeline frames to reduce latency
+    if (!SwappyGL_init(env, thiz)) {
+        __android_log_print(ANDROID_LOG_WARN, "mGBA_Perf", "SwappyGL_init failed — frame pacing unavailable");
+        return;
+    }
+    // 16666667ns = exactly 1 frame at 60Hz. The old value (16742707ns = 59.7275fps GBA rate)
+    // is 76µs longer than one 60Hz frame — Swappy rounds UP to 2 frames = 30fps on retro
+    // handhelds with fixed 60Hz displays (Retroid Pocket, Anbernic, etc.).
+    // LTPO tearing on high-refresh phones (Pixel 7 Pro) is prevented by Surface.setFrameRate()
+    // called in surfaceCreated() — that is unchanged and unaffected by this interval.
+    SwappyGL_setSwapIntervalNS(16666667ULL);        // 60fps — fits exactly 1 frame on any 60Hz display
+    SwappyGL_setMaxAutoSwapIntervalNS(16666667ULL); // hard cap: never auto-double to 30fps
+    SwappyGL_setAutoSwapInterval(false);
+    SwappyGL_setAutoPipelineMode(true);
+    __android_log_print(ANDROID_LOG_INFO, "mGBA_Perf", "SwappyGL init OK — swapInterval=16666667ns (60fps)");
 }
 
 extern "C"

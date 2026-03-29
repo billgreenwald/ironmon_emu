@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.4] - 2026-03-29
+
+### Fixed
+- **30fps lock on retro/handheld devices (root cause fix)** — The Swappy swap interval was set to 16742707ns (59.7275fps = actual GBA rate), which is 76µs longer than one 60Hz frame (16666667ns). Swappy rounded this up to 2 frames = 30fps on all fixed-60Hz devices (Retroid Pocket, Anbernic, etc.). Changed to 16666667ns (60fps) so Swappy always uses exactly 1 frame. Also added `SwappyGL_setMaxAutoSwapIntervalNS(16666667)` to hard-cap auto-doubling, and added a return-value check on `SwappyGL_init`. LTPO tearing prevention on Pixel 7 Pro is unaffected — that is handled by `Surface.setFrameRate(59.7275)` in `surfaceCreated()`, which is unchanged.
+
 ## [2.0.3] - 2026-03-29
 
 ### Fixed
