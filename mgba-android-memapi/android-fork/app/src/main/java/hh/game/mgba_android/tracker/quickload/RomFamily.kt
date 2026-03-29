@@ -1,5 +1,7 @@
 package hh.game.mgba_android.tracker.quickload
 
+enum class FamilyMode { BATCH, VANILLA }
+
 /**
  * Parsed representation of a ROM filename.
  *

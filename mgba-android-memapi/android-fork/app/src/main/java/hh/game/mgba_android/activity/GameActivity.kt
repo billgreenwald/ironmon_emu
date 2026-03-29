@@ -291,29 +291,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                 TrackerPanel(
                     state = state,
                     onQuickload = if (QuickloadManager.canQuickload()) {
-                        {
-                            Log.d("Quickload", "button tapped, family=${QuickloadManager.currentFamily}")
-                            TrackerPoller.manualNextRun()
-                            lifecycleScope.launch(Dispatchers.IO) {
-                                val nextPath = QuickloadManager.advanceToNext(applicationContext)
-                                Log.d("Quickload", "nextPath=$nextPath")
-                                if (nextPath != null) {
-                                    withContext(Dispatchers.Main) {
-                                        Log.d("Quickload", "launching new GameActivity, killing process")
-                                        val next = Intent(this@GameActivity, GameActivity::class.java).apply {
-                                            putExtra("gamepath", nextPath)
-                                            val cheat = this@GameActivity.intent.getStringExtra("cheat")
-                                            if (cheat != null) putExtra("cheat", cheat)
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                                        }
-                                        startActivity(next)
-                                        android.os.Process.killProcess(android.os.Process.myPid())
-                                    }
-                                } else {
-                                    Log.d("Quickload", "nextPath null — no next ROM found")
-                                }
-                            }
-                        }
+                        { loadNextRom() }
                     } else null,
                     fontScale = trackerFontScale,
                     isCollapsible = effectiveCollapsible,
@@ -764,7 +742,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         (getSystemService(INPUT_SERVICE) as InputManager).unregisterInputDeviceListener(this)
         TrackerPoller.stop()
         MemoryBridge.reader = null
-        QuickloadManager.unregister()
+        QuickloadManager.unregister(applicationContext)
         super.onDestroy()
         runFPS = false
     }
@@ -818,28 +796,32 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         }
     }
 
-    private fun doNextRun() {
-        if (QuickloadManager.canQuickload()) {
-            TrackerPoller.manualNextRun()
-            lifecycleScope.launch(Dispatchers.IO) {
-                val nextPath = QuickloadManager.advanceToNext(applicationContext)
+    private fun loadNextRom() {
+        Log.d("Quickload", "loadNextRom: family=${QuickloadManager.currentFamily}")
+        TrackerPoller.manualNextRun()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val nextPath = QuickloadManager.advanceToNext(applicationContext)
+            Log.d("Quickload", "nextPath=$nextPath")
+            withContext(Dispatchers.Main) {
                 if (nextPath != null) {
-                    withContext(Dispatchers.Main) {
-                        val next = Intent(this@GameActivity, GameActivity::class.java).apply {
-                            putExtra("gamepath", nextPath)
-                            val cheat = this@GameActivity.intent.getStringExtra("cheat")
-                            if (cheat != null) putExtra("cheat", cheat)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                        }
-                        startActivity(next)
-                        android.os.Process.killProcess(android.os.Process.myPid())
+                    val next = Intent(this@GameActivity, GameActivity::class.java).apply {
+                        putExtra("gamepath", nextPath)
+                        val cheat = intent.getStringExtra("cheat")
+                        if (cheat != null) putExtra("cheat", cheat)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                     }
+                    startActivity(next)
+                    android.os.Process.killProcess(android.os.Process.myPid())
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@GameActivity, "No next ROM found", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(this@GameActivity, "No next ROM found", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+    }
+
+    private fun doNextRun() {
+        if (QuickloadManager.canQuickload()) {
+            loadNextRom()
         } else {
             Toast.makeText(this, "Quickload not available", Toast.LENGTH_SHORT).show()
         }

@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0] - 2026-03-28
+
+### Added
+- **ROM Family Mode** — each ROM family can now be set to **Batch** (existing behavior: advance through numbered ROMs sequentially) or **Vanilla** (a single unmodified ROM that gets re-randomized via UPR-Android on every "Next Run"). Switch modes by long-pressing a family card and choosing Family Mode in the settings dialog.
+- **UPR-Android integration** — when a family is in Vanilla mode (or when a batch is exhausted), the tracker binds to the Universal Pokémon Randomizer service (`ly.mens.rndpkmn`) and randomizes the current ROM in-place before reloading. Requires UPR-Android to be installed.
+- **Randomizer status indicator** — the ROM list footer now shows "✓ Randomizer installed" (green) or "✗ Randomizer not installed" (grey) so users can tell at a glance whether Vanilla mode will work.
+- **Single-ROM families now appear in the ROM list** — previously only families with 2+ numbered ROMs were shown; a single un-numbered ROM now gets its own family card, enabling Vanilla-mode solo play.
+- **VANILLA chip on family cards** — family cards in Vanilla mode show an orange "VANILLA" badge and a subtitle "Vanilla · re-randomized each run" so the mode is visible at a glance.
+- **Family Settings dialog: mode selector** — the long-press settings dialog now includes a Batch / Vanilla chip toggle above the ROM number field. The ROM number field is hidden when Vanilla is selected (not applicable).
+- **`loadNextRom()` helper in GameActivity** — extracted shared quickload logic (used by both the tracker panel button and the game-over Next Run path) into a single private function.
+
 ## [1.3.9] - 2026-03-28
 
 ### Fixed

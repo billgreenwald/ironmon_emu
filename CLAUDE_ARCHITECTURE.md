@@ -48,6 +48,7 @@ ironmon_emu/
 | UI not rendering / layout broken | `TrackerPanel.kt` + `activity_game.xml` | [`tracker_panel.md`](claude_docs/tracker_panel.md), [`game_activity_layout.md`](claude_docs/game_activity_layout.md) |
 | Compose crash | Material3 1.1.0 API compat (LinearProgressIndicator) | [`tracker_panel.md`](claude_docs/tracker_panel.md) |
 | Quickload not working | `QuickloadManager.kt` + `loadRomJNI` in `runGame.cpp` | [`quickload.md`](claude_docs/quickload.md) |
+| Vanilla mode not randomizing | UPR-Android (`ly.mens.rndpkmn`) must be installed; check `randomizeCurrentRom()` in `QuickloadManager.kt` | [`quickload.md`](claude_docs/quickload.md) |
 | Run count not saving | `RunRepository.kt` / `filesDir` | [`persistence.md`](claude_docs/persistence.md) |
 | Non-English ROM not detected | `GameSettings.kt` game code sets | [`data_addresses.md`](claude_docs/data_addresses.md) |
 | Build failure | NDK version, Gradle path, Material3 version | [`build_system.md`](claude_docs/build_system.md) |

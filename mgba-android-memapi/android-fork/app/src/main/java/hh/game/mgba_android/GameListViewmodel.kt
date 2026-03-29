@@ -70,13 +70,10 @@ class GameListViewmodel : ViewModel() {
         documentfile ?: return
         val groups = withContext(Dispatchers.IO) {
             collectRomFiles(documentfile, context)
-                .mapNotNull { (name, path) ->
-                    RomFamilyUtils.parseFamily(name, path).takeIf { it.number != null }
-                }
+                .map { (name, path) -> RomFamilyUtils.parseFamily(name, path) }
                 .groupBy { Pair(it.prefix, it.extension) }
-                .filter { (_, members) -> members.size >= 2 }
                 .map { (key, members) ->
-                    val sorted = members.sortedBy { it.number!! }
+                    val sorted = members.sortedBy { it.number ?: 0 }
                     RomFamilyGroup(
                         prefix           = key.first,
                         extension        = key.second,

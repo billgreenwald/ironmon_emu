@@ -77,6 +77,8 @@ import com.anggrayudi.storage.file.getStorageId
 import hh.game.mgba_android.GameListViewmodel
 import hh.game.mgba_android.R
 import hh.game.mgba_android.activity.ui.theme.Mgba_AndroidTheme
+import android.content.pm.PackageManager
+import hh.game.mgba_android.tracker.quickload.FamilyMode
 import hh.game.mgba_android.tracker.quickload.QuickloadManager
 import hh.game.mgba_android.tracker.quickload.RomFamilyGroup
 import hh.game.mgba_android.tracker.quickload.RomFamilyUtils
@@ -191,6 +193,18 @@ class GameListMaterialActivity : ComponentActivity() {
                                     }
                                 }
                                 val ctx2 = this@GameListMaterialActivity
+                                val randomizerInstalled = remember {
+                                    try {
+                                        ctx2.packageManager.getPackageInfo("ly.mens.rndpkmn", 0)
+                                        true
+                                    } catch (_: PackageManager.NameNotFoundException) { false }
+                                }
+                                Text(
+                                    text = if (randomizerInstalled) "✓ Randomizer installed" else "✗ Randomizer not installed",
+                                    color = if (randomizerInstalled) Color(0xFF44BB44) else Color(0xFF888888),
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 2.dp),
+                                )
                                 TextButton(
                                     onClick = { exportLogs(ctx2) },
                                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp),
@@ -339,6 +353,8 @@ fun FamilyList(families: List<RomFamilyGroup>) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FamilyRow(group: RomFamilyGroup, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
+    val context = LocalContext.current
+    val mode = remember(group.prefix) { QuickloadManager.getFamilyMode(context, group.prefix) }
     Card(
         border = BorderStroke(1.dp, Color(0xFF4090FF)),
         modifier = Modifier
@@ -363,24 +379,46 @@ fun FamilyRow(group: RomFamilyGroup, onClick: () -> Unit, onLongClick: () -> Uni
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "ROM family · ${group.totalCount} ROMs",
+                    text = "ROM family · ${group.totalCount} ROM${if (group.totalCount == 1) "" else "s"}",
                     color = Color(0xFFAAAAAA),
                     style = MaterialTheme.typography.bodySmall,
                 )
-                Text(
-                    text = "Last: Run ${group.lastPlayedNumber}",
-                    color = Color(0xFF4090FF),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                if (mode == FamilyMode.VANILLA) {
+                    Text(
+                        text = "Vanilla · re-randomized each run",
+                        color = Color(0xFFFFAA44),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                } else {
+                    Text(
+                        text = "Last: Run ${group.lastPlayedNumber}",
+                        color = Color(0xFF4090FF),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
-            Text(
-                text = group.extension.uppercase(),
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier
-                    .background(Color.Green, shape = CircleShape)
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = group.extension.uppercase(),
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier
+                        .background(Color.Green, shape = CircleShape)
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                )
+                if (mode == FamilyMode.VANILLA) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "VANILLA",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        modifier = Modifier
+                            .background(Color(0xFFCC6600), shape = CircleShape)
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -668,6 +706,8 @@ fun KeyBindingsDialog(onDismiss: () -> Unit) {
 @Composable
 fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit) {
     val context = LocalContext.current
+    val selectedColor = Color(0xFF4090FF)
+    val unselectedColor = Color(0xFF888888)
 
     // Read game code from ROM file header (offset 0xAC, 4 bytes)
     val gameCode = remember(group) {
@@ -688,6 +728,7 @@ fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit) {
         else RunRepository.load(context, gameCode).stats.attempts
     }
 
+    var selectedMode by remember { mutableStateOf(QuickloadManager.getFamilyMode(context, group.prefix)) }
     var romNumberText by remember { mutableStateOf(currentRomNum.toString()) }
     var totalRunsText by remember { mutableStateOf(currentRuns.toString()) }
 
@@ -696,14 +737,34 @@ fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit) {
         title = { Text(group.prefix.replaceFirstChar { it.uppercase() } + " Settings") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("ROM in sequence (current: $currentRomNum)", fontSize = 12.sp)
-                OutlinedTextField(
-                    value = romNumberText,
-                    onValueChange = { romNumberText = it.filter { c -> c.isDigit() } },
-                    label = { Text("ROM number") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                )
+                // ── Family Mode ───────────────────────────────────────────────
+                Text("Family Mode", fontSize = 12.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FamilyMode.entries.forEach { mode ->
+                        val selected = selectedMode == mode
+                        TextButton(
+                            onClick = { selectedMode = mode },
+                            border = if (selected) BorderStroke(1.dp, selectedColor) else BorderStroke(1.dp, Color(0xFFDDDDDD)),
+                        ) {
+                            Text(
+                                text = mode.name.lowercase().replaceFirstChar { it.uppercase() },
+                                color = if (selected) selectedColor else unselectedColor,
+                            )
+                        }
+                    }
+                }
+                // ── ROM number — only relevant in BATCH mode ──────────────────
+                if (selectedMode == FamilyMode.BATCH) {
+                    Text("ROM in sequence (current: $currentRomNum)", fontSize = 12.sp)
+                    OutlinedTextField(
+                        value = romNumberText,
+                        onValueChange = { romNumberText = it.filter { c -> c.isDigit() } },
+                        label = { Text("ROM number") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    )
+                }
+                // ── Run count ─────────────────────────────────────────────────
                 Text("Total runs (current: $currentRuns)", fontSize = 12.sp)
                 OutlinedTextField(
                     value = totalRunsText,
@@ -716,11 +777,14 @@ fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = {
-                romNumberText.toIntOrNull()?.let { n ->
-                    QuickloadManager.setCurrentNumber(context, n)
-                    // Also update the SharedPreferences entry directly for families not currently loaded
-                    context.getSharedPreferences("mGBA", Context.MODE_PRIVATE)
-                        .edit().putInt("family_last_${group.prefix}", n).apply()
+                QuickloadManager.setFamilyMode(context, group.prefix, selectedMode)
+                if (selectedMode == FamilyMode.BATCH) {
+                    romNumberText.toIntOrNull()?.let { n ->
+                        QuickloadManager.setCurrentNumber(context, n)
+                        // Also update SharedPreferences directly for families not currently loaded
+                        context.getSharedPreferences("mGBA", Context.MODE_PRIVATE)
+                            .edit().putInt("family_last_${group.prefix}", n).apply()
+                    }
                 }
                 totalRunsText.toIntOrNull()?.let { n ->
                     TrackerPoller.setRunAttempts(n)
