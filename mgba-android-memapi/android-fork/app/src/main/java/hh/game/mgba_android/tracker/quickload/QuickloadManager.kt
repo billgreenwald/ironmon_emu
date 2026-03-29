@@ -215,7 +215,10 @@ object QuickloadManager {
     private suspend fun overwriteWithRandomizer(context: Context): String? {
         val currentPath = currentFamily?.absolutePath ?: return null
         if (!connected) return null
-        val currentFile = DocumentFile.fromFile(File(currentPath))
+        val currentFileName = currentPath.substringAfterLast('/')
+        val currentFile = folderUri?.let { uri ->
+            DocumentFile.fromTreeUri(context, uri)?.findFile(currentFileName)
+        } ?: DocumentFile.fromFile(File(currentPath))
         val message = Message.obtain().apply {
             obj = currentFile?.uri
             replyTo = replyMessenger

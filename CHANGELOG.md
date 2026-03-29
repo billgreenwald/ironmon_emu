@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.2] - 2026-03-29
+
+### Fixed
+- **UPR quickload "cannot save ROM" error** — `overwriteWithRandomizer()` was building a `file://` DocumentFile URI, which UPR-Android's OverwriteService cannot write to under Android 10+ scoped storage. Now resolves the target file from the SAF tree URI (already granted when the user picked their ROM folder), giving UPR a `content://` URI it can write through the ContentResolver.
+
 ## [2.0.1] - 2026-03-29
 
 ### Fixed
