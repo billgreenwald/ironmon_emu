@@ -774,6 +774,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         hasEverBeenPaused = true
         resumePending = false
         PauseGame()
+        Mute(true)          // silence audio whenever app backgrounds
     }
 
     override fun onResume() {
@@ -812,6 +813,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus && resumePending) {
             resumePending = false
+            Mute(isMute)    // restore user's mute preference before game resumes
             ResumeGame()
         }
     }

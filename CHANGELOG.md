@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.9] - 2026-03-28
+
+### Fixed
+- **Audio continues when backgrounded (Z Flip 4)** — `onPause` now always mutes audio when the app leaves foreground; `onWindowFocusChanged` restores the user's mute preference when focus is regained. Fixes audio playing through the SDL AudioTrack thread while the phone is folded/backgrounded.
+
 ## [1.3.8] - 2026-03-28
 
 ### Added
