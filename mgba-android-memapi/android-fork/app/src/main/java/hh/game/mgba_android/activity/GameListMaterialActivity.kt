@@ -334,11 +334,13 @@ private fun EmptyFamilyHint() {
 fun FamilyList(families: List<RomFamilyGroup>) {
     val context = LocalContext.current
     var settingsGroup by remember { mutableStateOf<RomFamilyGroup?>(null) }
+    var settingsVersion by remember { mutableStateOf(0) }
 
     LazyColumn {
         items(families) { group ->
             FamilyRow(
                 group = group,
+                settingsVersion = settingsVersion,
                 onClick = { launchFamily(group, context) },
                 onLongClick = { settingsGroup = group },
             )
@@ -346,15 +348,21 @@ fun FamilyList(families: List<RomFamilyGroup>) {
     }
 
     settingsGroup?.let { group ->
-        FamilySettingsDialog(group = group, onDismiss = { settingsGroup = null })
+        FamilySettingsDialog(
+            group = group,
+            onDismiss = { settingsGroup = null },
+            onSettingsChanged = { settingsVersion++ },
+        )
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun FamilyRow(group: RomFamilyGroup, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
+fun FamilyRow(group: RomFamilyGroup, settingsVersion: Int = 0, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
     val context = LocalContext.current
-    val mode = remember(group.prefix) { QuickloadManager.getFamilyMode(context, group.prefix) }
+    val mode = remember(group.prefix, settingsVersion) { QuickloadManager.getFamilyMode(context, group.prefix) }
+    val modeColor = if (mode == FamilyMode.UPR) Color(0xFFCC6600) else Color(0xFF4090FF)
+    val modeLabel = if (mode == FamilyMode.UPR) "UPR" else "BATCH"
     Card(
         border = BorderStroke(1.dp, Color(0xFF4090FF)),
         modifier = Modifier
@@ -383,9 +391,9 @@ fun FamilyRow(group: RomFamilyGroup, onClick: () -> Unit, onLongClick: () -> Uni
                     color = Color(0xFFAAAAAA),
                     style = MaterialTheme.typography.bodySmall,
                 )
-                if (mode == FamilyMode.VANILLA) {
+                if (mode == FamilyMode.UPR) {
                     Text(
-                        text = "Vanilla · re-randomized each run",
+                        text = "UPR · re-randomized each run",
                         color = Color(0xFFFFAA44),
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -397,7 +405,7 @@ fun FamilyRow(group: RomFamilyGroup, onClick: () -> Unit, onLongClick: () -> Uni
                     )
                 }
             }
-            Column(horizontalAlignment = Alignment.End) {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = group.extension.uppercase(),
                     fontWeight = FontWeight.Bold,
@@ -406,18 +414,15 @@ fun FamilyRow(group: RomFamilyGroup, onClick: () -> Unit, onLongClick: () -> Uni
                         .background(Color.Green, shape = CircleShape)
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                 )
-                if (mode == FamilyMode.VANILLA) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "VANILLA",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        modifier = Modifier
-                            .background(Color(0xFFCC6600), shape = CircleShape)
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                    )
-                }
+                Text(
+                    text = modeLabel,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    modifier = Modifier
+                        .background(modeColor, shape = CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                )
             }
         }
     }
@@ -704,10 +709,15 @@ fun KeyBindingsDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit) {
+fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit, onSettingsChanged: () -> Unit = {}) {
     val context = LocalContext.current
     val selectedColor = Color(0xFF4090FF)
     val unselectedColor = Color(0xFF888888)
+
+    val uprInstalled = remember {
+        try { context.packageManager.getPackageInfo("ly.mens.rndpkmn", 0); true }
+        catch (_: PackageManager.NameNotFoundException) { false }
+    }
 
     // Read game code from ROM file header (offset 0xAC, 4 bytes)
     val gameCode = remember(group) {
@@ -732,6 +742,8 @@ fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit) {
     var romNumberText by remember { mutableStateOf(currentRomNum.toString()) }
     var totalRunsText by remember { mutableStateOf(currentRuns.toString()) }
 
+    val saveBlocked = selectedMode == FamilyMode.UPR && !uprInstalled
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(group.prefix.replaceFirstChar { it.uppercase() } + " Settings") },
@@ -747,11 +759,22 @@ fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit) {
                             border = if (selected) BorderStroke(1.dp, selectedColor) else BorderStroke(1.dp, Color(0xFFDDDDDD)),
                         ) {
                             Text(
-                                text = mode.name.lowercase().replaceFirstChar { it.uppercase() },
+                                text = when (mode) {
+                                    FamilyMode.BATCH -> "Batch"
+                                    FamilyMode.UPR   -> "UPR"
+                                },
                                 color = if (selected) selectedColor else unselectedColor,
                             )
                         }
                     }
+                }
+                // ── UPR not installed warning ─────────────────────────────────
+                if (selectedMode == FamilyMode.UPR && !uprInstalled) {
+                    Text(
+                        text = "✗ UPR-Android not installed — cannot use UPR mode",
+                        color = Color(0xFFCC4444),
+                        fontSize = 11.sp,
+                    )
                 }
                 // ── ROM number — only relevant in BATCH mode ──────────────────
                 if (selectedMode == FamilyMode.BATCH) {
@@ -776,26 +799,30 @@ fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                QuickloadManager.setFamilyMode(context, group.prefix, selectedMode)
-                if (selectedMode == FamilyMode.BATCH) {
-                    romNumberText.toIntOrNull()?.let { n ->
-                        QuickloadManager.setCurrentNumber(context, n)
-                        // Also update SharedPreferences directly for families not currently loaded
-                        context.getSharedPreferences("mGBA", Context.MODE_PRIVATE)
-                            .edit().putInt("family_last_${group.prefix}", n).apply()
+            TextButton(
+                enabled = !saveBlocked,
+                onClick = {
+                    QuickloadManager.setFamilyMode(context, group.prefix, selectedMode)
+                    if (selectedMode == FamilyMode.BATCH) {
+                        romNumberText.toIntOrNull()?.let { n ->
+                            QuickloadManager.setCurrentNumber(context, n)
+                            // Also update SharedPreferences directly for families not currently loaded
+                            context.getSharedPreferences("mGBA", Context.MODE_PRIVATE)
+                                .edit().putInt("family_last_${group.prefix}", n).apply()
+                        }
                     }
-                }
-                totalRunsText.toIntOrNull()?.let { n ->
-                    TrackerPoller.setRunAttempts(n)
-                    if (gameCode.isNotEmpty()) {
-                        val data = RunRepository.load(context, gameCode)
-                        data.stats.attempts = n
-                        RunRepository.save(context, gameCode, data)
+                    totalRunsText.toIntOrNull()?.let { n ->
+                        TrackerPoller.setRunAttempts(n)
+                        if (gameCode.isNotEmpty()) {
+                            val data = RunRepository.load(context, gameCode)
+                            data.stats.attempts = n
+                            RunRepository.save(context, gameCode, data)
+                        }
                     }
-                }
-                onDismiss()
-            }) { Text("Save") }
+                    onSettingsChanged()
+                    onDismiss()
+                },
+            ) { Text("Save") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }

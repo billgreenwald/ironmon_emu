@@ -67,11 +67,11 @@ object QuickloadManager {
 
     /**
      * True when quickload/next-run is available.
-     * VANILLA: requires UPR-Android to be installed.
+     * UPR: requires UPR-Android to be installed.
      * BATCH: requires a numbered family or UPR fallback.
      */
     fun canQuickload(): Boolean = when (currentFamilyMode) {
-        FamilyMode.VANILLA -> uprAvailable
+        FamilyMode.UPR -> uprAvailable
         FamilyMode.BATCH   -> currentFamily?.number != null || uprAvailable
     }
 
@@ -113,12 +113,12 @@ object QuickloadManager {
     }
 
     /**
-     * Advances to the next ROM. In VANILLA mode always randomizes in place.
+     * Advances to the next ROM. In UPR mode always randomizes in place.
      * In BATCH mode tries the next numbered ROM, then falls back to the randomizer.
      * Returns null if no next ROM is available. Caller loads it via JNI.
      */
     suspend fun advanceToNext(context: Context): String? {
-        if (currentFamilyMode == FamilyMode.VANILLA) {
+        if (currentFamilyMode == FamilyMode.UPR) {
             return randomizeCurrentRom(context)
         }
         // BATCH: try next numbered ROM first
