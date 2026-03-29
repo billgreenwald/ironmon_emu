@@ -4,6 +4,7 @@
 
 ### Fixed
 - **Audio thread crash after ROM crash / save state load** — the Oboe audio stream (`AAudio_1`) kept running after `mCoreThreadJoin` freed `mCoreThread::impl`, causing a null-pointer dereference (`SIGSEGV` at fault addr `0x160` = `offsetof(mCoreThreadInternal, sync)`) in the audio callback. Fixed by calling `mOboeDeinit()` before `mCoreThreadJoin()` so the stream is stopped and drained before `impl` is freed. Added a defensive `mThread->impl` null check in `onAudioReady` as a secondary guard.
+- **Save state load crash / freeze** — `QuickLoadState` and `QuickSaveState` were calling `mCoreLoadState`/`mCoreSaveState` directly from the JNI (main) thread while the mGBA core thread was running, causing a race that corrupted the GBA timing system (`mTimingSchedule` SIGSEGV). Both now run via `mCoreThreadRunFunction` so the operation executes safely inside the core thread.
 
 ## [2.0.5] - 2026-03-29
 

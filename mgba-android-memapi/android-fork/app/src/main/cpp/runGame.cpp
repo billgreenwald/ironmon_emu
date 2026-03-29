@@ -67,6 +67,14 @@ static struct VFile* _state = NULL;
 static void _loadState(struct mCoreThread* thread) {
     mCoreLoadStateNamed(thread->core, _state, SAVESTATE_RTC);
 }
+static bool _quickSaveResult = false;
+static void _quickSaveState(struct mCoreThread* thread) {
+    _quickSaveResult = mCoreSaveState(thread->core, 0, SAVESTATE_SAVEDATA | SAVESTATE_SCREENSHOT | SAVESTATE_RTC);
+}
+static bool _quickLoadResult = false;
+static void _quickLoadState(struct mCoreThread* thread) {
+    _quickLoadResult = mCoreLoadState(thread->core, 0, SAVESTATE_SCREENSHOT | SAVESTATE_RTC);
+}
 struct mSDLRenderer androidrenderer;
 struct mCoreThread thread;
 
@@ -499,12 +507,16 @@ Java_hh_game_mgba_1android_activity_GameActivity_reCallCheats(JNIEnv *env, jobje
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_QuickSaveState(JNIEnv *env, jobject thiz) {
-    return static_cast<jboolean>(mCoreSaveState(androidrenderer.core, 0, SAVESTATE_SAVEDATA | SAVESTATE_SCREENSHOT | SAVESTATE_RTC));
+    if (!mCoreThreadIsActive(&thread)) return JNI_FALSE;
+    mCoreThreadRunFunction(&thread, _quickSaveState);
+    return static_cast<jboolean>(_quickSaveResult);
 }
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_QuickLoadState(JNIEnv *env, jobject thiz) {
-    return static_cast<jboolean> (mCoreLoadState(androidrenderer.core, 0, SAVESTATE_SCREENSHOT | SAVESTATE_RTC));
+    if (!mCoreThreadIsActive(&thread)) return JNI_FALSE;
+    mCoreThreadRunFunction(&thread, _quickLoadState);
+    return static_cast<jboolean>(_quickLoadResult);
 }
 extern "C"
 JNIEXPORT void JNICALL
