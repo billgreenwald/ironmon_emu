@@ -432,6 +432,7 @@ int mSDLRun(struct mSDLRenderer* renderer, struct mArguments* args) {
 #ifdef MEMAPI_ENABLE
         memapi_server_stop();
 #endif
+        mOboeDeinit();          // stop audio BEFORE mCoreThreadJoin frees impl (prevents AAudio_1 SIGSEGV)
         mCoreThreadJoin(&thread);
     } else {
         LOG_D("Could not run game. Are you sure the file exists and is a compatible game?\n");

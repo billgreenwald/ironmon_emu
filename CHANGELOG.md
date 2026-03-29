@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.6] - 2026-03-29
+
+### Fixed
+- **Audio thread crash after ROM crash / save state load** — the Oboe audio stream (`AAudio_1`) kept running after `mCoreThreadJoin` freed `mCoreThread::impl`, causing a null-pointer dereference (`SIGSEGV` at fault addr `0x160` = `offsetof(mCoreThreadInternal, sync)`) in the audio callback. Fixed by calling `mOboeDeinit()` before `mCoreThreadJoin()` so the stream is stopped and drained before `impl` is freed. Added a defensive `mThread->impl` null check in `onAudioReady` as a secondary guard.
+
 ## [2.0.5] - 2026-03-29
 
 ### Added
