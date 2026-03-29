@@ -86,7 +86,7 @@ IronMon Emu is distributed as an APK for sideloading. It is not on the Play Stor
 
 ### Steps
 
-1. **Download** the latest `ironmon_emulator.apk` from the [Releases](../../releases) page on this GitHub repo from your phone.
+1. **Download** the latest `ironmon_emulator.apk` from the [Latest Release](../../releases/latest) page on this GitHub repo from your phone.
 
 2. **Enable sideloading** on your device:
    - On Android 8+: when you open the APK, Android will prompt you to allow installs from that source (your browser or Files app). Tap **Allow**.
