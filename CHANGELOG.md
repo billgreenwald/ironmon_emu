@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.3] - 2026-03-29
+
+### Fixed
+- **30fps lock on retro/handheld GBA devices** — `SDL_GL_SetSwapInterval(1)` (vsync on) was left as a fallback in `mSDLGLCommonInit`. When Swappy is active, SDL vsync and Swappy both wait on the display — the double-wait halves the effective frame rate to 30fps on 60Hz displays. Now set to `0` so Swappy is the sole frame-pacing authority.
+
 ## [2.0.2] - 2026-03-29
 
 ### Fixed

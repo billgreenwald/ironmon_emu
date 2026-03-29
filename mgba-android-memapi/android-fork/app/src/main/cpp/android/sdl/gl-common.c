@@ -87,7 +87,7 @@ bool mSDLGLCommonInit(struct mSDLRenderer* renderer) {
 		SDL_DestroyWindow(renderer->window);
 		return false;
 	}
-	SDL_GL_SetSwapInterval(1); // Fallback vsync if SwappyGL EGL path fails
+	SDL_GL_SetSwapInterval(0); // Disable SDL vsync — SwappyGL manages frame pacing; SDL vsync would interfere and cause 30fps cap
 	SDL_GetWindowSize(renderer->window, &renderer->viewportWidth, &renderer->viewportHeight);
 	renderer->player.window = renderer->window;
 	if (renderer->lockIntegerScaling) {
