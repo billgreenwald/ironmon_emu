@@ -74,9 +74,30 @@ if (g_pendingRomPath[0] != '\0') {
 }
 ```
 
+## UPR Mode (overwriteWithRandomizer)
+
+When a family is in UPR mode, `advanceToNext()` calls `overwriteWithRandomizer()`:
+1. Resolve the current ROM's DocumentFile using the SAF tree URI (`folderUri`) — gives a `content://` URI
+2. Call `context.grantUriPermission("ly.mens.rndpkmn", fileUri, READ | WRITE)` so UPR can open the file
+3. Send the URI to UPR's `OverwriteService` via `Messenger`
+4. Wait up to 10 s for UPR to reply with randomized ROM bytes in `SharedMemory`
+5. Write the received bytes back to the file via `openOutputStream`
+6. Return the same path (same file, new content) for `loadRomJNI`
+
+**URI must be `content://`** — `file://` URIs are rejected by UPR on Android 10+ (scoped storage). If `folderUri` is null (user hasn't picked a ROM folder), falls back to `DocumentFile.fromFile()` which produces a `file://` URI and will fail.
+
+**Diagnosing UPR failures:** run `adb logcat -s Quickload` — every step is logged. Key tags:
+- `overwriteWithRandomizer: ... uri=...` — shows which URI was sent
+- `Granted UPR URI permission` / `grantUriPermission failed` — permission grant result
+- `Sent URI to UPR, waiting for reply…` — confirms message dispatched
+- `Received N bytes from UPR` — UPR responded successfully
+- `UPR randomize timed out after 10s` — UPR didn't reply (install/version issue?)
+- `openOutputStream returned null — ROM not written` — content URI write failed
+
 ## Troubleshooting
 - **Quickload button not visible:** Check `canQuickload()` — requires ROM filename to have a number
 - **Wrong next ROM:** Check `lastPlayedNumber` in FamilyCache; clear cache to rescan
 - **JNI crash:** Verify JNI function name matches GameActivity declaration + package name
 - **ROM not found after advance:** Check SAF permissions for the ROM storage folder
 - **Family not detected:** Filename must match `(prefix)(number).(gba|gb)` — e.g., `firered1.gba` ✓, `fire_red.gba` ✗
+- **"cannot save ROM" from UPR:** URI sent was `file://` (folderUri null) or `grantUriPermission` failed — check logcat `Quickload` tag

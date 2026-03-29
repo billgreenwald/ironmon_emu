@@ -219,15 +219,34 @@ object QuickloadManager {
         val currentFile = folderUri?.let { uri ->
             DocumentFile.fromTreeUri(context, uri)?.findFile(currentFileName)
         } ?: DocumentFile.fromFile(File(currentPath))
+        val fileUri = currentFile?.uri
+        Log.d("Quickload", "overwriteWithRandomizer: path=$currentPath file=$currentFileName uri=$fileUri folderUri=$folderUri")
+        if (fileUri == null) {
+            Log.e("Quickload", "Could not resolve URI for current ROM — aborting")
+            return null
+        }
+        // Grant UPR read+write access to the content URI so it can read the ROM and write back
+        try {
+            context.grantUriPermission(
+                "ly.mens.rndpkmn", fileUri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            Log.d("Quickload", "Granted UPR URI permission for $fileUri")
+        } catch (e: Exception) {
+            Log.w("Quickload", "grantUriPermission failed (non-fatal): ${e.message}")
+        }
         val message = Message.obtain().apply {
-            obj = currentFile?.uri
+            obj = fileUri
             replyTo = replyMessenger
         }
         return try {
             serviceMessenger!!.send(message)
+            Log.d("Quickload", "Sent URI to UPR, waiting for reply…")
             withTimeout(10_000L) {
                 val data = replyChannel.receive()
-                currentFile?.openOutputStream(context, append = false)?.use { it.write(data) }
+                Log.d("Quickload", "Received ${data.size} bytes from UPR")
+                currentFile.openOutputStream(context, append = false)?.use { it.write(data) }
+                    ?: Log.e("Quickload", "openOutputStream returned null — ROM not written")
             }
             val nextNumber = getLastNumber(context, currentFamily!!.prefix) + 1
             setCurrentNumber(context, nextNumber)
@@ -236,7 +255,10 @@ object QuickloadManager {
             Log.e("Quickload", "Failed to send message to UPR service", e)
             null
         } catch (e: CancellationException) {
-            Log.e("Quickload", "UPR randomize timed out", e)
+            Log.e("Quickload", "UPR randomize timed out after 10s", e)
+            null
+        } catch (e: Exception) {
+            Log.e("Quickload", "Unexpected error in overwriteWithRandomizer", e)
             null
         }
     }
