@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.7] - 2026-03-29
+
+### Added
+- **Update check** — on each app open the ROM list checks the GitHub releases API for a newer version; if one is found a green banner appears with a tap-to-open link to the release page. The result is cached in SharedPreferences so the banner persists offline until the app is updated.
+- **Version display** — current app version (e.g. `v2.0.7`) is shown below the Export Debug Logs button on the ROM list page.
+
 ## [2.0.6] - 2026-03-29
 
 ### Fixed

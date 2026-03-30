@@ -99,6 +99,10 @@ import hh.game.mgba_android.utils.BindableAction
 import hh.game.mgba_android.utils.EmulatorPreferences
 import hh.game.mgba_android.utils.getKeyDisplayName
 import kotlin.math.abs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.lifecycle.lifecycleScope
 
 
 class GameListMaterialActivity : ComponentActivity() {
@@ -162,6 +166,14 @@ class GameListMaterialActivity : ComponentActivity() {
         var latestFamilies: List<RomFamilyGroup> = emptyList()
         var latestScanning = false
 
+        // Update check: load cached result from prefs (shown immediately if valid)
+        @Suppress("DEPRECATION")
+        val appVersionName = packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+        val updatePrefs = getSharedPreferences("mGBA", Context.MODE_PRIVATE)
+        val cachedTag = updatePrefs.getString("update_tag", null)
+        var latestUpdateTag: String? = cachedTag?.takeIf { it != "v$appVersionName" }
+        var latestUpdateUrl: String? = if (latestUpdateTag != null) updatePrefs.getString("update_url", null) else null
+
         fun render() {
             setContent {
                 Mgba_AndroidTheme {
@@ -209,6 +221,20 @@ class GameListMaterialActivity : ComponentActivity() {
                                     onClick = { exportLogs(ctx2) },
                                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp),
                                 ) { Text("⬇ Export Debug Logs", color = Color(0xFF888888), fontSize = 12.sp) }
+                                if (latestUpdateTag != null && latestUpdateUrl != null) {
+                                    TextButton(
+                                        onClick = {
+                                            ctx2.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(latestUpdateUrl)))
+                                        },
+                                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 2.dp),
+                                    ) { Text("⬆ Update available: $latestUpdateTag — tap to download", color = Color(0xFF44BB44), fontSize = 12.sp) }
+                                }
+                                Text(
+                                    text = "v$appVersionName",
+                                    color = Color(0xFF555555),
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp),
+                                )
                             }
                         }
                     }
@@ -217,6 +243,34 @@ class GameListMaterialActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+
+        // Fire-and-forget GitHub release check on every open
+        lifecycleScope.launch {
+            try {
+                val (tag, url) = withContext(Dispatchers.IO) {
+                    val conn = java.net.URL(
+                        "https://api.github.com/repos/billgreenwald/ironmon_emu/releases/latest"
+                    ).openConnection() as java.net.HttpURLConnection
+                    conn.connectTimeout = 4000
+                    conn.readTimeout = 4000
+                    val body = conn.inputStream.bufferedReader().readText()
+                    conn.disconnect()
+                    val t = Regex(""""tag_name"\s*:\s*"([^"]+)"""").find(body)?.groupValues?.get(1)
+                    val u = t?.let { "https://github.com/billgreenwald/ironmon_emu/releases/tag/$it" }
+                    Pair(t, u)
+                }
+                if (tag != null && tag != "v$appVersionName") {
+                    latestUpdateTag = tag
+                    latestUpdateUrl = url
+                    updatePrefs.edit().putString("update_tag", tag).putString("update_url", url).apply()
+                } else {
+                    latestUpdateTag = null
+                    latestUpdateUrl = null
+                    updatePrefs.edit().remove("update_tag").remove("update_url").apply()
+                }
+                render()
+            } catch (_: Exception) { /* no network — keep cached state, don't re-render */ }
         }
 
         viewModel.familyGroupData.observe(this) { families ->
