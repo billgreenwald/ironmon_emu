@@ -507,16 +507,16 @@ Java_hh_game_mgba_1android_activity_GameActivity_reCallCheats(JNIEnv *env, jobje
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_QuickSaveState(JNIEnv *env, jobject thiz) {
-    if (!mCoreThreadIsActive(&thread)) return JNI_FALSE;
-    mCoreThreadRunFunction(&thread, _quickSaveState);
-    return static_cast<jboolean>(_quickSaveResult);
+    // Caller must have already called PauseGame() (mCoreThreadInterrupt) so the
+    // core thread is in INTERRUPTED state — safe to access core state directly.
+    return static_cast<jboolean>(mCoreSaveState(androidrenderer.core, 0, SAVESTATE_SAVEDATA | SAVESTATE_SCREENSHOT | SAVESTATE_RTC));
 }
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_QuickLoadState(JNIEnv *env, jobject thiz) {
-    if (!mCoreThreadIsActive(&thread)) return JNI_FALSE;
-    mCoreThreadRunFunction(&thread, _quickLoadState);
-    return static_cast<jboolean>(_quickLoadResult);
+    // Caller must have already called PauseGame() (mCoreThreadInterrupt) so the
+    // core thread is in INTERRUPTED state — safe to access core state directly.
+    return static_cast<jboolean>(mCoreLoadState(androidrenderer.core, 0, SAVESTATE_SCREENSHOT | SAVESTATE_RTC));
 }
 extern "C"
 JNIEXPORT void JNICALL

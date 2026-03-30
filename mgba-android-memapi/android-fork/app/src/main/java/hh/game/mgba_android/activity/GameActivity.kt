@@ -857,12 +857,16 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             val kc = event.keyCode
             when {
                 kc != -1 && kc == (actionBindings[BindableAction.QUICK_SAVE] ?: -1) -> {
+                    PauseGame()
                     QuickSaveState()
+                    ResumeGame()
                     Toast.makeText(this, getString(R.string.state_saved), Toast.LENGTH_SHORT).show()
                     handled = true
                 }
                 kc != -1 && kc == (actionBindings[BindableAction.QUICK_LOAD] ?: -1) -> {
+                    PauseGame()
                     QuickLoadState()
+                    ResumeGame()
                     Toast.makeText(this, getString(R.string.state_loaded), Toast.LENGTH_SHORT).show()
                     handled = true
                 }
