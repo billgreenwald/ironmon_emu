@@ -3,8 +3,10 @@
 ## [2.0.6] - 2026-03-29
 
 ### Fixed
-- **Audio thread crash after ROM crash / save state load** — the Oboe audio stream (`AAudio_1`) kept running after `mCoreThreadJoin` freed `mCoreThread::impl`, causing a null-pointer dereference (`SIGSEGV` at fault addr `0x160` = `offsetof(mCoreThreadInternal, sync)`) in the audio callback. Fixed by calling `mOboeDeinit()` before `mCoreThreadJoin()` so the stream is stopped and drained before `impl` is freed. Added a defensive `mThread->impl` null check in `onAudioReady` as a secondary guard.
-- **Save state load crash / freeze** — `QuickLoadState` and `QuickSaveState` were calling `mCoreLoadState`/`mCoreSaveState` directly from the JNI (main) thread while the mGBA core thread was running, causing a race that corrupted the GBA timing system (`mTimingSchedule` SIGSEGV). Both now run via `mCoreThreadRunFunction` so the operation executes safely inside the core thread.
+- **Audio thread crash on ROM exit** — the Oboe audio stream (`AAudio_1`) kept running after `mCoreThreadJoin` freed `mCoreThread::impl`, causing a null-pointer dereference (`SIGSEGV` at fault addr `0x160`) in the audio callback. Fixed by calling `mOboeDeinit()` before `mCoreThreadJoin()`. Added a defensive `mThread->impl` null check in `onAudioReady` as a secondary guard.
+- **Save state load crash** — `QuickLoadState`/`QuickSaveState` called `mCoreLoadState`/`mCoreSaveState` from the JNI thread while the mGBA core thread was running, racing on the GBA timing system (`mTimingSchedule` SIGSEGV). Fixed by wrapping calls with `PauseGame()`/`ResumeGame()` (mCoreThreadInterrupt) so the core is halted before state is touched.
+- **Visual freeze after save state load** — `mCoreLoadState` raced with the Oboe audio callback on the `blip_t` audio buffers. The race corrupted the blip read pointer, causing `mCoreSyncProduceAudio` to block forever after the core resumed (GBA CPU blocked → SwappyGL kept swapping the last framebuffer at 60fps, appearing frozen). Fixed by holding `audioBufferMutex` via `mCoreSyncLockAudio`/`mCoreSyncUnlockAudio` around `mCoreLoadState`, and calling `blip_clear` on both channels after load to reset audio to a clean slate.
+- **Double ResumeGame in save/load state dialogs** — `onPositive()` and `onDismiss()` both called `ResumeGame()`, making `interruptDepth` go negative after each dialog interaction. Moved `ResumeGame()` solely to `onDismiss()` so exactly one resume fires per pause.
 
 ## [2.0.5] - 2026-03-29
 

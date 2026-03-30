@@ -10,7 +10,9 @@
 #include <mgba/core/core.h>
 #include <mgba/core/config.h>
 #include <mgba/core/input.h>
+#include <mgba/core/blip_buf.h>
 #include <mgba/core/serialize.h>
+#include <mgba/core/sync.h>
 #include <mgba/core/thread.h>
 #include <mgba/internal/gba/input.h>
 
@@ -516,7 +518,21 @@ JNIEXPORT jboolean JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_QuickLoadState(JNIEnv *env, jobject thiz) {
     // Caller must have already called PauseGame() (mCoreThreadInterrupt) so the
     // core thread is in INTERRUPTED state — safe to access core state directly.
-    return static_cast<jboolean>(mCoreLoadState(androidrenderer.core, 0, SAVESTATE_SCREENSHOT | SAVESTATE_RTC));
+    //
+    // Hold audioBufferMutex for the duration of the load: the Oboe callback on AAudio_1
+    // races on the blip_t buffers (blip_read_samples / blip_samples_avail) without this
+    // lock. The race corrupts blip's internal read pointer, causing mCoreSyncProduceAudio
+    // to block forever after the core resumes (visual freeze at 60fps SwappyGL).
+    struct mCoreSync* sync = (thread.impl) ? &thread.impl->sync : nullptr;
+    if (sync) mCoreSyncLockAudio(sync);
+    jboolean result = static_cast<jboolean>(mCoreLoadState(androidrenderer.core, 0, SAVESTATE_SCREENSHOT | SAVESTATE_RTC));
+    // Clear blip buffers so audio starts from a clean slate after the load.
+    if (androidrenderer.core) {
+        blip_clear(androidrenderer.core->getAudioChannel(androidrenderer.core, 0));
+        blip_clear(androidrenderer.core->getAudioChannel(androidrenderer.core, 1));
+    }
+    if (sync) mCoreSyncUnlockAudio(sync);
+    return result;
 }
 extern "C"
 JNIEXPORT void JNICALL

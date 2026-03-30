@@ -391,9 +391,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                                                 if (QuickSaveState()) getString(R.string.state_saved)
                                                 else getString(R.string.state_save_fail),
                                                 Toast.LENGTH_SHORT).show()
-                                            ResumeGame()
                                         }
-                                        override fun onNegative() { ResumeGame() }
+                                        override fun onNegative() { /* onDismiss handles ResumeGame */ }
                                         override fun onDismiss() { ResumeGame() }
                                     })
                                 }
@@ -409,9 +408,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                                                 if (QuickLoadState()) getString(R.string.state_loaded)
                                                 else getString(R.string.state_load_fail),
                                                 Toast.LENGTH_SHORT).show()
-                                            ResumeGame()
                                         }
-                                        override fun onNegative() { ResumeGame() }
+                                        override fun onNegative() { /* onDismiss handles ResumeGame */ }
                                         override fun onDismiss() { ResumeGame() }
                                     })
                                 }
