@@ -516,27 +516,33 @@ Java_hh_game_mgba_1android_activity_GameActivity_QuickSaveState(JNIEnv *env, job
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_QuickLoadState(JNIEnv *env, jobject thiz) {
-    // Caller must have already called PauseGame() (mCoreThreadInterrupt) so the
-    // core thread is in INTERRUPTED state — safe to access core state directly.
-    //
-    // Hold audioBufferMutex for the duration of the load: the Oboe callback on AAudio_1
-    // races on the blip_t buffers (blip_read_samples / blip_samples_avail) without this
-    // lock. The race corrupts blip's internal read pointer, causing mCoreSyncProduceAudio
-    // to block forever after the core resumes (visual freeze at 60fps SwappyGL).
+    // Caller must have already called PauseGame() so core thread is INTERRUPTED.
+    __android_log_print(ANDROID_LOG_DEBUG, "mGBA_Load", "QuickLoadState: enter, interruptDepth=%d",
+        thread.impl ? thread.impl->interruptDepth : -1);
+
     struct mCoreSync* sync = (thread.impl) ? &thread.impl->sync : nullptr;
+    int blipBefore = sync ? (int)blip_samples_avail(androidrenderer.core->getAudioChannel(androidrenderer.core, 0)) : -1;
+
+    // Hold audioBufferMutex: Oboe callback races on blip_t buffers during load.
     if (sync) mCoreSyncLockAudio(sync);
     jboolean result = static_cast<jboolean>(mCoreLoadState(androidrenderer.core, 0, SAVESTATE_SCREENSHOT | SAVESTATE_RTC));
-    // Clear blip buffers so audio starts from a clean slate after the load.
+    // Clear blip buffers for a clean audio slate after load.
     if (androidrenderer.core) {
         blip_clear(androidrenderer.core->getAudioChannel(androidrenderer.core, 0));
         blip_clear(androidrenderer.core->getAudioChannel(androidrenderer.core, 1));
     }
     if (sync) mCoreSyncUnlockAudio(sync);
+
+    __android_log_print(ANDROID_LOG_DEBUG, "mGBA_Load",
+        "QuickLoadState: done result=%d blipBefore=%d interruptDepth=%d",
+        (int)result, blipBefore, thread.impl ? thread.impl->interruptDepth : -1);
     return result;
 }
 extern "C"
 JNIEXPORT void JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_PauseGame(JNIEnv *env, jobject thiz) {
+    __android_log_print(ANDROID_LOG_DEBUG, "mGBA_Load", "PauseGame: interruptDepth before=%d",
+        thread.impl ? thread.impl->interruptDepth : -1);
     if (thread.core) {
         mCoreThreadInterrupt(&thread);
     }
@@ -544,6 +550,8 @@ Java_hh_game_mgba_1android_activity_GameActivity_PauseGame(JNIEnv *env, jobject 
 extern "C"
 JNIEXPORT void JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_ResumeGame(JNIEnv *env, jobject thiz) {
+    __android_log_print(ANDROID_LOG_DEBUG, "mGBA_Load", "ResumeGame: interruptDepth before=%d",
+        thread.impl ? thread.impl->interruptDepth : -1);
     if (thread.core) {
         mCoreThreadContinue(&thread);
     }

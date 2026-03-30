@@ -383,6 +383,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                         1 -> openHexEditor()
                         2 -> {
                             PauseGame()
+                            var resumed = false
                             PopDialogFragment(getString(R.string.savestatetitle))
                                 .also {
                                     it.setOnDialogClickListener(object : OnDialogClickListener {
@@ -391,15 +392,17 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                                                 if (QuickSaveState()) getString(R.string.state_saved)
                                                 else getString(R.string.state_save_fail),
                                                 Toast.LENGTH_SHORT).show()
+                                            resumed = true; ResumeGame()
                                         }
-                                        override fun onNegative() { /* onDismiss handles ResumeGame */ }
-                                        override fun onDismiss() { ResumeGame() }
+                                        override fun onNegative() { resumed = true; ResumeGame() }
+                                        override fun onDismiss() { if (!resumed) ResumeGame() }
                                     })
                                 }
                                 .show(supportFragmentManager, "savestate")
                         }
                         3 -> {
                             PauseGame()
+                            var resumed = false
                             PopDialogFragment(getString(R.string.loadstatetitle))
                                 .also {
                                     it.setOnDialogClickListener(object : OnDialogClickListener {
@@ -408,9 +411,10 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                                                 if (QuickLoadState()) getString(R.string.state_loaded)
                                                 else getString(R.string.state_load_fail),
                                                 Toast.LENGTH_SHORT).show()
+                                            resumed = true; ResumeGame()
                                         }
-                                        override fun onNegative() { /* onDismiss handles ResumeGame */ }
-                                        override fun onDismiss() { ResumeGame() }
+                                        override fun onNegative() { resumed = true; ResumeGame() }
+                                        override fun onDismiss() { if (!resumed) ResumeGame() }
                                     })
                                 }
                                 .show(supportFragmentManager, "loadstate")
