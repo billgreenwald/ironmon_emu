@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.8] - 2026-03-30
+
+### Fixed
+- **Catching tutorial battle no longer triggers game-over** — the Old Man / Wally catching demonstration battle is now detected via `sSpecialFlags` (mirrors Lua `Program.updateCatchingTutorial`): when the flag reads 3 the battle is marked as tutorial and the lead-fainted game-over check is suppressed for that battle.
+
 ## [2.0.7] - 2026-03-29
 
 ### Added

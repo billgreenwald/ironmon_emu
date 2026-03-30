@@ -58,6 +58,10 @@ object TrackerPoller {
     // if two poll coroutines both see battle-end before either sets the flag
     private val isGameOver = AtomicBoolean(false)
 
+    // Catching tutorial state — mirrors Lua Program.updateCatchingTutorial / Battle.recentBattleWasTutorial
+    private var recentBattleWasTutorial = false
+    private var hasCompletedTutorial = false
+
     // Run persistence
     private var appContext: Context? = null
     private var lastGameCode: String = ""
@@ -136,6 +140,8 @@ object TrackerPoller {
         visitedRoutes.clear()
         currentWildBattleRecorded = false
         lastGameCode = ""  // force restore from disk on next game load
+        recentBattleWasTutorial = false
+        hasCompletedTutorial = false
     }
 
     private fun poll(): TrackerState {
@@ -220,10 +226,23 @@ object TrackerPoller {
             }
         }
 
+        // ── Catching tutorial detection (mirrors Lua Program.updateCatchingTutorial) ──────────
+        // sSpecialFlags == 3 while the tutorial battle is active; drops to 0 when done.
+        if (!hasCompletedTutorial && addresses.sSpecialFlags != 0L) {
+            val tutorialFlag = MemoryBridge.readU8(addresses.sSpecialFlags) ?: 0
+            when {
+                tutorialFlag == 3 -> recentBattleWasTutorial = true
+                recentBattleWasTutorial && tutorialFlag == 0 -> hasCompletedTutorial = true
+            }
+        }
+
         // ── Battle ────────────────────────────────────────────────────────────
         // Capture pre-poll battle state so we can detect the active→ended transition below.
         val wasBattleActive = lastBattleActive
         val battle = pollBattle(game, addresses)
+
+        // Reset tutorial flag at the start of each new battle (mirrors Lua Battle init reset)
+        if (!wasBattleActive && battle.isActive) recentBattleWasTutorial = false
 
         // ── Wild encounter recording (Lua tracker: Tracker.TrackRouteEncounter) ───
         // Reset flag when battle ends so it's ready for the next encounter.
@@ -258,7 +277,8 @@ object TrackerPoller {
         // ── Game over detection ───────────────────────────────────────────────
         // Matches Lua tracker LeadPokemonFaints condition (most common Ironmon rule):
         // trigger when battle just ended and the lead Pokemon has 0 HP.
-        if (wasBattleActive && !battle.isActive && !isGameOver.get()) {
+        // Exclude catching tutorial battle — mirrors Lua GameOverScreen.checkForGameOver.
+        if (wasBattleActive && !battle.isActive && !isGameOver.get() && !recentBattleWasTutorial) {
             val lead = party.firstOrNull()
             if (lead != null && !lead.isAlive && isGameOver.compareAndSet(false, true)) {
                 runAttempts++

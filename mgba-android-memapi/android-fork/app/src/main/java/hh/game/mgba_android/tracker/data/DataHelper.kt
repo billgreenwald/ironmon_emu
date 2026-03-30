@@ -39,6 +39,8 @@ data class GameAddresses(
     val trainerBattleOpponent: Long = 0L,
     // gBattlerPartyIndexes: u8 array; [0]=playerSlot, [2]=enemySlot (Lua: Battle.Combatants.LeftOther)
     val gBattlerPartyIndexes: Long = 0L,
+    // sSpecialFlags: u8; value 3 = catching tutorial active (Lua: Program.updateCatchingTutorial)
+    val sSpecialFlags: Long = 0L,
 )
 
 object DataHelper {
@@ -153,6 +155,7 @@ object DataHelper {
         bagPocket_Berries_size  = 0x2B,     // 43 slots
         trainerBattleOpponent   = 0x020386AEL,  // gTrainerBattleOpponent_A (English FR/LG)
         gBattlerPartyIndexes    = 0x02023BCEL,  // gBattlerPartyIndexes (English FR/LG all versions)
+        sSpecialFlags           = 0x020370E0L,  // sSpecialFlags (FR/LG): 3=catching tutorial (Lua tracker)
     )
 
     // FireRed English v1.1 (BPRE, version byte 1)
@@ -213,6 +216,7 @@ object DataHelper {
         bagPocket_Berries_size  = 0x2E,     // 46 slots
         trainerBattleOpponent   = 0x0202FF5EL,  // gTrainerBattleOpponent_A
         gBattlerPartyIndexes    = 0x02024A6AL,  // gBattlerPartyIndexes (Ruby/Sapphire all versions)
+        sSpecialFlags           = 0x0202E8E2L,  // sSpecialFlags (Ruby/Sapphire): 3=catching tutorial (Lua tracker)
     )
 
     // Ruby v1.1 / v1.2
@@ -265,6 +269,7 @@ object DataHelper {
         bagPocket_Berries_size  = 0x2E,     // 46 slots
         trainerBattleOpponent   = 0x02038BCAL,  // gTrainerBattleOpponent_A from Emerald.json
         gBattlerPartyIndexes    = 0x0202406EL,  // gBattlerPartyIndexes from Emerald.json
+        sSpecialFlags           = 0x020375FCL,  // sSpecialFlags (Emerald): 3=catching tutorial (Lua tracker)
     )
 
     /**
