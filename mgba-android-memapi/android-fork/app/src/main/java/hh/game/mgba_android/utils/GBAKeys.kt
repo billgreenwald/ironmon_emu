@@ -77,5 +77,5 @@ fun getKeyDisplayName(keyCode: Int): String = when (keyCode) {
     KeyEvent.KEYCODE_DPAD_LEFT     -> "D-Left"
     KeyEvent.KEYCODE_DPAD_RIGHT    -> "D-Right"
     -1                             -> "None"
-    else                           -> "Key($keyCode)"
+    else                           -> KeyEvent.keyCodeToString(keyCode).removePrefix("KEYCODE_").replace('_', ' ')
 }

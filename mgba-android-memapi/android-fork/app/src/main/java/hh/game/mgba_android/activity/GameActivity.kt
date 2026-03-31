@@ -54,6 +54,7 @@ import hh.game.mgba_android.fragment.PopDialogFragment
 import hh.game.mgba_android.memory.CoreMemoryBlock
 import hh.game.mgba_android.utils.CheatUtils
 import hh.game.mgba_android.utils.BindableAction
+import hh.game.mgba_android.utils.GbaButton
 import hh.game.mgba_android.utils.GBAKeys
 import hh.game.mgba_android.utils.Gametype
 import hh.game.mgba_android.utils.controllerUtil.getDirectionPressed
@@ -98,6 +99,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var defaultFps = 60f
     private var secondaryFps = 60f
     private val actionBindings = HashMap<BindableAction, Int>()
+    private val gbaKeyBindings = HashMap<Int, Int>() // pressed keycode → native keycode
     // Button drag-across tracking
     private val gbaButtonViews = mutableListOf<Pair<View, Int>>()  // view → key code
     private var dragActiveKey: Int? = null
@@ -351,6 +353,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         BindableAction.entries.forEach { action ->
             actionBindings[action] = EmulatorPreferences.getBinding(this, action)
         }
+        reloadGbaKeyBindings()
         setFPS = defaultFps
         if (defaultFps != 60f) {
             lifecycleScope.launch {
@@ -565,9 +568,22 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private fun hasGamepadConnected(): Boolean =
         InputDevice.getDeviceIds().any { isGamepad(it) }
 
+    private fun reloadGbaKeyBindings() {
+        gbaKeyBindings.clear()
+        GbaButton.entries.forEach { btn ->
+            val pressedKey = EmulatorPreferences.getGbaKeyBinding(this, btn)
+            gbaKeyBindings[pressedKey] = btn.nativeKeyCode
+        }
+    }
+
     private fun updateOnscreenControls() {
         val alwaysShow = EmulatorPreferences.getAlwaysShowControls(this)
-        val visible = if (alwaysShow || !hasGamepadConnected()) View.VISIBLE else View.INVISIBLE
+        val hideControls = EmulatorPreferences.getHideOnScreenControls(this)
+        val visible = when {
+            hideControls -> View.GONE
+            alwaysShow || !hasGamepadConnected() -> View.VISIBLE
+            else -> View.INVISIBLE
+        }
         findViewById<View>(R.id.padboardInclude)?.visibility = visible
         findViewById<View>(R.id.tools_btn)?.visibility = visible
     }
@@ -782,6 +798,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         BindableAction.entries.forEach { action ->
             actionBindings[action] = EmulatorPreferences.getBinding(this, action)
         }
+        reloadGbaKeyBindings()
         // ResumeGame() is deferred to onWindowFocusChanged to avoid racing SDL surface readiness.
         // SDL requires mHasFocus=true (set on focus grant) before nativeResume() unblocks the
         // render thread. Calling ResumeGame() here would wake the mGBA core before SDL is ready.
@@ -838,12 +855,23 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         var handled = false
 
-        // GBA game controls
+        // GBA game controls — gamepad/dpad path (hardcoded, always works)
         val gbaKey = getKey(event.keyCode)
         if (gbaKey != GBAKeys.GBA_KEY_NONE.key) {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> { onNativeKeyDown(gbaKey); handled = true }
                 KeyEvent.ACTION_UP   -> { onNativeKeyUp(gbaKey);   handled = true }
+            }
+        }
+
+        // User-configured keyboard → GBA button bindings
+        if (!handled) {
+            val nativeCode = gbaKeyBindings[event.keyCode]
+            if (nativeCode != null) {
+                when (event.action) {
+                    KeyEvent.ACTION_DOWN -> { onNativeKeyDown(nativeCode); handled = true }
+                    KeyEvent.ACTION_UP   -> { onNativeKeyUp(nativeCode);   handled = true }
+                }
             }
         }
 

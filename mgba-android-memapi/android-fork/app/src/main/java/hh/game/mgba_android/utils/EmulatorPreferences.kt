@@ -10,7 +10,8 @@ object EmulatorPreferences {
     private const val KEY_SHOW_FPS           = "pref_show_fps"
     private const val KEY_MUTED              = "pref_mute"
     private const val KEY_SPLIT_FRACTION     = "pref_split_fraction"
-    private const val KEY_ALWAYS_SHOW_CONTROLS = "pref_always_show_controls"
+    private const val KEY_ALWAYS_SHOW_CONTROLS    = "pref_always_show_controls"
+    private const val KEY_HIDE_ON_SCREEN_CONTROLS = "pref_hide_on_screen_controls"
     private const val KEY_TRACKER_COLLAPSIBLE  = "pref_tracker_collapsible"
     private const val KEY_HIDE_COLLAPSE_BUTTON = "pref_hide_collapse_button"
     private const val KEY_CONTROLS_ALPHA       = "pref_controls_alpha"
@@ -49,6 +50,9 @@ object EmulatorPreferences {
     fun getAlwaysShowControls(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
         .getBoolean(KEY_ALWAYS_SHOW_CONTROLS, false)
 
+    fun getHideOnScreenControls(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
+        .getBoolean(KEY_HIDE_ON_SCREEN_CONTROLS, false)
+
     fun getTrackerCollapsible(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
         .getBoolean(KEY_TRACKER_COLLAPSIBLE, false)
 
@@ -67,6 +71,15 @@ object EmulatorPreferences {
 
     fun setControlsScale(ctx: Context, value: Float) {
         ctx.getSharedPreferences(PREFS, 0).edit().putFloat(KEY_CONTROLS_SCALE, value).apply()
+    }
+
+    fun getGbaKeyBinding(ctx: Context, btn: GbaButton): Int {
+        val stored = ctx.getSharedPreferences(PREFS, 0).getInt(btn.prefKey, -1)
+        return if (stored == -1) btn.nativeKeyCode else stored
+    }
+
+    fun setGbaKeyBinding(ctx: Context, btn: GbaButton, keyCode: Int) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putInt(btn.prefKey, keyCode).apply()
     }
 
     fun getBinding(ctx: Context, action: BindableAction): Int {
@@ -95,6 +108,7 @@ object EmulatorPreferences {
         alwaysShowControls: Boolean = getAlwaysShowControls(ctx),
         trackerCollapsible: Boolean = getTrackerCollapsible(ctx),
         hideCollapseButton: Boolean = getHideCollapseButton(ctx),
+        hideOnScreenControls: Boolean = getHideOnScreenControls(ctx),
     ) {
         ctx.getSharedPreferences(PREFS, 0).edit()
             .putFloat(KEY_DEFAULT_FPS, defaultFps)
@@ -105,6 +119,7 @@ object EmulatorPreferences {
             .putBoolean(KEY_ALWAYS_SHOW_CONTROLS, alwaysShowControls)
             .putBoolean(KEY_TRACKER_COLLAPSIBLE, trackerCollapsible)
             .putBoolean(KEY_HIDE_COLLAPSE_BUTTON, hideCollapseButton)
+            .putBoolean(KEY_HIDE_ON_SCREEN_CONTROLS, hideOnScreenControls)
             .apply()
     }
 }

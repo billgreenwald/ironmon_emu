@@ -97,6 +97,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.window.Dialog
 import hh.game.mgba_android.utils.BindableAction
 import hh.game.mgba_android.utils.EmulatorPreferences
+import hh.game.mgba_android.utils.GbaButton
 import hh.game.mgba_android.utils.getKeyDisplayName
 import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
@@ -491,6 +492,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     var showFps by remember { mutableStateOf(EmulatorPreferences.getShowFps(context)) }
     var splitFraction by remember { mutableStateOf(EmulatorPreferences.getSplitFraction(context)) }
     var alwaysShowControls by remember { mutableStateOf(EmulatorPreferences.getAlwaysShowControls(context)) }
+    var hideOnScreenControls by remember { mutableStateOf(EmulatorPreferences.getHideOnScreenControls(context)) }
     var trackerCollapsible by remember { mutableStateOf(EmulatorPreferences.getTrackerCollapsible(context)) }
     var hideCollapseButton by remember { mutableStateOf(EmulatorPreferences.getHideCollapseButton(context)) }
     var controlsAlpha by remember { mutableStateOf(EmulatorPreferences.getControlsAlpha(context)) }
@@ -577,6 +579,18 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     Text("Always show on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor, modifier = Modifier.weight(1f))
                     Switch(checked = alwaysShowControls, onCheckedChange = { alwaysShowControls = it })
                 }
+                // ── Always hide on-screen controls (keyboard/gamepad users) ──
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Always hide on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                        Text("For keyboard or gamepad-only users", fontSize = 11.sp, color = Color(0xFF888888))
+                    }
+                    Switch(checked = hideOnScreenControls, onCheckedChange = { hideOnScreenControls = it })
+                }
                 // ── Collapsible tracker panel (forced on in overlay modes) ────
                 val isOverlaySplit = splitFraction == 0.0f || splitFraction == 1.0f
                 Row(
@@ -656,6 +670,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                 EmulatorPreferences.save(
                     context, defaultFps, secondaryFps, "none", showFps,
                     splitFraction, alwaysShowControls, trackerCollapsible, hideCollapseButton,
+                    hideOnScreenControls = hideOnScreenControls,
                 )
                 EmulatorPreferences.setControlsAlpha(context, controlsAlpha)
                 EmulatorPreferences.setControlsScale(context, controlsScale)
@@ -674,32 +689,39 @@ fun KeyBindingsDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val bindings = remember {
         mutableStateMapOf<BindableAction, Int>().also { map ->
-            BindableAction.entries.forEach { a ->
-                map[a] = EmulatorPreferences.getBinding(context, a)
-            }
+            BindableAction.entries.forEach { a -> map[a] = EmulatorPreferences.getBinding(context, a) }
         }
     }
-    var capturingFor by remember { mutableStateOf<BindableAction?>(null) }
+    val gbaBindings = remember {
+        mutableStateMapOf<GbaButton, Int>().also { map ->
+            GbaButton.entries.forEach { b -> map[b] = EmulatorPreferences.getGbaKeyBinding(context, b) }
+        }
+    }
+    var capturingAction by remember { mutableStateOf<BindableAction?>(null) }
+    var capturingGba by remember { mutableStateOf<GbaButton?>(null) }
     val focusRequester = remember { FocusRequester() }
 
     val labelColor  = Color(0xFF111111)
     val accentColor = Color(0xFF4090FF)
     val mutedColor  = Color(0xFF888888)
+    val sectionColor = Color(0xFF555555)
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
                 .onKeyEvent { keyEvent ->
-                    val capturing = capturingFor ?: return@onKeyEvent false
+                    val capA = capturingAction
+                    val capG = capturingGba
+                    if (capA == null && capG == null) return@onKeyEvent false
                     if (keyEvent.type == KeyEventType.KeyDown) {
                         val kc = keyEvent.key.nativeKeyCode
                         when {
-                            kc == KeyEvent.KEYCODE_BACK -> { capturingFor = null }
+                            kc == KeyEvent.KEYCODE_BACK -> { capturingAction = null; capturingGba = null }
                             kc != KeyEvent.KEYCODE_VOLUME_UP &&
                             kc != KeyEvent.KEYCODE_VOLUME_DOWN &&
                             kc != KeyEvent.KEYCODE_VOLUME_MUTE -> {
-                                bindings[capturing] = kc
-                                capturingFor = null
+                                capA?.let { bindings[it] = kc; capturingAction = null }
+                                capG?.let { gbaBindings[it] = kc; capturingGba = null }
                             }
                         }
                         true
@@ -723,47 +745,35 @@ fun KeyBindingsDialog(onDismiss: () -> Unit) {
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        // ── Actions ───────────────────────────────────────────
+                        Text("Actions", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = sectionColor,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 2.dp))
                         BindableAction.entries.forEach { action ->
                             val keyCode = bindings[action] ?: -1
-                            val isCapturing = capturingFor == action
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    action.label,
-                                    color = labelColor, fontSize = 13.sp,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                when {
-                                    isCapturing -> {
-                                        Text("Press a button...", color = accentColor, fontSize = 12.sp)
-                                    }
-                                    keyCode != -1 -> {
-                                        TextButton(
-                                            onClick = { capturingFor = action },
-                                            border = BorderStroke(1.dp, accentColor),
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                        ) {
-                                            Text(getKeyDisplayName(keyCode), color = accentColor, fontSize = 11.sp)
-                                        }
-                                        IconButton(
-                                            onClick = { bindings[action] = -1 },
-                                            modifier = Modifier.size(28.dp),
-                                        ) {
-                                            Text("✕", color = mutedColor, fontSize = 12.sp)
-                                        }
-                                    }
-                                    else -> {
-                                        TextButton(
-                                            onClick = { capturingFor = action },
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                        ) {
-                                            Text("Tap to bind", color = mutedColor, fontSize = 11.sp)
-                                        }
-                                    }
-                                }
-                            }
+                            val isCapturing = capturingAction == action
+                            BindingRow(
+                                label = action.label,
+                                keyCode = keyCode,
+                                isCapturing = isCapturing,
+                                labelColor = labelColor, accentColor = accentColor, mutedColor = mutedColor,
+                                onStartCapture = { capturingAction = action; capturingGba = null },
+                                onClear = { bindings[action] = -1 },
+                            )
+                        }
+                        // ── GBA Controls ──────────────────────────────────────
+                        Text("GBA Controls", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = sectionColor,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
+                        GbaButton.entries.forEach { btn ->
+                            val keyCode = gbaBindings[btn] ?: btn.nativeKeyCode
+                            val isCapturing = capturingGba == btn
+                            BindingRow(
+                                label = btn.label,
+                                keyCode = keyCode,
+                                isCapturing = isCapturing,
+                                labelColor = labelColor, accentColor = accentColor, mutedColor = mutedColor,
+                                onStartCapture = { capturingGba = btn; capturingAction = null },
+                                onClear = { gbaBindings[btn] = btn.nativeKeyCode },
+                            )
                         }
                     }
                     Divider()
@@ -773,9 +783,8 @@ fun KeyBindingsDialog(onDismiss: () -> Unit) {
                     ) {
                         TextButton(onClick = onDismiss) { Text("Cancel") }
                         TextButton(onClick = {
-                            bindings.forEach { (action, kc) ->
-                                EmulatorPreferences.setBinding(context, action, kc)
-                            }
+                            bindings.forEach { (action, kc) -> EmulatorPreferences.setBinding(context, action, kc) }
+                            gbaBindings.forEach { (btn, kc) -> EmulatorPreferences.setGbaKeyBinding(context, btn, kc) }
                             onDismiss()
                         }) { Text("Save") }
                     }
@@ -783,6 +792,50 @@ fun KeyBindingsDialog(onDismiss: () -> Unit) {
             }
         }
         LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    }
+}
+
+@Composable
+private fun BindingRow(
+    label: String,
+    keyCode: Int,
+    isCapturing: Boolean,
+    labelColor: Color,
+    accentColor: Color,
+    mutedColor: Color,
+    onStartCapture: () -> Unit,
+    onClear: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, color = labelColor, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        when {
+            isCapturing -> {
+                Text("Press a button...", color = accentColor, fontSize = 12.sp)
+            }
+            keyCode != -1 -> {
+                TextButton(
+                    onClick = onStartCapture,
+                    border = BorderStroke(1.dp, accentColor),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                ) {
+                    Text(getKeyDisplayName(keyCode), color = accentColor, fontSize = 11.sp)
+                }
+                IconButton(onClick = onClear, modifier = Modifier.size(28.dp)) {
+                    Text("✕", color = mutedColor, fontSize = 12.sp)
+                }
+            }
+            else -> {
+                TextButton(
+                    onClick = onStartCapture,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                ) {
+                    Text("Tap to bind", color = mutedColor, fontSize = 11.sp)
+                }
+            }
+        }
     }
 }
 

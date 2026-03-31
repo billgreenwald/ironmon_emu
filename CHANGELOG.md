@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.9] - 2026-03-30
+
+### Added
+- **GBA button keyboard bindings** — the "Button Bindings" dialog now has a "GBA Controls" section with all 10 GBA buttons (A, B, L, R, Start, Select, D-pad Up/Down/Left/Right). Each can be rebound to any keyboard key via live capture; defaults match the standard mGBA keyboard layout (X=A, Z=B, Q=L, U=R, Y=Start, N=Select, arrow keys=D-pad). Gamepad button mapping is unchanged.
+- **Always hide on-screen controls** — new toggle in Emulator Settings (below "Always show on-screen controls") that permanently hides the padboard. Intended for keyboard or gamepad-only users who don't need touch controls on screen.
+
+### Changed
+- Key display names now show readable labels ("X", "Z", "DPAD UP") instead of raw numeric codes ("Key(52)") throughout the Button Bindings dialog.
+
 ## [2.0.8] - 2026-03-30
 
 ### Fixed
