@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skydoves.landscapist.glide.GlideImage
 import hh.game.mgba_android.tracker.data.BagDetailInfo
+import hh.game.mgba_android.tracker.data.BattlePowerCalc
 import hh.game.mgba_android.tracker.data.DataHelper
 import hh.game.mgba_android.tracker.data.GameStats
 import hh.game.mgba_android.tracker.data.LearnsetInfo
@@ -476,13 +477,16 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
         Spacer(Modifier.height(4.dp))
 
-        MoveTable(pokemon.moves, battle, stabTypes = setOf(pokemon.type1, pokemon.type2), onClick = { showMoveSheet = it })
+        MoveTable(pokemon.moves, battle, player = pokemon, stabTypes = setOf(pokemon.type1, pokemon.type2), onClick = { showMoveSheet = it })
     }
 
     Spacer(Modifier.height(4.dp))
 
     showMoveSheet?.let { move ->
-        MoveDetailSheet(move, onDismiss = { showMoveSheet = null })
+        val battlePower = BattlePowerCalc.calculate(
+            move.moveId, pokemon, battle.enemy, battle.weather, inBattle = battle.isActive,
+        )
+        MoveDetailSheet(move, battlePower = battlePower, onDismiss = { showMoveSheet = null })
     }
     if (showAbilitySheet) {
         AbilityDetailSheet(
@@ -978,7 +982,7 @@ private fun MoveCategoryIcon(typeId: Int, power: Int, modifier: Modifier = Modif
 
 // ── Move table ────────────────────────────────────────────────────────────────
 @Composable
-private fun MoveTable(moves: List<MoveData>, battle: BattleState, stabTypes: Set<Int> = emptySet(), onClick: (MoveData) -> Unit) {
+private fun MoveTable(moves: List<MoveData>, battle: BattleState, player: PokemonData? = null, stabTypes: Set<Int> = emptySet(), onClick: (MoveData) -> Unit) {
     // Column header
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(18.dp))  // category icon column
@@ -990,14 +994,17 @@ private fun MoveTable(moves: List<MoveData>, battle: BattleState, stabTypes: Set
     }
     Spacer(Modifier.height(2.dp))
     moves.forEach { move ->
-        MoveTableRow(move, battle, isStab = move.moveType in stabTypes, onClick = { onClick(move) })
+        MoveTableRow(move, battle, player = player, isStab = move.moveType in stabTypes, onClick = { onClick(move) })
     }
 }
 
 @Composable
-private fun MoveTableRow(move: MoveData, battle: BattleState, isStab: Boolean = false, onClick: () -> Unit) {
+private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonData? = null, isStab: Boolean = false, onClick: () -> Unit) {
     val effectiveness = battle.enemy?.let { enemy ->
         TypeChart.effectiveness(move.moveType, enemy.type1, enemy.type2)
+    }
+    val calcPower = player?.let {
+        BattlePowerCalc.calculate(move.moveId, it, battle.enemy, battle.weather, inBattle = battle.isActive)
     }
 
     Row(
@@ -1029,10 +1036,11 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, isStab: Boolean = 
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         }
-        // Power
+        // Power — use live-calculated value in battle when available, else static display
         Text(
-            text = MoveStatsTable.get(move.moveId).displayPower ?: if (move.power > 0) "${move.power}" else "—",
-            color = TextSecondary, fontSize = ssp(13), textAlign = TextAlign.Center,
+            text = calcPower ?: MoveStatsTable.get(move.moveId).displayPower ?: if (move.power > 0) "${move.power}" else "—",
+            color = if (calcPower != null) Color(0xFFFFD700) else TextSecondary,
+            fontSize = ssp(13), textAlign = TextAlign.Center,
             modifier = Modifier.width(28.dp),
         )
         // Effectiveness arrows
@@ -1193,7 +1201,7 @@ fun LearnsetSheet(learnset: LearnsetInfo, currentLevel: Int, onDismiss: () -> Un
 // ── Move detail sheet ─────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MoveDetailSheet(move: MoveData, onDismiss: () -> Unit) {
+fun MoveDetailSheet(move: MoveData, battlePower: String? = null, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1203,8 +1211,12 @@ fun MoveDetailSheet(move: MoveData, onDismiss: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Power: ${MoveStatsTable.get(move.moveId).displayPower ?: if (move.power > 0) move.power.toString() else "—"}",
-                    color = TextSecondary, fontSize = ssp(13))
+                val powerDisplay = battlePower
+                    ?: MoveStatsTable.get(move.moveId).displayPower
+                    ?: if (move.power > 0) move.power.toString() else "—"
+                Text("Power: $powerDisplay",
+                    color = if (battlePower != null) Color(0xFFFFD700) else TextSecondary,
+                    fontSize = ssp(13))
                 Text("Acc: ${if (move.accuracy > 0) "${move.accuracy}%" else "—"}",
                     color = TextSecondary, fontSize = ssp(13))
                 Text("PP: ${move.pp}", color = TextSecondary, fontSize = ssp(13))

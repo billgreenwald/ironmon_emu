@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0] - 2026-03-31
+
+### Added
+- **Variable-power move calculations in battle** — move power is now computed live during battle for HP-based, weight-based, friendship-based, and weather-dependent moves. Calculated values display in gold to distinguish them from static labels. Affected moves:
+  - **Flail / Reversal** — shows actual power (200/150/100/80/40/20) based on player's current HP
+  - **Eruption / Water Spout** — shows computed power (1–150) based on player's current HP
+  - **Low Kick** — shows weight bracket (20/40/60/80/100/120) based on enemy species weight (static table from Lua tracker)
+  - **Return / Frustration** — shows computed power when friendship is near max (≥100), matching Lua tracker behavior
+  - **Hidden Power** — shows power (30–70) computed from player's IVs
+  - **Weather Ball** — shows 50 (clear) or 100 (active weather)
+- Outside battle, all moves continue showing static labels (`>HP`, `<HP`, `WT`, `VAR`, `>FR`, `<FR`, etc.) unchanged
+
 ## [2.0.9] - 2026-03-30
 
 ### Added
