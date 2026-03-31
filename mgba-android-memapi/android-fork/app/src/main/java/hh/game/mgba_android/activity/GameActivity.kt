@@ -297,6 +297,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                     onQuickload = if (QuickloadManager.canQuickload()) {
                         { loadNextRom() }
                     } else null,
+                    onReroll = { TrackerPoller.rerollBall() },
                     fontScale = trackerFontScale,
                     isCollapsible = effectiveCollapsible && !hideCollapseButton,
                     isExpanded = trackerExpanded,

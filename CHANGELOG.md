@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.1] - 2026-03-31
+
+### Added
+- **Starter ball randomizer** — when a new run begins and the player is in the starter lab with no Pokémon, the tracker now displays a ball picker showing Left / Middle / Right positions. One is randomly highlighted with a ▼ arrow to tell you which starter to grab. A **Reroll** button lets you re-randomize the choice. The picker dismisses automatically once you pick up your starter. Mirrors the Lua tracker's ball picker feature; trigger locations match Lua `RouteData.Locations.IsInLab` (FRLG: Oak's Lab, RSE/Emerald: Route 101).
+
 ## [2.1.0] - 2026-03-31
 
 ### Added

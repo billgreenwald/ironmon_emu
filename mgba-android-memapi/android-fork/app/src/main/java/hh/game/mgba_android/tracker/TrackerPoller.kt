@@ -24,6 +24,8 @@ import hh.game.mgba_android.tracker.tables.BstTable
 import hh.game.mgba_android.tracker.tables.MoveNames
 import hh.game.mgba_android.tracker.tables.SpeciesNames
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -53,6 +55,12 @@ object TrackerPoller {
     private val visitedRoutes = mutableSetOf<Int>()  // every map the player has stepped onto
     // Whether the current wild battle has already been recorded (reset when battle ends)
     private var currentWildBattleRecorded = false
+
+    // Ball picker: random starter position (1=Left, 2=Middle, 3=Right; 0=unset)
+    private val chosenBall = AtomicInteger(0)
+
+    /** Re-randomize the ball picker (user pressed Reroll). */
+    fun rerollBall() { chosenBall.set(Random.nextInt(1, 4)) }
 
     // Game over state — AtomicBoolean so compareAndSet prevents double-increment
     // if two poll coroutines both see battle-end before either sets the flag
@@ -166,6 +174,7 @@ object TrackerPoller {
         // ── Run persistence: load attempt count + route encounters when game code changes ─────────
         if (gameCode != lastGameCode) {
             lastGameCode = gameCode
+            chosenBall.set(0)  // new ROM — reset ball picker
             Log.d(TAG, "gameCode changed to $gameCode — restoring run data")
             appContext?.let { ctx ->
                 val runData = RunRepository.load(ctx, gameCode)
@@ -226,6 +235,19 @@ object TrackerPoller {
             }
         }
 
+        // ── Ball picker (mirrors Lua TrackerScreen.canShowBallPicker) ────────────────────────
+        // IsInLab mapLayoutIds from Lua RouteData.Locations.IsInLab: FRLG=5, RSE/Emerald=17
+        val starterLabLayoutId = when (game) {
+            GameVersion.FIRE_RED, GameVersion.LEAF_GREEN -> 5
+            else -> 17  // Ruby, Sapphire, Emerald — Route 101 / Birch's lab
+        }
+        val inStarterLab = mapId == starterLabLayoutId
+        when {
+            count == 0 && inStarterLab -> if (chosenBall.get() == 0) chosenBall.set(Random.nextInt(1, 4))
+            count > 0 -> chosenBall.set(0)  // player chose a starter — dismiss picker
+        }
+        val showBallPicker = count == 0 && inStarterLab
+
         // ── Catching tutorial detection (mirrors Lua Program.updateCatchingTutorial) ──────────
         // sSpecialFlags == 3 while the tutorial battle is active; drops to 0 when done.
         if (!hasCompletedTutorial && addresses.sSpecialFlags != 0L) {
@@ -251,25 +273,25 @@ object TrackerPoller {
         // from the previous battle (especially at 3x speed). Wait one extra poll cycle (250ms).
         val isFirstBattleFrame = !wasBattleActive && battle.isActive
         if (battle.isActive && battle.isWild && !currentWildBattleRecorded && !isFirstBattleFrame) {
-            val mapId = route?.mapLayoutId
+            val encounterMapId = route?.mapLayoutId
             val sid = battle.enemy?.speciesId
-            if (mapId != null && sid != null && sid in 1..411) {
+            if (encounterMapId != null && sid != null && sid in 1..411) {
                 currentWildBattleRecorded = true
-                if (mapId !in routeVisitOrder) routeVisitOrder.add(mapId)
-                val list = encountersByRoute.getOrPut(mapId) { mutableListOf() }
+                if (encounterMapId !in routeVisitOrder) routeVisitOrder.add(encounterMapId)
+                val list = encountersByRoute.getOrPut(encounterMapId) { mutableListOf() }
                 if (sid !in list) {
                     list.add(sid)
-                    Log.d(TAG, "new encounter sid=$sid mapId=$mapId gameCode=$gameCode — saving")
+                    Log.d(TAG, "new encounter sid=$sid mapId=$encounterMapId gameCode=$gameCode — saving")
                     // Persist to RunData so encounters survive app restarts
                     appContext?.let { ctx ->
                         val data = RunRepository.load(ctx, gameCode)
-                        val routeList = data.routeEncounters.getOrPut(mapId.toString()) { mutableListOf() }
+                        val routeList = data.routeEncounters.getOrPut(encounterMapId.toString()) { mutableListOf() }
                         if (sid !in routeList) routeList.add(sid)
                         Log.d(TAG, "saving routeEncounters=${data.routeEncounters}")
                         RunRepository.save(ctx, gameCode, data)
                     }
                 } else {
-                    Log.d(TAG, "encounter sid=$sid mapId=$mapId already in list=$list — skipping")
+                    Log.d(TAG, "encounter sid=$sid mapId=$encounterMapId already in list=$list — skipping")
                 }
             }
         }
@@ -329,6 +351,8 @@ object TrackerPoller {
             routeVisitOrder = routeVisitOrder.toList(),
             trainerCounts = trainerCounts,
             visitedRoutes = visitedRoutes.toSet(),
+            showBallPicker = showBallPicker,
+            chosenBall = chosenBall.get(),
         )
     }
 

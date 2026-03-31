@@ -97,6 +97,7 @@ private val SPECIAL_TYPES  = setOf(10, 11, 12, 13, 14, 15, 16, 17)
 fun TrackerPanel(
     state: TrackerState,
     onQuickload: (() -> Unit)? = null,
+    onReroll: (() -> Unit)? = null,
     fontScale: Float = 1f,
     isCollapsible: Boolean = false,
     isExpanded: Boolean = true,
@@ -135,7 +136,7 @@ fun TrackerPanel(
                         when (state) {
                             is TrackerState.Disconnected -> StatusText("Loading…")
                             is TrackerState.NoGameLoaded -> StatusText("No supported game loaded")
-                            is TrackerState.Active       -> ActivePanel(state, onQuickload)
+                            is TrackerState.Active       -> ActivePanel(state, onQuickload, onReroll)
                         }
                     }
                 }
@@ -147,7 +148,7 @@ fun TrackerPanel(
                 when (state) {
                     is TrackerState.Disconnected -> StatusText("Loading…")
                     is TrackerState.NoGameLoaded -> StatusText("No supported game loaded")
-                    is TrackerState.Active       -> ActivePanel(state, onQuickload)
+                    is TrackerState.Active       -> ActivePanel(state, onQuickload, onReroll)
                 }
             }
         }
@@ -167,7 +168,7 @@ private fun StatusText(msg: String) {
 // Matches Lua Constants.STAT_STATES: 0=blank, 1="+", 2="--", 3="="
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) {
+private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, onReroll: (() -> Unit)?) {
     val statMarkings: SnapshotStateMap<Pair<Int, String>, Int> = remember { mutableStateMapOf() }
     var galleryRoute by remember { mutableStateOf<String?>(null) }
 
@@ -223,6 +224,12 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?) 
                 )
             }
         }
+    }
+
+    // Ball picker — shown at run start before any Pokémon (mirrors Lua canShowBallPicker)
+    if (state.showBallPicker) {
+        BallPickerPanel(chosenBall = state.chosenBall, onReroll = onReroll ?: {})
+        return
     }
 
     // Three-tab pager: MY MON | ROUTE | OPPONENT
@@ -329,6 +336,79 @@ private fun PanelHeader(state: TrackerState.Active) {
             text = "Run ${state.runAttempts + 1}",
             color = AccentRed, fontSize = ssp(9), fontWeight = FontWeight.Bold,
         )
+    }
+}
+
+// ── Ball picker ───────────────────────────────────────────────────────────────
+// Shown at run start when player is in the starter lab with no Pokémon.
+// Mirrors Lua TrackerScreen.drawBallPicker / canShowBallPicker.
+@Composable
+private fun BallPickerPanel(chosenBall: Int, onReroll: () -> Unit) {
+    val ballLabels = listOf("LEFT", "MIDDLE", "RIGHT")
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Pick your starter ball",
+            color = TextSecondary,
+            fontSize = ssp(13),
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            ballLabels.forEachIndexed { i, label ->
+                val ballIndex = i + 1  // 1-3
+                val isChosen = chosenBall == ballIndex
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Down arrow above chosen ball
+                    Text(
+                        text = if (isChosen) "▼" else " ",
+                        color = AccentRed,
+                        fontSize = ssp(12),
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    // Pokéball drawn with Canvas
+                    Canvas(modifier = Modifier.size(40.dp)) {
+                        val r = size.minDimension / 2f
+                        val cx = size.width / 2f
+                        val cy = size.height / 2f
+                        val topColor    = if (isChosen) Color(0xFFE94560) else Color(0xFF666666)
+                        val bottomColor = if (isChosen) Color(0xFFEEEEEE) else Color(0xFF444444)
+                        val outlineColor = Color(0xFF222222)
+                        val bandColor    = Color(0xFF111111)
+                        // Bottom half (white/gray)
+                        drawArc(color = bottomColor, startAngle = 0f, sweepAngle = 180f, useCenter = true, size = Size(r*2, r*2), topLeft = Offset(cx - r, cy - r))
+                        // Top half (red/gray)
+                        drawArc(color = topColor, startAngle = 180f, sweepAngle = 180f, useCenter = true, size = Size(r*2, r*2), topLeft = Offset(cx - r, cy - r))
+                        // Horizontal band
+                        drawRect(color = bandColor, topLeft = Offset(cx - r, cy - 2f), size = Size(r * 2, 4f))
+                        // Outline circle
+                        drawCircle(color = outlineColor, radius = r, center = Offset(cx, cy), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5f))
+                        // Center button circle (outline)
+                        drawCircle(color = outlineColor, radius = r * 0.22f, center = Offset(cx, cy))
+                        drawCircle(color = bottomColor, radius = r * 0.15f, center = Offset(cx, cy))
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = label,
+                        color = if (isChosen) TextPrimary else TextSecondary,
+                        fontSize = ssp(11),
+                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(20.dp))
+        TextButton(onClick = onReroll) {
+            Text("↺  Reroll", color = TextSecondary, fontSize = ssp(13))
+        }
     }
 }
 

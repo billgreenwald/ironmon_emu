@@ -33,6 +33,9 @@ sealed class TrackerState {
         val trainerCounts: Map<Int, Pair<Int, Int>> = emptyMap(),
         // Routes the player has physically entered this run
         val visitedRoutes: Set<Int> = emptySet(),
+        // Ball picker: shown at run start in the starter lab before the player has any Pokémon
+        val showBallPicker: Boolean = false,
+        val chosenBall: Int = 0,   // 1=Left, 2=Middle, 3=Right; 0=not yet chosen
     ) : TrackerState() {
         val leadPokemon: PokemonData? get() = party.firstOrNull()
     }
