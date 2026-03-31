@@ -7,4 +7,5 @@ enum class BindableAction(val label: String, val prefKey: String) {
     TRACKER_TOGGLE("Tracker Open/Close",   "pref_bind_tracker_toggle"),
     NEXT_RUN      ("Next Run →",           "pref_bind_next_run"),
     MUTE          ("Mute Toggle",          "pref_bind_mute"),
+    TOOLS_MENU    ("Tools Menu",           "pref_bind_tools_menu"),
 }

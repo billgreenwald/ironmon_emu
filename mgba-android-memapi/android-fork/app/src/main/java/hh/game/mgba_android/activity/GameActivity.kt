@@ -913,6 +913,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                     Toast.makeText(this, if (isMute) "Sound Off" else "Sound On", Toast.LENGTH_SHORT).show()
                     handled = true
                 }
+                kc != -1 && kc == (actionBindings[BindableAction.TOOLS_MENU] ?: -1) -> {
+                    findViewById<View>(R.id.tools_btn)?.performClick(); handled = true
+                }
             }
         }
         return handled || super.dispatchKeyEvent(event)

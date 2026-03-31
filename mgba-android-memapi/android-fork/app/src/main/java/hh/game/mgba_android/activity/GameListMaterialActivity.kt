@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -62,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -739,8 +741,10 @@ fun KeyBindingsDialog(onDismiss: () -> Unit) {
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                     Divider()
+                    val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.55f).dp
                     Column(
                         modifier = Modifier
+                            .heightIn(max = maxListHeight)
                             .verticalScroll(rememberScrollState())
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
