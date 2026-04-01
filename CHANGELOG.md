@@ -8,7 +8,7 @@
 - **Version display combined** — the version label and update-available banner are now a single line. Shows "Current version: vX.X.X. Up to date." in gray, or "Current version: vX.X.X, vY.Y.Y available — tap to download" in red when an update exists.
 
 ### Fixed
-- **L button = Fast Forward now fully blocks GBA L** — the intercept previously required Fast Forward Speed ≠ Default Speed to take effect, so the GBA L button (help menu etc.) would still fire if both speeds were equal. L is now always consumed when the setting is on.
+- **L button = Fast Forward now fully blocks GBA L** — two bugs fixed: (1) the intercept was gated on Fast Forward Speed ≠ Default Speed, so GBA L still fired when speeds matched; (2) the on-screen L button called `onNativeKeyDown` directly via touch listener, bypassing the intercept entirely. Both paths now respect the setting.
 
 ## [2.2.1] - 2026-03-31
 

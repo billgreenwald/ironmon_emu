@@ -341,6 +341,16 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             constraintSet.applyTo(overlay)
         }
 
+        // Load speed preferences before addGameControler so lAsSpeed is known
+        defaultFps = EmulatorPreferences.getDefaultFps(this)
+        secondaryFps = EmulatorPreferences.getSecondaryFps(this)
+        BindableAction.entries.forEach { action ->
+            actionBindings[action] = EmulatorPreferences.getBinding(this, action)
+        }
+        reloadGbaKeyBindings()
+        lAsSpeed = EmulatorPreferences.getLAsSpeed(this)
+        speedToggleMode = EmulatorPreferences.getSpeedToggleMode(this)
+
         addGameControler()
         applyControlsStyle()
         (getSystemService(INPUT_SERVICE) as InputManager)
@@ -350,16 +360,6 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 //            Gameutils.getFPS().toString()
 //        }
         initSwappy()
-
-        // Load speed preferences — apply default FPS only after emulator core is live
-        defaultFps = EmulatorPreferences.getDefaultFps(this)
-        secondaryFps = EmulatorPreferences.getSecondaryFps(this)
-        BindableAction.entries.forEach { action ->
-            actionBindings[action] = EmulatorPreferences.getBinding(this, action)
-        }
-        reloadGbaKeyBindings()
-        lAsSpeed = EmulatorPreferences.getLAsSpeed(this)
-        speedToggleMode = EmulatorPreferences.getSpeedToggleMode(this)
         setFPS = defaultFps
         if (defaultFps != 60f) {
             lifecycleScope.launch {
@@ -976,9 +976,30 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
     private fun addGameControler() {
         // Action buttons: simple independent per-finger press/release (supports multi-touch)
-        listOf(R.id.rBtn to "R", R.id.lBtn to "L", R.id.aBtn to "A", R.id.bBtn to "B",
+        listOf(R.id.rBtn to "R", R.id.aBtn to "A", R.id.bBtn to "B",
                R.id.selectBtn to "select", R.id.startBtn to "start")
             .forEach { (id, name) -> findViewById<View>(id).setActionKeyListener(getKey(name)) }
+        // L button — either GBA L or fast-forward depending on lAsSpeed setting
+        findViewById<View>(R.id.lBtn)?.run {
+            if (lAsSpeed) {
+                setOnTouchListener { _, ev ->
+                    if (secondaryFps != defaultFps) {
+                        when (ev.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                if (speedToggleMode) { speedToggled = !speedToggled; applySpeed(speedToggled) }
+                                else applySpeed(true)
+                            }
+                            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                if (!speedToggleMode) applySpeed(false)
+                            }
+                        }
+                    }
+                    true
+                }
+            } else {
+                setActionKeyListener(getKey("L"))
+            }
+        }
 
         // D-pad: drag-across tracking (slide between directions)
         val dpadDefs = listOf(R.id.upBtn to "up", R.id.downBtn to "down",
