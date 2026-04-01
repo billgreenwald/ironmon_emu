@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.2] - 2026-04-01
+
+### Fixed
+- **Trash files no longer appear in the ROM list** — files and folders whose names start with `.trash` (case-insensitive) are now skipped during ROM folder scanning. Some phones move deleted files to a `.Trash` folder instead of removing them immediately, causing phantom entries in the family list.
+
 ## [2.3.1] - 2026-04-01
 
 ### Changed
