@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.0] - 2026-03-31
+
+### Added
+- **Game Over Condition setting** — new dropdown in Emulator Settings under the Tracker section lets you choose what triggers a run-end: "Lead Pokémon faints" (default), "Highest level faints", or "Entire party faints". Mirrors the three options in the Lua Ironmon Tracker's Game Over settings. Persisted across sessions.
+
 ## [2.2.2] - 2026-03-31
 
 ### Changed

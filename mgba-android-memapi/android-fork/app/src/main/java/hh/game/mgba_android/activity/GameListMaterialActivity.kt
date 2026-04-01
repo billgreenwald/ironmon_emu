@@ -98,6 +98,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.window.Dialog
 import hh.game.mgba_android.tracker.data.GachaMonRuleset
+import hh.game.mgba_android.tracker.data.GameOverCondition
 import hh.game.mgba_android.utils.BindableAction
 import hh.game.mgba_android.utils.EmulatorPreferences
 import hh.game.mgba_android.utils.GbaButton
@@ -522,6 +523,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     var controlsAlpha by remember { mutableStateOf(EmulatorPreferences.getControlsAlpha(context)) }
     var controlsScale by remember { mutableStateOf(EmulatorPreferences.getControlsScale(context)) }
     var selectedRuleset by remember { mutableStateOf(EmulatorPreferences.getRuleset(context)) }
+    var selectedGameOverCondition by remember { mutableStateOf(EmulatorPreferences.getGameOverCondition(context)) }
     var lAsSpeed by remember { mutableStateOf(EmulatorPreferences.getLAsSpeed(context)) }
     var speedToggleMode by remember { mutableStateOf(EmulatorPreferences.getSpeedToggleMode(context)) }
     val labelColor = Color(0xFF111111)
@@ -728,6 +730,31 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         }
                     }
                 }
+                var gameOverExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = gameOverExpanded,
+                    onExpandedChange = { gameOverExpanded = it },
+                ) {
+                    OutlinedTextField(
+                        value = selectedGameOverCondition.label,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Game Over Condition", color = labelColor) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = gameOverExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    )
+                    ExposedDropdownMenu(
+                        expanded = gameOverExpanded,
+                        onDismissRequest = { gameOverExpanded = false },
+                    ) {
+                        GameOverCondition.entries.forEach { cond ->
+                            DropdownMenuItem(
+                                text = { Text(cond.label) },
+                                onClick = { selectedGameOverCondition = cond; gameOverExpanded = false },
+                            )
+                        }
+                    }
+                }
                 // ══ DISPLAY ═══════════════════════════════════════════════════
                 SectionHeader("Display")
                 Row(
@@ -752,6 +779,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                 EmulatorPreferences.setControlsAlpha(context, controlsAlpha)
                 EmulatorPreferences.setControlsScale(context, controlsScale)
                 EmulatorPreferences.setRuleset(context, selectedRuleset)
+                EmulatorPreferences.setGameOverCondition(context, selectedGameOverCondition)
                 onDismiss()
             }) { Text("Save") }
         },

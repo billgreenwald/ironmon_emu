@@ -7,6 +7,7 @@ import hh.game.mgba_android.tracker.data.BagReader
 import hh.game.mgba_android.tracker.data.DataHelper
 import hh.game.mgba_android.tracker.data.GachaMonRating
 import hh.game.mgba_android.tracker.data.GachaMonRuleset
+import hh.game.mgba_android.tracker.data.GameOverCondition
 import hh.game.mgba_android.tracker.data.GameAddresses
 import hh.game.mgba_android.tracker.data.GameSettings
 import hh.game.mgba_android.tracker.data.LearnsetReader
@@ -309,12 +310,26 @@ object TrackerPoller {
         }
 
         // ── Game over detection ───────────────────────────────────────────────
-        // Matches Lua tracker LeadPokemonFaints condition (most common Ironmon rule):
-        // trigger when battle just ended and the lead Pokemon has 0 HP.
-        // Exclude catching tutorial battle — mirrors Lua GameOverScreen.checkForGameOver.
+        // Mirrors Lua GameOverScreen.checkForGameOver — three selectable conditions.
+        // Exclude catching tutorial battle — mirrors Lua Battle.recentBattleWasTutorial guard.
         if (wasBattleActive && !battle.isActive && !isGameOver.get() && !recentBattleWasTutorial) {
-            val lead = party.firstOrNull()
-            if (lead != null && !lead.isAlive && isGameOver.compareAndSet(false, true)) {
+            val condition = appContext?.let { EmulatorPreferences.getGameOverCondition(it) }
+                ?: GameOverCondition.LEAD_FAINTS
+            val isLost = when (condition) {
+                GameOverCondition.LEAD_FAINTS -> {
+                    val lead = party.firstOrNull()
+                    lead != null && !lead.isAlive
+                }
+                GameOverCondition.HIGHEST_LEVEL_FAINTS -> {
+                    val maxLevel = party.filter { it.level > 0 }.maxOfOrNull { it.level } ?: 0
+                    maxLevel > 0 && party.any { it.level == maxLevel && !it.isAlive }
+                }
+                GameOverCondition.ENTIRE_PARTY_FAINTS -> {
+                    val realPokemon = party.filter { it.level > 0 }
+                    realPokemon.isNotEmpty() && realPokemon.all { !it.isAlive }
+                }
+            }
+            if (isLost && isGameOver.compareAndSet(false, true)) {
                 runAttempts++
                 appContext?.let { ctx ->
                     val data = RunRepository.load(ctx, gameCode)

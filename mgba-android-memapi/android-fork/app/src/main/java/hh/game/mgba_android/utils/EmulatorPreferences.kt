@@ -2,6 +2,7 @@ package hh.game.mgba_android.utils
 
 import android.content.Context
 import hh.game.mgba_android.tracker.data.GachaMonRuleset
+import hh.game.mgba_android.tracker.data.GameOverCondition
 
 object EmulatorPreferences {
     private const val PREFS = "mGBA"
@@ -20,6 +21,7 @@ object EmulatorPreferences {
     private const val KEY_RATING_RULESET       = "pref_rating_ruleset"
     private const val KEY_L_AS_SPEED           = "pref_l_as_speed"
     private const val KEY_SPEED_TOGGLE_MODE    = "pref_speed_toggle_mode"
+    private const val KEY_GAME_OVER_CONDITION  = "pref_game_over_condition"
 
     val speedOptions = listOf(1 to 60f, 2 to 120f, 3 to 180f, 4 to 240f)
     // All mappable GBA inputs (matches getKey() string names)
@@ -86,6 +88,18 @@ object EmulatorPreferences {
 
     fun setRuleset(ctx: Context, ruleset: GachaMonRuleset) {
         ctx.getSharedPreferences(PREFS, 0).edit().putString(KEY_RATING_RULESET, ruleset.name).apply()
+    }
+
+    fun getGameOverCondition(ctx: Context): GameOverCondition {
+        val name = ctx.getSharedPreferences(PREFS, 0)
+            .getString(KEY_GAME_OVER_CONDITION, GameOverCondition.LEAD_FAINTS.name)
+        return try { GameOverCondition.valueOf(name ?: GameOverCondition.LEAD_FAINTS.name) }
+               catch (_: IllegalArgumentException) { GameOverCondition.LEAD_FAINTS }
+    }
+
+    fun setGameOverCondition(ctx: Context, cond: GameOverCondition) {
+        ctx.getSharedPreferences(PREFS, 0).edit()
+            .putString(KEY_GAME_OVER_CONDITION, cond.name).apply()
     }
 
     fun getLAsSpeed(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
