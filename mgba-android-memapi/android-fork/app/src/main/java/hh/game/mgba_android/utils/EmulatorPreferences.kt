@@ -1,6 +1,7 @@
 package hh.game.mgba_android.utils
 
 import android.content.Context
+import hh.game.mgba_android.tracker.data.GachaMonRuleset
 
 object EmulatorPreferences {
     private const val PREFS = "mGBA"
@@ -16,6 +17,7 @@ object EmulatorPreferences {
     private const val KEY_HIDE_COLLAPSE_BUTTON = "pref_hide_collapse_button"
     private const val KEY_CONTROLS_ALPHA       = "pref_controls_alpha"
     private const val KEY_CONTROLS_SCALE       = "pref_controls_scale"
+    private const val KEY_RATING_RULESET       = "pref_rating_ruleset"
 
     val speedOptions = listOf(1 to 60f, 2 to 120f, 3 to 180f, 4 to 240f)
     // All mappable GBA inputs (matches getKey() string names)
@@ -71,6 +73,17 @@ object EmulatorPreferences {
 
     fun setControlsScale(ctx: Context, value: Float) {
         ctx.getSharedPreferences(PREFS, 0).edit().putFloat(KEY_CONTROLS_SCALE, value).apply()
+    }
+
+    fun getRuleset(ctx: Context): GachaMonRuleset {
+        val name = ctx.getSharedPreferences(PREFS, 0)
+            .getString(KEY_RATING_RULESET, GachaMonRuleset.STANDARD.name)
+        return try { GachaMonRuleset.valueOf(name ?: GachaMonRuleset.STANDARD.name) }
+               catch (_: IllegalArgumentException) { GachaMonRuleset.STANDARD }
+    }
+
+    fun setRuleset(ctx: Context, ruleset: GachaMonRuleset) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putString(KEY_RATING_RULESET, ruleset.name).apply()
     }
 
     fun getGbaKeyBinding(ctx: Context, btn: GbaButton): Int {

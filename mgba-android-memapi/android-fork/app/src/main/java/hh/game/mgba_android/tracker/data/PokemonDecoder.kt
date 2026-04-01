@@ -160,6 +160,12 @@ object PokemonDecoder {
         val expGroup   = baseStats?.get(DataHelper.BASE_STATS_EXP_GROUP)?.toInt()?.and(0xFF) ?: 0
         val ability1Id = baseStats?.get(DataHelper.BASE_STATS_ABILITY1)?.toInt()?.and(0xFF) ?: 0
         val ability2Id = baseStats?.get(DataHelper.BASE_STATS_ABILITY2)?.toInt()?.and(0xFF) ?: 0
+        val baseHp     = baseStats?.get(DataHelper.BASE_STATS_HP)?.toInt()?.and(0xFF) ?: 0
+        val baseAtk    = baseStats?.get(DataHelper.BASE_STATS_ATK)?.toInt()?.and(0xFF) ?: 0
+        val baseDef    = baseStats?.get(DataHelper.BASE_STATS_DEF)?.toInt()?.and(0xFF) ?: 0
+        val baseSpa    = baseStats?.get(DataHelper.BASE_STATS_SPA)?.toInt()?.and(0xFF) ?: 0
+        val baseSpd    = baseStats?.get(DataHelper.BASE_STATS_SPD)?.toInt()?.and(0xFF) ?: 0
+        val baseSpe    = baseStats?.get(DataHelper.BASE_STATS_SPE)?.toInt()?.and(0xFF) ?: 0
 
         val gender: Gender = when {
             genderRatio == 0xFF -> Gender.NONE
@@ -218,6 +224,12 @@ object PokemonDecoder {
             evSpD            = evSpD,
             friendship       = friendship,
             hiddenPowerType  = hiddenPowerType,
+            baseHp           = baseHp,
+            baseAtk          = baseAtk,
+            baseDef          = baseDef,
+            baseSpa          = baseSpa,
+            baseSpd          = baseSpd,
+            baseSpe          = baseSpe,
         )
     }
 

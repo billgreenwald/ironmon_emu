@@ -464,6 +464,26 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
                     Spacer(Modifier.width(4.dp))
                     Text("Lv.${pokemon.level}", color = TextSecondary, fontSize = ssp(13))
                 }
+                if (pokemon.starRating > 0) {
+                    val displayStars = if (pokemon.starRating == 6) 5 else pokemon.starRating
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(0.dp),
+                    ) {
+                        repeat(displayStars) {
+                            Text("★", color = Color(0xFFFFCC00), fontSize = ssp(12))
+                        }
+                        if (pokemon.starRating == 6) {
+                            Text("+", color = Color(0xFFFFCC00), fontSize = ssp(11), fontWeight = FontWeight.Bold)
+                        } else {
+                            repeat(5 - displayStars) {
+                                Text("☆", color = TextSecondary, fontSize = ssp(12))
+                            }
+                        }
+                        Spacer(Modifier.width(4.dp))
+                        Text("(${pokemon.ratingScore})", color = TextSecondary, fontSize = ssp(10))
+                    }
+                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                     modifier = Modifier.clickable { showDefenseSheet = true },

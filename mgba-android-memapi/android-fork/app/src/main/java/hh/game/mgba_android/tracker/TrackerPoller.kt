@@ -5,6 +5,8 @@ import android.util.Log
 import hh.game.mgba_android.tracker.data.BagDetailInfo
 import hh.game.mgba_android.tracker.data.BagReader
 import hh.game.mgba_android.tracker.data.DataHelper
+import hh.game.mgba_android.tracker.data.GachaMonRating
+import hh.game.mgba_android.tracker.data.GachaMonRuleset
 import hh.game.mgba_android.tracker.data.GameAddresses
 import hh.game.mgba_android.tracker.data.GameSettings
 import hh.game.mgba_android.tracker.data.LearnsetReader
@@ -12,6 +14,7 @@ import hh.game.mgba_android.tracker.data.PokemonDecoder
 import hh.game.mgba_android.tracker.data.RouteReader
 import hh.game.mgba_android.tracker.data.StatsReader
 import hh.game.mgba_android.tracker.data.TrainerFlagReader
+import hh.game.mgba_android.utils.EmulatorPreferences
 import hh.game.mgba_android.tracker.tables.TrainerRouteTable
 import hh.game.mgba_android.tracker.models.BattleState
 import hh.game.mgba_android.tracker.models.EnemyData
@@ -215,7 +218,16 @@ object TrackerPoller {
                         MemoryBridge.readBytes(addr, DataHelper.BASE_STATS_ENTRY_SIZE)
                     },
                 )
-                if (pokemon != null) add(pokemon)
+                if (pokemon != null) {
+                    val rated = if (slot == 0) {
+                        val ruleset = appContext?.let { EmulatorPreferences.getRuleset(it) }
+                            ?: GachaMonRuleset.STANDARD
+                        val score = GachaMonRating.calculateRatingScore(pokemon, ruleset)
+                        val stars = GachaMonRating.calculateStars(score)
+                        pokemon.copy(ratingScore = score, starRating = stars)
+                    } else pokemon
+                    add(rated)
+                }
             }
         }
 

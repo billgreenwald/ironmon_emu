@@ -97,6 +97,7 @@ import androidx.compose.ui.input.key.nativeKeyCode
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.window.Dialog
+import hh.game.mgba_android.tracker.data.GachaMonRuleset
 import hh.game.mgba_android.utils.BindableAction
 import hh.game.mgba_android.utils.EmulatorPreferences
 import hh.game.mgba_android.utils.GbaButton
@@ -499,6 +500,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     var hideCollapseButton by remember { mutableStateOf(EmulatorPreferences.getHideCollapseButton(context)) }
     var controlsAlpha by remember { mutableStateOf(EmulatorPreferences.getControlsAlpha(context)) }
     var controlsScale by remember { mutableStateOf(EmulatorPreferences.getControlsScale(context)) }
+    var selectedRuleset by remember { mutableStateOf(EmulatorPreferences.getRuleset(context)) }
     val labelColor = Color(0xFF111111)
     val unselectedColor = Color(0xFF444444)
     val selectedColor = Color(0xFF4090FF)
@@ -568,6 +570,32 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                             DropdownMenuItem(
                                 text = { Text(splitLabels[i]) },
                                 onClick = { splitFraction = f; splitExpanded = false }
+                            )
+                        }
+                    }
+                }
+                // ── Rating Ruleset ────────────────────────────────────────────
+                var rulesetExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = rulesetExpanded,
+                    onExpandedChange = { rulesetExpanded = it },
+                ) {
+                    OutlinedTextField(
+                        value = selectedRuleset.label,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Rating Ruleset", color = labelColor) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = rulesetExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    )
+                    ExposedDropdownMenu(
+                        expanded = rulesetExpanded,
+                        onDismissRequest = { rulesetExpanded = false },
+                    ) {
+                        GachaMonRuleset.entries.forEach { ruleset ->
+                            DropdownMenuItem(
+                                text = { Text(ruleset.label) },
+                                onClick = { selectedRuleset = ruleset; rulesetExpanded = false },
                             )
                         }
                     }
@@ -676,6 +704,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                 )
                 EmulatorPreferences.setControlsAlpha(context, controlsAlpha)
                 EmulatorPreferences.setControlsScale(context, controlsScale)
+                EmulatorPreferences.setRuleset(context, selectedRuleset)
                 onDismiss()
             }) { Text("Save") }
         },

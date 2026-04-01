@@ -54,6 +54,7 @@ ironmon_emu/
 | Build failure | NDK version, Gradle path, Material3 version | [`build_system.md`](claude_docs/build_system.md) |
 | Wrong ability/nature name | `AbilityTable.kt` / `NatureTable.kt` | [`lookup_tables.md`](claude_docs/lookup_tables.md) |
 | Type effectiveness wrong | `TypeChart.kt` — indexed by ROM type IDs (not 0-based!) | [`lookup_tables.md`](claude_docs/lookup_tables.md) |
+| Star rating wrong / missing | `GachaMonRating.kt` + `AbilityRatingTable.kt` + `MoveRatingTable.kt`; source of truth is `GachaMonRatingSystem.json` in the Lua tracker | |
 
 ---
 
@@ -68,6 +69,7 @@ JNI: getMemoryRange(addr, len) → ByteArray
     ├── GameSettings      (ROM detection: 0x080000AC)
     ├── DataHelper        (per-game addresses)
     ├── PokemonDecoder    (XOR decrypt + 24 orderings)
+    ├── GachaMonRating    (star rating: ability + moves + stats + nature, per ruleset)
     ├── RouteReader       (gMapHeader → RouteNames)
     ├── StatsReader       (SaveBlock1 XOR decrypt → steps/battles/centers)
     ├── BagReader         (SaveBlock1 items/berries pockets)

@@ -50,6 +50,16 @@ data class PokemonData(
     val friendship: Int,
     // Hidden Power type (0–17, Gen III type ID) computed from IVs
     val hiddenPowerType: Int,
+    // Base stats from ROM (needed for GachaMon rating thresholds; 0 if unavailable)
+    val baseHp: Int = 0,
+    val baseAtk: Int = 0,
+    val baseDef: Int = 0,
+    val baseSpa: Int = 0,
+    val baseSpd: Int = 0,
+    val baseSpe: Int = 0,
+    // GachaMon star rating (computed by TrackerPoller for the lead Pokémon; 0 = not rated)
+    val ratingScore: Int = 0,
+    val starRating: Int = 0,
 ) {
     val isAlive: Boolean get() = currentHp > 0
     val hpPercent: Float get() = if (maxHp > 0) currentHp.toFloat() / maxHp else 0f

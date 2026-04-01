@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.0] - 2026-03-31
+
+### Added
+- **GachaMon star rating** — the main tracker tab now displays a ★★★★☆☆ star rating (1–5, or 5+) for the lead Pokémon, computed from the same formula used by the Lua Ironmon Tracker's GachaMon system. The score accounts for ability quality, move ratings (with STAB, accuracy, and recoil bonuses), offensive/defensive/speed base stat thresholds, and nature. The numeric score is shown alongside the stars (e.g. `★★★☆☆ (38)`).
+- **Rating Ruleset setting** — a new "Rating Ruleset" dropdown in Emulator Settings lets you choose which ruleset to evaluate against: Standard, Ultimate, Kaizo, Survival, Super Kaizo, or Subpar. Banned and adjusted moves/abilities are scored at 0 or 50% per the selected ruleset. Defaults to Standard. Persisted across sessions.
+
 ## [2.1.1] - 2026-03-31
 
 ### Added
