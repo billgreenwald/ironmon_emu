@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.1] - 2026-04-01
+
+### Changed
+- **Opponent move list is now a table** — revealed enemy moves display in the same column layout as the player's move table (category icon, type dot, move name, Pwr, Eff, Acc, PP). The Eff column shows how each enemy move hits *our* lead Pokémon (instead of the other way around). STAB moves are highlighted green using the opponent's types.
+
 ## [2.3.0] - 2026-03-31
 
 ### Added

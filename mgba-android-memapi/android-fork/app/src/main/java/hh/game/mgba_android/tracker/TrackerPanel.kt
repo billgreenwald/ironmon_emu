@@ -296,7 +296,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
                     .verticalScroll(rememberScrollState()),
             ) {
                 if (state.battle.isActive) {
-                    EnemyView(state.battle, statMarkings, state.enemyLearnset)
+                    EnemyView(state.battle, statMarkings, state.enemyLearnset, playerLead = state.leadPokemon)
                 } else {
                     StatusText("Not in battle")
                 }
@@ -782,6 +782,7 @@ private fun EnemyView(
     battle: BattleState,
     statMarkings: SnapshotStateMap<Pair<Int, String>, Int>,
     learnset: LearnsetInfo? = null,
+    playerLead: PokemonData? = null,
 ) {
     val enemy = battle.enemy
     if (enemy == null) {
@@ -881,39 +882,7 @@ private fun EnemyView(
             Spacer(Modifier.height(4.dp))
             Text("Revealed Moves:", color = TextSecondary, fontSize = ssp(13))
             Spacer(Modifier.height(2.dp))
-            enemy.revealedMoveIds.forEach { moveId ->
-                val stats = MoveStatsTable.get(moveId)
-                val moveTypeId = stats.type
-                val movePower  = stats.power
-                val moveAcc    = stats.accuracy
-                val movePp     = stats.pp
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            showMoveSheet = MoveData(
-                                moveId   = moveId,
-                                moveName = MoveNames.get(moveId),
-                                pp       = movePp,
-                                maxPp    = movePp,
-                                power    = movePower,
-                                accuracy = moveAcc,
-                                moveType = moveTypeId,
-                            )
-                        }
-                        .padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        Modifier
-                            .size(8.dp)
-                            .background(typeColor(moveTypeId), CircleShape)
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    val ppText = enemy.ppByMoveId[moveId]?.let { " (${it}PP)" } ?: ""
-                    Text(MoveNames.get(moveId) + ppText, color = TextPrimary, fontSize = ssp(14))
-                }
-            }
+            EnemyMoveTable(enemy, playerLead, onClick = { showMoveSheet = it })
         }
 
         // ── Stat markings ─────────────────────────────────────────────────────
@@ -1165,6 +1134,89 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonDat
             modifier = Modifier.width(28.dp),
         )
         // PP
+        Text(
+            text = "${move.pp}", color = TextSecondary, fontSize = ssp(13),
+            textAlign = TextAlign.Center, modifier = Modifier.width(24.dp),
+        )
+    }
+}
+
+// ── Enemy move table (mirrors MoveTable but effectiveness is vs our lead) ────
+@Composable
+private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, onClick: (MoveData) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.width(18.dp))
+        Text("Move", color = TextSecondary, fontSize = ssp(12), modifier = Modifier.weight(1f))
+        Text("Pwr", color = TextSecondary, fontSize = ssp(12), textAlign = TextAlign.Center, modifier = Modifier.width(28.dp))
+        Text("Eff", color = TextSecondary, fontSize = ssp(12), textAlign = TextAlign.Center, modifier = Modifier.width(22.dp))
+        Text("Acc", color = TextSecondary, fontSize = ssp(12), textAlign = TextAlign.Center, modifier = Modifier.width(28.dp))
+        Text("PP",  color = TextSecondary, fontSize = ssp(12), textAlign = TextAlign.Center, modifier = Modifier.width(24.dp))
+    }
+    Spacer(Modifier.height(2.dp))
+    enemy.revealedMoveIds.forEach { moveId ->
+        val stats = MoveStatsTable.get(moveId)
+        val moveData = MoveData(
+            moveId   = moveId,
+            moveName = MoveNames.get(moveId),
+            pp       = enemy.ppByMoveId[moveId] ?: stats.pp,
+            maxPp    = stats.pp,
+            power    = stats.power,
+            accuracy = stats.accuracy,
+            moveType = stats.type,
+        )
+        EnemyMoveTableRow(moveData, enemy, playerLead, onClick = { onClick(moveData) })
+    }
+}
+
+@Composable
+private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: PokemonData?, onClick: () -> Unit) {
+    val isStab = move.moveType == enemy.type1 || move.moveType == enemy.type2
+    val effectiveness = playerLead?.let {
+        TypeChart.effectiveness(move.moveType, it.type1, it.type2)
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        MoveCategoryIcon(typeId = move.moveType, power = move.power, modifier = Modifier.size(width = 14.dp, height = 14.dp))
+        Spacer(Modifier.width(4.dp))
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).background(typeColor(move.moveType), CircleShape))
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = move.moveName,
+                color = if (isStab) Color(0xFF4CAF50) else TextPrimary,
+                fontSize = ssp(13),
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Text(
+            text = MoveStatsTable.get(move.moveId).displayPower ?: if (move.power > 0) "${move.power}" else "—",
+            color = TextSecondary, fontSize = ssp(13), textAlign = TextAlign.Center,
+            modifier = Modifier.width(28.dp),
+        )
+        val (effText, effColor) = when (effectiveness) {
+            null  -> "" to TextSecondary
+            0.0f  -> "✕"  to Color(0xFF888888)
+            0.25f -> "⇊"  to Color(0xFFFF4444)
+            0.5f  -> "↓"  to Color(0xFFFF8866)
+            1.0f  -> ""   to TextSecondary
+            2.0f  -> "↑"  to Color(0xFF66CC44)
+            4.0f  -> "⇈"  to Color(0xFF00DD44)
+            else  -> ""   to TextSecondary
+        }
+        Text(
+            text = effText, color = effColor, fontSize = ssp(13), fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center, modifier = Modifier.width(22.dp),
+        )
+        Text(
+            text = if (move.accuracy > 0) "${move.accuracy}" else "—",
+            color = TextSecondary, fontSize = ssp(13), textAlign = TextAlign.Center,
+            modifier = Modifier.width(28.dp),
+        )
         Text(
             text = "${move.pp}", color = TextSecondary, fontSize = ssp(13),
             textAlign = TextAlign.Center, modifier = Modifier.width(24.dp),
