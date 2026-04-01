@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.2] - 2026-03-31
+
+### Changed
+- **Settings page reorganized** — Emulator Settings now has five labeled sections (Speed, Input, Layout, Tracker, Display) with dividers, making it easier to find settings as the list grows.
+- "Hold-Button Speed" renamed to "Fast Forward Speed" throughout.
+
 ## [2.2.1] - 2026-03-31
 
 ### Added

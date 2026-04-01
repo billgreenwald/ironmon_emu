@@ -486,6 +486,19 @@ fun FamilyRow(group: RomFamilyGroup, settingsVersion: Int = 0, onClick: () -> Un
     }
 }
 
+@Composable
+private fun SectionHeader(title: String) {
+    Divider(modifier = Modifier.padding(top = 8.dp))
+    Text(
+        text = title.uppercase(),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color(0xFF888888),
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
+    )
+}
+
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SpeedSettingsDialog(onDismiss: () -> Unit) {
@@ -501,6 +514,8 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     var controlsAlpha by remember { mutableStateOf(EmulatorPreferences.getControlsAlpha(context)) }
     var controlsScale by remember { mutableStateOf(EmulatorPreferences.getControlsScale(context)) }
     var selectedRuleset by remember { mutableStateOf(EmulatorPreferences.getRuleset(context)) }
+    var lAsSpeed by remember { mutableStateOf(EmulatorPreferences.getLAsSpeed(context)) }
+    var speedToggleMode by remember { mutableStateOf(EmulatorPreferences.getSpeedToggleMode(context)) }
     val labelColor = Color(0xFF111111)
     val unselectedColor = Color(0xFF444444)
     val selectedColor = Color(0xFF4090FF)
@@ -515,6 +530,8 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // ══ SPEED ═════════════════════════════════════════════════════
+                SectionHeader("Speed")
                 Text("Default Speed", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     EmulatorPreferences.speedOptions.forEach { (mult, fps) ->
@@ -525,7 +542,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         ) { Text("${mult}x", color = if (selected) selectedColor else unselectedColor) }
                     }
                 }
-                Text("Hold-Button Speed", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                Text("Fast Forward Speed", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     EmulatorPreferences.speedOptions.forEach { (mult, fps) ->
                         val selected = secondaryFps == fps
@@ -535,7 +552,30 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         ) { Text("${mult}x", color = if (selected) selectedColor else unselectedColor) }
                     }
                 }
-                // ── Keybindings ───────────────────────────────────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("L button = Fast Forward", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                        Text("Disables GBA L button", fontSize = 11.sp, color = Color(0xFF888888))
+                    }
+                    Switch(checked = lAsSpeed, onCheckedChange = { lAsSpeed = it })
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Fast Forward: Toggle mode", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                        Text("Press once to activate, again to stop", fontSize = 11.sp, color = Color(0xFF888888))
+                    }
+                    Switch(checked = speedToggleMode, onCheckedChange = { speedToggleMode = it })
+                }
+                // ══ INPUT ═════════════════════════════════════════════════════
+                SectionHeader("Input")
                 var showKeyBindings by remember { mutableStateOf(false) }
                 TextButton(
                     onClick = { showKeyBindings = true },
@@ -547,7 +587,8 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                 if (showKeyBindings) {
                     KeyBindingsDialog(onDismiss = { showKeyBindings = false })
                 }
-                // ── Game / Tracker split ──────────────────────────────────────
+                // ══ LAYOUT ════════════════════════════════════════════════════
+                SectionHeader("Layout")
                 val splitFractions = listOf(1.0f, 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f, 0.2f, 0.1f, 0.0f)
                 val splitLabels = listOf(
                     "100% / 0% (Game Overlay)", "90% / 10%", "80% / 20%", "70% / 30%",
@@ -574,7 +615,86 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         }
                     }
                 }
-                // ── Rating Ruleset ────────────────────────────────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("Always show on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor, modifier = Modifier.weight(1f))
+                    Switch(checked = alwaysShowControls, onCheckedChange = { alwaysShowControls = it })
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Always hide on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                        Text("For keyboard or gamepad-only users", fontSize = 11.sp, color = Color(0xFF888888))
+                    }
+                    Switch(checked = hideOnScreenControls, onCheckedChange = { hideOnScreenControls = it })
+                }
+                Text(
+                    "Controls Opacity: ${(controlsAlpha * 100).toInt()}%",
+                    fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor,
+                )
+                Slider(
+                    value = controlsAlpha,
+                    onValueChange = { controlsAlpha = it },
+                    valueRange = 0f..1f,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    "Controls Scale: ${((controlsScale - 0.5f) * 100).toInt() + 50}%",
+                    fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor,
+                )
+                Slider(
+                    value = controlsScale,
+                    onValueChange = { controlsScale = it },
+                    valueRange = 0.5f..1.5f,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                val isOverlaySplit = splitFraction == 0.0f || splitFraction == 1.0f
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        "Collapsible tracker panel",
+                        fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                        color = if (isOverlaySplit) Color(0xFFAAAAAA) else labelColor,
+                    )
+                    Switch(
+                        checked = if (isOverlaySplit) true else trackerCollapsible,
+                        onCheckedChange = { if (!isOverlaySplit) trackerCollapsible = it },
+                        enabled = !isOverlaySplit,
+                    )
+                }
+                if (trackerCollapsible || isOverlaySplit) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Hide on-screen collapse button",
+                                fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor,
+                            )
+                            Text(
+                                "Bind \"Tracker Open/Close\" in Key Bindings to collapse/expand",
+                                fontSize = 11.sp, color = Color(0xFF888888),
+                            )
+                        }
+                        Switch(
+                            checked = hideCollapseButton,
+                            onCheckedChange = { hideCollapseButton = it },
+                        )
+                    }
+                }
+                // ══ TRACKER ═══════════════════════════════════════════════════
+                SectionHeader("Tracker")
                 var rulesetExpanded by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = rulesetExpanded,
@@ -600,91 +720,8 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         }
                     }
                 }
-                // ── Always show on-screen controls ───────────────────────────
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text("Always show on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor, modifier = Modifier.weight(1f))
-                    Switch(checked = alwaysShowControls, onCheckedChange = { alwaysShowControls = it })
-                }
-                // ── Always hide on-screen controls (keyboard/gamepad users) ──
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Always hide on-screen controls", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
-                        Text("For keyboard or gamepad-only users", fontSize = 11.sp, color = Color(0xFF888888))
-                    }
-                    Switch(checked = hideOnScreenControls, onCheckedChange = { hideOnScreenControls = it })
-                }
-                // ── Collapsible tracker panel (forced on in overlay modes) ────
-                val isOverlaySplit = splitFraction == 0.0f || splitFraction == 1.0f
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        "Collapsible tracker panel",
-                        fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                        color = if (isOverlaySplit) Color(0xFFAAAAAA) else labelColor,
-                    )
-                    Switch(
-                        checked = if (isOverlaySplit) true else trackerCollapsible,
-                        onCheckedChange = { if (!isOverlaySplit) trackerCollapsible = it },
-                        enabled = !isOverlaySplit,
-                    )
-                }
-                // ── Hide on-screen collapse button (only when collapsible is on) ──
-                if (trackerCollapsible || isOverlaySplit) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Hide on-screen collapse button",
-                                fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor,
-                            )
-                            Text(
-                                "Bind \"Tracker Open/Close\" in Key Bindings to collapse/expand",
-                                fontSize = 11.sp, color = Color(0xFF888888),
-                            )
-                        }
-                        Switch(
-                            checked = hideCollapseButton,
-                            onCheckedChange = { hideCollapseButton = it },
-                        )
-                    }
-                }
-                // ── Controls Opacity ──────────────────────────────────────────
-                Text(
-                    "Controls Opacity: ${(controlsAlpha * 100).toInt()}%",
-                    fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor,
-                )
-                Slider(
-                    value = controlsAlpha,
-                    onValueChange = { controlsAlpha = it },
-                    valueRange = 0f..1f,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                // ── Controls Scale ────────────────────────────────────────────
-                Text(
-                    "Controls Scale: ${((controlsScale - 0.5f) * 100).toInt() + 50}%",
-                    fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor,
-                )
-                Slider(
-                    value = controlsScale,
-                    onValueChange = { controlsScale = it },
-                    valueRange = 0.5f..1.5f,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                // ── Show FPS ──────────────────────────────────────────────────
+                // ══ DISPLAY ═══════════════════════════════════════════════════
+                SectionHeader("Display")
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -701,6 +738,8 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     context, defaultFps, secondaryFps, "none", showFps,
                     splitFraction, alwaysShowControls, trackerCollapsible, hideCollapseButton,
                     hideOnScreenControls = hideOnScreenControls,
+                    lAsSpeed = lAsSpeed,
+                    speedToggleMode = speedToggleMode,
                 )
                 EmulatorPreferences.setControlsAlpha(context, controlsAlpha)
                 EmulatorPreferences.setControlsScale(context, controlsScale)
