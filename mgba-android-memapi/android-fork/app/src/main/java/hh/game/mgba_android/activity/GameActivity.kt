@@ -886,19 +886,20 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         var handled = false
 
-        // L-as-speed intercept — captures the L button before it reaches the GBA emulator
-        if (lAsSpeed && isLButtonEvent(event.keyCode) && secondaryFps != defaultFps) {
-            when {
-                !speedToggleMode -> when (event.action) {
-                    KeyEvent.ACTION_DOWN -> { applySpeed(true);  handled = true }
-                    KeyEvent.ACTION_UP   -> { applySpeed(false); handled = true }
+        // L-as-speed intercept — always consume L before it reaches the GBA emulator
+        if (lAsSpeed && isLButtonEvent(event.keyCode)) {
+            if (secondaryFps != defaultFps) {
+                when {
+                    !speedToggleMode -> when (event.action) {
+                        KeyEvent.ACTION_DOWN -> { applySpeed(true);  handled = true }
+                        KeyEvent.ACTION_UP   -> { applySpeed(false); handled = true }
+                    }
+                    event.action == KeyEvent.ACTION_DOWN -> {
+                        speedToggled = !speedToggled; applySpeed(speedToggled); handled = true
+                    }
                 }
-                event.action == KeyEvent.ACTION_DOWN -> {
-                    speedToggled = !speedToggled; applySpeed(speedToggled); handled = true
-                }
-                else -> handled = true  // swallow ACTION_UP in toggle mode
             }
-            return handled || super.dispatchKeyEvent(event)
+            return true  // always swallow — never send L to GBA
         }
 
         // GBA game controls — gamepad/dpad path (hardcoded, always works)

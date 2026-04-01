@@ -230,15 +230,23 @@ class GameListMaterialActivity : ComponentActivity() {
                                         onClick = {
                                             ctx2.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(latestUpdateUrl)))
                                         },
-                                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 2.dp),
-                                    ) { Text("⬆ Update available: $latestUpdateTag — tap to download", color = Color(0xFF44BB44), fontSize = 12.sp) }
+                                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                    ) {
+                                        Text(
+                                            "Current version: v$appVersionName, $latestUpdateTag available — tap to download",
+                                            color = Color(0xFFCC3333),
+                                            fontSize = 11.sp,
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = "Current version: v$appVersionName. Up to date.",
+                                        color = Color(0xFF555555),
+                                        fontSize = 11.sp,
+                                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp),
+                                    )
                                 }
-                                Text(
-                                    text = "v$appVersionName",
-                                    color = Color(0xFF555555),
-                                    fontSize = 11.sp,
-                                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp),
-                                )
                             }
                         }
                     }
