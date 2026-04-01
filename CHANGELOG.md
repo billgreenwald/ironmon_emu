@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.1] - 2026-03-31
+
+### Added
+- **Volume key binding** — volume up, volume down, and mute keys can now be captured in the Button Bindings dialog and assigned to any action (quick save, load state, fast forward, etc.). Previously these keys were silently ignored during capture.
+- **L button as Fast Forward** — new toggle in Emulator Settings ("L button = Fast Forward (disables GBA L)") that intercepts the physical L button and uses it for fast forward instead of sending it to the GBA emulator.
+- **Fast Forward toggle mode** — new toggle in Emulator Settings ("Fast Forward: Toggle (instead of Hold)") that makes the fast forward button press-once-to-activate / press-again-to-deactivate, instead of requiring the button to be held down.
+
+### Changed
+- "Fast Forward (Hold)" renamed to "Fast Forward Speed" in the Button Bindings dialog.
+
 ## [2.2.0] - 2026-03-31
 
 ### Added

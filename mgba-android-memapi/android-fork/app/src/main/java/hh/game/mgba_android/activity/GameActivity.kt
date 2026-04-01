@@ -98,6 +98,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var isMute = false
     private var defaultFps = 60f
     private var secondaryFps = 60f
+    private var lAsSpeed = false
+    private var speedToggleMode = false
+    private var speedToggled = false
     private val actionBindings = HashMap<BindableAction, Int>()
     private val gbaKeyBindings = HashMap<Int, Int>() // pressed keycode → native keycode
     // Button drag-across tracking
@@ -355,6 +358,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             actionBindings[action] = EmulatorPreferences.getBinding(this, action)
         }
         reloadGbaKeyBindings()
+        lAsSpeed = EmulatorPreferences.getLAsSpeed(this)
+        speedToggleMode = EmulatorPreferences.getSpeedToggleMode(this)
         setFPS = defaultFps
         if (defaultFps != 60f) {
             lifecycleScope.launch {
@@ -720,6 +725,18 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         }
         container.addView(showFpsCheck)
 
+        val lAsSpeedCheck = CheckBox(ctx).apply {
+            text = "L button = Fast Forward (disables GBA L)"
+            isChecked = EmulatorPreferences.getLAsSpeed(ctx)
+        }
+        container.addView(lAsSpeedCheck)
+
+        val speedToggleCheck = CheckBox(ctx).apply {
+            text = "Fast Forward: Toggle (instead of Hold)"
+            isChecked = EmulatorPreferences.getSpeedToggleMode(ctx)
+        }
+        container.addView(speedToggleCheck)
+
         val speedLabel = TextView(ctx).apply { text = "Speed Button:" }
         container.addView(speedLabel)
         val speedSpinner = Spinner(ctx)
@@ -745,7 +762,12 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                     secondaryFps = EmulatorPreferences.getSecondaryFps(ctx),
                     button = speedSpinner.selectedItem as String,
                     showFps = showFpsCheck.isChecked,
+                    lAsSpeed = lAsSpeedCheck.isChecked,
+                    speedToggleMode = speedToggleCheck.isChecked,
                 )
+                lAsSpeed = lAsSpeedCheck.isChecked
+                speedToggleMode = speedToggleCheck.isChecked
+                speedToggled = false
                 applyControlsStyle()
                 findViewById<TextView>(R.id.fps_text)?.visibility =
                     if (showFpsCheck.isChecked) View.VISIBLE else View.GONE
@@ -853,8 +875,31 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         return super.onKeyDown(keyCode, event)
     }
 
+    private fun isLButtonEvent(keyCode: Int): Boolean =
+        getKey(keyCode) == GBAKeys.GBA_KEY_L.key || gbaKeyBindings[keyCode] == GBAKeys.GBA_KEY_L.key
+
+    private fun applySpeed(fast: Boolean) {
+        val fps = if (fast) secondaryFps else defaultFps
+        setFPS = fps; Forward(fps)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         var handled = false
+
+        // L-as-speed intercept — captures the L button before it reaches the GBA emulator
+        if (lAsSpeed && isLButtonEvent(event.keyCode) && secondaryFps != defaultFps) {
+            when {
+                !speedToggleMode -> when (event.action) {
+                    KeyEvent.ACTION_DOWN -> { applySpeed(true);  handled = true }
+                    KeyEvent.ACTION_UP   -> { applySpeed(false); handled = true }
+                }
+                event.action == KeyEvent.ACTION_DOWN -> {
+                    speedToggled = !speedToggled; applySpeed(speedToggled); handled = true
+                }
+                else -> handled = true  // swallow ACTION_UP in toggle mode
+            }
+            return handled || super.dispatchKeyEvent(event)
+        }
 
         // GBA game controls — gamepad/dpad path (hardcoded, always works)
         val gbaKey = getKey(event.keyCode)
@@ -879,9 +924,15 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         // Action bindings (raw keyCode comparison)
         val speedKey = actionBindings[BindableAction.SPEED_HOLD] ?: -1
         if (speedKey != -1 && event.keyCode == speedKey && secondaryFps != defaultFps) {
-            when (event.action) {
-                KeyEvent.ACTION_DOWN -> { setFPS = secondaryFps; Forward(secondaryFps); handled = true }
-                KeyEvent.ACTION_UP   -> { setFPS = defaultFps;   Forward(defaultFps);   handled = true }
+            when {
+                !speedToggleMode -> when (event.action) {
+                    KeyEvent.ACTION_DOWN -> { applySpeed(true);  handled = true }
+                    KeyEvent.ACTION_UP   -> { applySpeed(false); handled = true }
+                }
+                event.action == KeyEvent.ACTION_DOWN -> {
+                    speedToggled = !speedToggled; applySpeed(speedToggled); handled = true
+                }
+                else -> handled = true  // swallow ACTION_UP in toggle mode
             }
         }
         if (event.action == KeyEvent.ACTION_DOWN) {

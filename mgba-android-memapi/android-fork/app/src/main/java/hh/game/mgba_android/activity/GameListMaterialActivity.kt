@@ -748,9 +748,7 @@ fun KeyBindingsDialog(onDismiss: () -> Unit) {
                         val kc = keyEvent.key.nativeKeyCode
                         when {
                             kc == KeyEvent.KEYCODE_BACK -> { capturingAction = null; capturingGba = null }
-                            kc != KeyEvent.KEYCODE_VOLUME_UP &&
-                            kc != KeyEvent.KEYCODE_VOLUME_DOWN &&
-                            kc != KeyEvent.KEYCODE_VOLUME_MUTE -> {
+                            else -> {
                                 capA?.let { bindings[it] = kc; capturingAction = null }
                                 capG?.let { gbaBindings[it] = kc; capturingGba = null }
                             }

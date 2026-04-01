@@ -18,6 +18,8 @@ object EmulatorPreferences {
     private const val KEY_CONTROLS_ALPHA       = "pref_controls_alpha"
     private const val KEY_CONTROLS_SCALE       = "pref_controls_scale"
     private const val KEY_RATING_RULESET       = "pref_rating_ruleset"
+    private const val KEY_L_AS_SPEED           = "pref_l_as_speed"
+    private const val KEY_SPEED_TOGGLE_MODE    = "pref_speed_toggle_mode"
 
     val speedOptions = listOf(1 to 60f, 2 to 120f, 3 to 180f, 4 to 240f)
     // All mappable GBA inputs (matches getKey() string names)
@@ -86,6 +88,12 @@ object EmulatorPreferences {
         ctx.getSharedPreferences(PREFS, 0).edit().putString(KEY_RATING_RULESET, ruleset.name).apply()
     }
 
+    fun getLAsSpeed(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
+        .getBoolean(KEY_L_AS_SPEED, false)
+
+    fun getSpeedToggleMode(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
+        .getBoolean(KEY_SPEED_TOGGLE_MODE, false)
+
     fun getGbaKeyBinding(ctx: Context, btn: GbaButton): Int {
         val stored = ctx.getSharedPreferences(PREFS, 0).getInt(btn.prefKey, -1)
         return if (stored == -1) btn.nativeKeyCode else stored
@@ -122,6 +130,8 @@ object EmulatorPreferences {
         trackerCollapsible: Boolean = getTrackerCollapsible(ctx),
         hideCollapseButton: Boolean = getHideCollapseButton(ctx),
         hideOnScreenControls: Boolean = getHideOnScreenControls(ctx),
+        lAsSpeed: Boolean = getLAsSpeed(ctx),
+        speedToggleMode: Boolean = getSpeedToggleMode(ctx),
     ) {
         ctx.getSharedPreferences(PREFS, 0).edit()
             .putFloat(KEY_DEFAULT_FPS, defaultFps)
@@ -133,6 +143,8 @@ object EmulatorPreferences {
             .putBoolean(KEY_TRACKER_COLLAPSIBLE, trackerCollapsible)
             .putBoolean(KEY_HIDE_COLLAPSE_BUTTON, hideCollapseButton)
             .putBoolean(KEY_HIDE_ON_SCREEN_CONTROLS, hideOnScreenControls)
+            .putBoolean(KEY_L_AS_SPEED, lAsSpeed)
+            .putBoolean(KEY_SPEED_TOGGLE_MODE, speedToggleMode)
             .apply()
     }
 }
