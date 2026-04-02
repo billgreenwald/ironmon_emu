@@ -22,6 +22,7 @@ object EmulatorPreferences {
     private const val KEY_L_AS_SPEED           = "pref_l_as_speed"
     private const val KEY_SPEED_TOGGLE_MODE    = "pref_speed_toggle_mode"
     private const val KEY_GAME_OVER_CONDITION  = "pref_game_over_condition"
+    private const val KEY_GBA_FRAME_RATE       = "pref_gba_frame_rate"
 
     val speedOptions = listOf(1 to 60f, 2 to 120f, 3 to 180f, 4 to 240f)
     // All mappable GBA inputs (matches getKey() string names)
@@ -108,6 +109,9 @@ object EmulatorPreferences {
     fun getSpeedToggleMode(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
         .getBoolean(KEY_SPEED_TOGGLE_MODE, false)
 
+    fun getGbaFrameRate(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
+        .getBoolean(KEY_GBA_FRAME_RATE, false)  // false = 60fps exact (default); true = 59.7fps GBA native
+
     fun getGbaKeyBinding(ctx: Context, btn: GbaButton): Int {
         val stored = ctx.getSharedPreferences(PREFS, 0).getInt(btn.prefKey, -1)
         return if (stored == -1) btn.nativeKeyCode else stored
@@ -146,6 +150,7 @@ object EmulatorPreferences {
         hideOnScreenControls: Boolean = getHideOnScreenControls(ctx),
         lAsSpeed: Boolean = getLAsSpeed(ctx),
         speedToggleMode: Boolean = getSpeedToggleMode(ctx),
+        gbaFrameRate: Boolean = getGbaFrameRate(ctx),
     ) {
         ctx.getSharedPreferences(PREFS, 0).edit()
             .putFloat(KEY_DEFAULT_FPS, defaultFps)
@@ -159,6 +164,7 @@ object EmulatorPreferences {
             .putBoolean(KEY_HIDE_ON_SCREEN_CONTROLS, hideOnScreenControls)
             .putBoolean(KEY_L_AS_SPEED, lAsSpeed)
             .putBoolean(KEY_SPEED_TOGGLE_MODE, speedToggleMode)
+            .putBoolean(KEY_GBA_FRAME_RATE, gbaFrameRate)
             .apply()
     }
 }

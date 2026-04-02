@@ -359,7 +359,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 //        GlobalScope.launch {
 //            Gameutils.getFPS().toString()
 //        }
-        initSwappy()
+        initSwappy(EmulatorPreferences.getGbaFrameRate(this))
         setFPS = defaultFps
         if (defaultFps != 60f) {
             lifecycleScope.launch {
@@ -1187,7 +1187,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     external fun getMemoryBlock(): ArrayList<CoreMemoryBlock>
     external fun writeMem(address: Int, value: Int)
     external fun writeMem8(address: Int, value: Int)
-    external fun initSwappy()
+    external fun initSwappy(useGbaRate: Boolean)
     external fun setShader(path: String): Boolean
     external fun getFPS(): Float
     external fun getMemoryRange(address: Int, length: Int): ByteArray?

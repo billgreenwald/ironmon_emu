@@ -708,21 +708,26 @@ extern float g_fps;
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_hh_game_mgba_1android_activity_GameActivity_initSwappy(JNIEnv *env, jobject thiz) {
+Java_hh_game_mgba_1android_activity_GameActivity_initSwappy(JNIEnv *env, jobject thiz, jboolean useGbaRate) {
     if (!SwappyGL_init(env, thiz)) {
         __android_log_print(ANDROID_LOG_WARN, "mGBA_Perf", "SwappyGL_init failed — frame pacing unavailable");
         return;
     }
-    // 16666667ns = exactly 1 frame at 60Hz. The old value (16742707ns = 59.7275fps GBA rate)
-    // is 76µs longer than one 60Hz frame — Swappy rounds UP to 2 frames = 30fps on retro
-    // handhelds with fixed 60Hz displays (Retroid Pocket, Anbernic, etc.).
-    // LTPO tearing on high-refresh phones (Pixel 7 Pro) is prevented by Surface.setFrameRate()
-    // called in surfaceCreated() — that is unchanged and unaffected by this interval.
-    SwappyGL_setSwapIntervalNS(16666667ULL);        // 60fps — fits exactly 1 frame on any 60Hz display
-    SwappyGL_setMaxAutoSwapIntervalNS(16666667ULL); // hard cap: never auto-double to 30fps
+    // useGbaRate=true: 16742707ns (59.7275fps, GBA native rate — what 2.0.3 used).
+    //   Better for some phones (e.g. Xiaomi Note 8 Pro) that lag with the exact-60fps value.
+    // useGbaRate=false: 16666667ns (exactly 60fps) — fixes 30fps lock on retro handhelds
+    //   (Retroid Pocket, Anbernic) where Swappy rounds 59.7fps up to 2 frames.
+    // LTPO tearing on high-refresh phones is handled by Surface.setFrameRate() in
+    // surfaceCreated() — unaffected by this setting.
+    uint64_t intervalNs = useGbaRate ? 16742707ULL : 16666667ULL;
+    SwappyGL_setSwapIntervalNS(intervalNs);
+    if (!useGbaRate) {
+        SwappyGL_setMaxAutoSwapIntervalNS(16666667ULL); // hard cap: never auto-double to 30fps
+    }
     SwappyGL_setAutoSwapInterval(false);
     SwappyGL_setAutoPipelineMode(true);
-    __android_log_print(ANDROID_LOG_INFO, "mGBA_Perf", "SwappyGL init OK — swapInterval=16666667ns (60fps)");
+    __android_log_print(ANDROID_LOG_INFO, "mGBA_Perf", "SwappyGL init OK — intervalNs=%llu (%s)",
+        (unsigned long long)intervalNs, useGbaRate ? "59.7fps GBA native" : "60fps exact");
 }
 
 extern "C"

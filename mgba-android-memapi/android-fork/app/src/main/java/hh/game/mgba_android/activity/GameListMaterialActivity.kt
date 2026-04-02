@@ -526,6 +526,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     var selectedGameOverCondition by remember { mutableStateOf(EmulatorPreferences.getGameOverCondition(context)) }
     var lAsSpeed by remember { mutableStateOf(EmulatorPreferences.getLAsSpeed(context)) }
     var speedToggleMode by remember { mutableStateOf(EmulatorPreferences.getSpeedToggleMode(context)) }
+    var gbaFrameRate by remember { mutableStateOf(EmulatorPreferences.getGbaFrameRate(context)) }
     val labelColor = Color(0xFF111111)
     val unselectedColor = Color(0xFF444444)
     val selectedColor = Color(0xFF4090FF)
@@ -583,6 +584,17 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         Text("Press once to activate, again to stop", fontSize = 11.sp, color = Color(0xFF888888))
                     }
                     Switch(checked = speedToggleMode, onCheckedChange = { speedToggleMode = it })
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("GBA native frame rate", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                        Text("Use 59.7fps instead of 60fps — try if you experience lag", fontSize = 11.sp, color = Color(0xFF888888))
+                    }
+                    Switch(checked = gbaFrameRate, onCheckedChange = { gbaFrameRate = it })
                 }
                 // ══ INPUT ═════════════════════════════════════════════════════
                 SectionHeader("Input")
@@ -775,6 +787,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     hideOnScreenControls = hideOnScreenControls,
                     lAsSpeed = lAsSpeed,
                     speedToggleMode = speedToggleMode,
+                    gbaFrameRate = gbaFrameRate,
                 )
                 EmulatorPreferences.setControlsAlpha(context, controlsAlpha)
                 EmulatorPreferences.setControlsScale(context, controlsScale)

@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.3] - 2026-04-02
+
+### Added
+- **GBA native frame rate toggle** — new toggle in Emulator Settings ("GBA native frame rate") under the Speed section. When enabled, uses the GBA's native 59.7fps swap interval instead of the exact 60fps value introduced in 2.0.4. Fixes lag on certain phones (e.g. Xiaomi Note 8 Pro) that were smooth on 2.0.3. Disabled by default; 60fps exact remains the default for retro handhelds.
+
 ## [2.3.2] - 2026-04-01
 
 ### Fixed
