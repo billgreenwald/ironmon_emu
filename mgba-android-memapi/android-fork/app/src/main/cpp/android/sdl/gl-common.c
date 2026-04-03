@@ -87,7 +87,12 @@ bool mSDLGLCommonInit(struct mSDLRenderer* renderer) {
 		SDL_DestroyWindow(renderer->window);
 		return false;
 	}
-	SDL_GL_SetSwapInterval(0); // Disable SDL vsync — SwappyGL manages frame pacing; SDL vsync would interfere and cause 30fps cap
+	// SDL_GL_SetSwapInterval(0) removed — leaving vsync=1 (default) so the display's hardware
+	// vsync caps frames at 60fps. With vsync=0, Swappy was the sole gatekeeper; any
+	// miscalibration on first launch caused uncapped rendering → GPU thermal throttle → lag.
+	// After bg/fg the EGL surface was recreated (resetting to vsync=1), which is why lag
+	// disappeared after backgrounding. Swappy's setAutoSwapInterval(false) prevents it from
+	// adding extra delay on top of vsync, so the two work together cleanly.
 	SDL_GetWindowSize(renderer->window, &renderer->viewportWidth, &renderer->viewportHeight);
 	renderer->player.window = renderer->window;
 	if (renderer->lockIntegerScaling) {

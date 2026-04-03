@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.5] - 2026-04-02
+
+### Fixed
+- **First-launch lag (attempt 2)** — removed `SDL_GL_SetSwapInterval(0)`, which disabled EGL vsync at startup. With vsync disabled, Swappy was the sole frame-rate gatekeeper; any miscalibration on first launch caused uncapped GPU rendering and thermal throttling. After background/foreground the EGL surface was recreated, restoring vsync=1 by default — which is why lag disappeared after backgrounding. Now vsync=1 is kept throughout, letting the display's hardware vsync cap frames at 60fps while Swappy provides fine-grained timing on top.
+
 ## [2.3.4] - 2026-04-02
 
 ### Fixed
