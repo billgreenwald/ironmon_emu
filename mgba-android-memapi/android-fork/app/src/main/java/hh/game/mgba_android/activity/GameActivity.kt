@@ -272,21 +272,31 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             RelativeLayout.LayoutParams.MATCH_PARENT,
         )
 
-        // Tell SurfaceFlinger the content rate is fixed 59.7275fps (GBA) so it locks the
-        // display to a 60Hz multiple and only swaps buffers at those boundaries — eliminates
-        // persistent tearing on LTPO displays (Pixel 7 Pro 120Hz).
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            mSurface?.holder?.addCallback(object : SurfaceHolder.Callback {
-                override fun surfaceCreated(holder: SurfaceHolder) {
+        // Tie Swappy's lifecycle to the surface lifecycle so SwappyGL_init() is called after the
+        // window is fully attached to the display. Calling it in onCreate() causes Swappy to query
+        // display timing before the window is attached, getting wrong values and causing lag on
+        // first launch that disappears after background/foreground.
+        mSurface?.holder?.addCallback(object : SurfaceHolder.Callback {
+            override fun surfaceCreated(holder: SurfaceHolder) {
+                // Tell SurfaceFlinger the content rate is fixed 59.7275fps (GBA) so it locks the
+                // display to a 60Hz multiple and only swaps buffers at those boundaries — eliminates
+                // persistent tearing on LTPO displays (Pixel 7 Pro 120Hz).
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     holder.surface.setFrameRate(
                         59.7275f,
                         Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE
                     )
                 }
-                override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
-                override fun surfaceDestroyed(holder: SurfaceHolder) {}
-            })
-        }
+                // Destroy any stale Swappy state (e.g. from a previous surface on foreground resume)
+                // then re-init with the now-valid display timing.
+                destroySwappy()
+                initSwappy(EmulatorPreferences.getGbaFrameRate(this@GameActivity))
+            }
+            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+            override fun surfaceDestroyed(holder: SurfaceHolder) {
+                destroySwappy()
+            }
+        })
 
         MemoryBridge.reader = { addr, len -> getMemoryRange(addr, len) }
         TrackerPoller.start(applicationContext, lifecycleScope)
@@ -359,7 +369,6 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 //        GlobalScope.launch {
 //            Gameutils.getFPS().toString()
 //        }
-        initSwappy(EmulatorPreferences.getGbaFrameRate(this))
         setFPS = defaultFps
         if (defaultFps != 60f) {
             lifecycleScope.launch {
@@ -1188,6 +1197,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     external fun writeMem(address: Int, value: Int)
     external fun writeMem8(address: Int, value: Int)
     external fun initSwappy(useGbaRate: Boolean)
+    external fun destroySwappy()
     external fun setShader(path: String): Boolean
     external fun getFPS(): Float
     external fun getMemoryRange(address: Int, length: Int): ByteArray?

@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.4] - 2026-04-02
+
+### Fixed
+- **First-launch lag** — Swappy (frame pacer) was initialized in `onCreate()` before the window is attached to the display, causing it to query incorrect refresh rate timing. It now initializes in `surfaceCreated()` when the window is fully ready, eliminating lag that previously required a background/foreground cycle to resolve.
+
 ## [2.3.3] - 2026-04-02
 
 ### Added

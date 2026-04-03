@@ -732,6 +732,13 @@ Java_hh_game_mgba_1android_activity_GameActivity_initSwappy(JNIEnv *env, jobject
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_hh_game_mgba_1android_activity_GameActivity_destroySwappy(JNIEnv *env, jobject thiz) {
+    SwappyGL_destroy();
+    __android_log_print(ANDROID_LOG_INFO, "mGBA_Perf", "SwappyGL destroyed");
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_hh_game_mgba_1android_activity_GameActivity_writeMem8(JNIEnv *env, jobject thiz, jint address, jint value) {
     if (!thread.core) return;
     androidrenderer.core->busWrite8(androidrenderer.core, (uint32_t)address, (uint8_t)value);
