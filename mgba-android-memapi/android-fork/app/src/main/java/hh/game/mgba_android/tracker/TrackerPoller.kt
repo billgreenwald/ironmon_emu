@@ -274,7 +274,16 @@ object TrackerPoller {
         // ── Battle ────────────────────────────────────────────────────────────
         // Capture pre-poll battle state so we can detect the active→ended transition below.
         val wasBattleActive = lastBattleActive
-        val battle = pollBattle(game, addresses)
+        val battleRaw = pollBattle(game, addresses)
+
+        // Override lead Pokémon's types with live gBattleMons types while in battle.
+        // This reflects Conversion, Conversion 2, Camouflage, and Color Change automatically.
+        val liveParty = if (battleRaw.isActive && battleRaw.playerType1 in 0..17 && party.isNotEmpty()) {
+            val lead = party[0].copy(type1 = battleRaw.playerType1, type2 = battleRaw.playerType2)
+            listOf(lead) + party.drop(1)
+        } else party
+
+        val battle = battleRaw
 
         // Reset tutorial flag at the start of each new battle (mirrors Lua Battle init reset)
         if (!wasBattleActive && battle.isActive) recentBattleWasTutorial = false
@@ -370,7 +379,7 @@ object TrackerPoller {
 
         return TrackerState.Active(
             game = game, romVersion = romVersion, romTitle = romTitle,
-            party = party, battle = battle, currentRoute = route,
+            party = liveParty, battle = battle, currentRoute = route,
             stats = stats, bagDetail = bagDetail,
             isGameOver = isGameOver.get(), runAttempts = runAttempts,
             playerLearnset = playerLearnset, enemyLearnset = enemyLearnset,
@@ -441,7 +450,6 @@ object TrackerPoller {
                     lastEnemyMoveId = currentEnemyMoveId
                 }
 
-                var type1 = 0; var type2 = 0
                 var ability1Id = 0; var ability2Id = 0
 
                 val baseStats = MemoryBridge.readBytes(
@@ -449,11 +457,17 @@ object TrackerPoller {
                     DataHelper.BASE_STATS_ENTRY_SIZE
                 )
                 if (baseStats != null) {
-                    type1     = baseStats[DataHelper.BASE_STATS_TYPE1].toInt() and 0xFF
-                    type2     = baseStats[DataHelper.BASE_STATS_TYPE2].toInt() and 0xFF
                     ability1Id = baseStats[DataHelper.BASE_STATS_ABILITY1].toInt() and 0xFF
                     ability2Id = baseStats[DataHelper.BASE_STATS_ABILITY2].toInt() and 0xFF
                 }
+
+                // Read live types from gBattleMons — the game engine updates these for
+                // Conversion, Conversion 2, Camouflage, and Color Change (ability 16).
+                // Fall back to base stats if the battle struct read failed.
+                val type1 = (enemyMon[DataHelper.BMON_TYPE1].toInt() and 0xFF)
+                    .let { if (it < 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0 }
+                val type2 = (enemyMon[DataHelper.BMON_TYPE2].toInt() and 0xFF)
+                    .let { if (it < 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: 0 }
                 val bst = BstTable.bst(speciesId)
 
                 val currentHp = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_CURRENT_HP) else 0
@@ -502,6 +516,14 @@ object TrackerPoller {
                 )
             } else null
         } else null
+
+        // ── Player live types (gBattleMons slot 0, offsets 0x21/0x22) ───────────
+        // Updated by Conversion, Conversion 2, Camouflage, Color Change, etc.
+        val playerTypeBytes = MemoryBridge.readBytes(
+            addresses.battleMons + DataHelper.BMON_TYPE1.toLong(), 2
+        )
+        val playerType1 = playerTypeBytes?.get(0)?.toInt()?.and(0xFF) ?: -1
+        val playerType2 = playerTypeBytes?.get(1)?.toInt()?.and(0xFF) ?: -1
 
         // ── Player stat stages (gBattleMons slot 0, offset 0x18, 8 bytes) ─────
         // Memory layout per Lua Battle.lua: [HP, Atk, Def, Spe, SpA, SpD, Acc, Eva]
@@ -565,6 +587,8 @@ object TrackerPoller {
             lastMoveId         = 0,
             trainerOpponentId  = trainerOpponentId,
             playerStatStages   = playerStatStages,
+            playerType1        = playerType1,
+            playerType2        = playerType2,
         )
     }
 

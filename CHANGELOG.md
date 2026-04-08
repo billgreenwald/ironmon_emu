@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.3] - 2026-04-08
+
+### Added
+- **Live battle type tracking** — the tracker now reads Pokémon types directly from the battle struct (`gBattleMons`) instead of static ROM data. This means type-changing moves and abilities automatically update the displayed types and type effectiveness in real time: Conversion (user's type → one of their move types), Conversion 2 (user's type → resists last move taken), Camouflage (user's type → terrain type), and Color Change / Kecleon (user's type → type of move just received). Both player and enemy types update. Types revert to base stats at battle end.
+
 ## [2.3.2] - 2026-04-01
 
 ### Fixed

@@ -107,6 +107,8 @@ object DataHelper {
     const val BMON_MOVE2:      Int = 0x0E
     const val BMON_MOVE3:      Int = 0x10
     const val BMON_MOVE4:      Int = 0x12
+    const val BMON_TYPE1:      Int = 0x21  // live type bytes — game engine updates these for
+    const val BMON_TYPE2:      Int = 0x22  // Conversion, Conversion 2, Camouflage, Color Change
     const val BMON_STATUS:     Int = 0x28  // status1 (approximate; used for display only)
 
     // ── Party Pokemon unencrypted status (u32 at raw[0x50]) ──────────────────

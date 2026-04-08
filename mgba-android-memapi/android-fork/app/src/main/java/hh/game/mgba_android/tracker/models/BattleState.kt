@@ -31,6 +31,8 @@ data class BattleState(
     val lastMoveId: Int,               // 0 = none
     val trainerOpponentId: Int = 0,    // gTrainerBattleOpponent_A; 0 for wild
     val playerStatStages: IntArray? = null, // [Atk,Def,SpA,SpD,Spe,Acc,Eva] 0-12; 6=neutral
+    val playerType1: Int = -1,         // live from gBattleMons slot 0; -1 = not in battle
+    val playerType2: Int = -1,         // updated by Conversion, Camouflage, etc.
 ) {
     companion object {
         val NONE = BattleState(
