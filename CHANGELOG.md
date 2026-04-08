@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.4] - 2026-04-08
+
+### Fixed
+- **Blank screen on Android 10 (API 29)** — the app showed a grey blank screen on launch on Android 10 devices. The permission check only handled Android 11+ (`MANAGE_EXTERNAL_STORAGE`) with no fallback, so the ROM list never loaded. Now correctly requests `READ_EXTERNAL_STORAGE` on Android 10 and below, then proceeds to the ROM list.
+
 ## [2.3.3] - 2026-04-08
 
 ### Added

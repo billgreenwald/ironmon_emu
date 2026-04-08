@@ -123,6 +123,11 @@ class GameListMaterialActivity : ComponentActivity() {
             checkPermission()
         }
 
+    val requestReadStoragePermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) checkPermission()
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         checkPermission()
@@ -149,6 +154,22 @@ class GameListMaterialActivity : ComponentActivity() {
                     storageHelper.openFolderPicker()
                     setupStorageFolder()
                 }
+            }
+        } else {
+            // Android 10 (API 29) and below: use READ_EXTERNAL_STORAGE
+            sharepreferences = getSharedPreferences("mGBA", Context.MODE_PRIVATE)
+            if (checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED) {
+                if (contentResolver.persistedUriPermissions.isNotEmpty()) {
+                    storageid = sharepreferences?.getString(STORAGEID, null)
+                    setupUI()
+                } else {
+                    sharepreferences?.edit()?.putString(FOLDER_PATH, null)?.apply()
+                    storageHelper.openFolderPicker()
+                    setupStorageFolder()
+                }
+            } else {
+                requestReadStoragePermission.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
             }
         }
     }
