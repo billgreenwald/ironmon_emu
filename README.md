@@ -8,6 +8,26 @@ A GBA emulator for Android with a built-in [IronMon Tracker](https://github.com/
 
 ---
 
+## Installation
+
+IronMon Emu is distributed as an APK for sideloading. It is not on the Play Store.
+
+### Steps
+
+1. **Download** the latest `ironmon_emulator.apk` from the [Latest Release](../../releases/latest) page on this GitHub repo from your phone.
+
+2. **Enable sideloading** on your device:
+   - On Android 8+: when you open the APK, Android will prompt you to allow installs from that source (your browser or Files app). Tap **Allow**.
+   - On older Android: go to **Settings → Security → Unknown sources** and enable it.
+
+3. **Open the APK** from your Files app and tap **Install**.
+
+4. **Grant storage permission** on first launch so the app can scan for ROMs.
+
+5. Tap the **folder icon** in the top bar, select the directory where your ROMs live, and you're ready to go.  ROMs can be nested within this folder if you want further filesystem organization, the app will automatically scan within.
+
+---
+
 ## Full IronMon Tracker Built In
 
 IronMon Emu replicates the full feature set of the [Ironmon-Tracker](https://github.com/besteon/Ironmon-Tracker) Lua script — live, on your Android device. Everything you would see on a second monitor or stream overlay is shown in the right-hand panel while you play.
@@ -16,7 +36,7 @@ The tracker panel has three tabs, which you can select by tapping the tab name o
 
 - **MY MON** — Your lead Pokémon's species, level, nature (with stat impact highlighted), ability, held item, base stats, moves with power/accuracy/PP, type chips, shiny/Pokérus/gender indicators, HP bar, XP progress, and a **GachaMon star rating** (see below).
 - **OPPONENT** — When a battle starts, the opponent tab automatically populates with the enemy Pokémon's species, level, type, BST, stat markings, and moves as they are revealed in the same column layout as the player's move table (category icon, type dot, move name, Pwr, Eff, Acc, PP). Wild vs. trainer battles are detected automatically.
-- **ROUTES** — Shows the current route and all Pokémon that can be encountered in it, with trainer defeat counts, so you can plan ahead without leaving the app.
+- **ROUTES** — Shows the current route and all Pokémon that have been encountered in it, with trainer defeat counts.
 
 <p align="center">
   <img src="screenshots/opponent%20view.png" alt="Opponent View" width="600"/>
@@ -40,40 +60,6 @@ In **Emulator Settings**, a **Rating Ruleset** dropdown lets you choose which ru
 
 ---
 
-## Live Battle Type Tracking
-
-During battle, the tracker reads Pokémon types directly from the live battle struct (`gBattleMons`) instead of static ROM data. This means type-changing moves and abilities automatically update the displayed types and type effectiveness in real time:
-
-- **Conversion** — user's type changes to one of their move types
-- **Conversion 2** — user's type changes to resist the last move taken
-- **Camouflage** — user's type changes to match the terrain
-- **Color Change / Kecleon** — user's type changes to the type of the move just received
-
-Both player and enemy types update live. Types revert to base stats at battle end.
-
----
-
-## Variable-Power Move Calculations in Battle
-
-Move power is computed live during battle for HP-based, weight-based, friendship-based, and weather-dependent moves. Calculated values display in gold to distinguish them from static labels:
-
-- **Flail / Reversal** — shows actual power (200/150/100/80/40/20) based on player's current HP
-- **Eruption / Water Spout** — shows computed power (1–150) based on player's current HP
-- **Low Kick** — shows weight bracket (20/40/60/80/100/120) based on enemy species weight
-- **Return / Frustration** — shows computed power when friendship is near max (≥100)
-- **Hidden Power** — shows power (30–70) computed from player's IVs
-- **Weather Ball** — shows 50 (clear) or 100 (active weather)
-
-Outside battle, all moves continue showing static labels (`>HP`, `<HP`, `WT`, `VAR`, etc.) unchanged.
-
----
-
-## Starter Ball Randomizer
-
-When a new run begins and the player is in the starter lab with no Pokémon, the tracker displays a ball picker showing Left / Middle / Right positions. One is randomly highlighted with a ▼ arrow to tell you which starter to grab. A **Reroll** button lets you re-randomize the choice. The picker dismisses automatically once you pick up your starter — mirroring the Lua tracker's ball picker feature.
-
----
-
 ## Gamepad Detection
 
 When a Bluetooth or USB gamepad is connected, the on-screen touch controls automatically hide so they don't cover the game. Disconnect the controller and they reappear instantly.
@@ -85,26 +71,37 @@ When a Bluetooth or USB gamepad is connected, the on-screen touch controls autom
 
 ---
 
-## How to set up ROMs, and the concept of ROM Families
+## How to set up ROMs
 
-When you load the app for the first time, click the folder in the top status bar to locate your ROMs.  This will open a file browser.   The folder you select is where you should store any ROMs you want the app to load; they can be nested within subdirectories if you want.  The app is designed to be used with the Bulk Generation mode of the randomizer app (either Android based, or the java one on a computer and then you manually transfer the ROMs to your computer).  Once you have a folder with a batch of ROMs in it selected, the app will autoscan and create ROM families from them for you.
-
-The home screen groups your ROMs into **families** rather than listing every file individually. A family is a set of ROMs that were batch generated together (or in later batches) with the ironmon randomizer.  Families are detected by name, and then sequenced by number (i.e. all "FireRed1" "FireRed2" ... will be grouped into a single family called "FireRed". The card shows how many ROMs are in the family and which run you were on last, and when you pick it will automatically start your last played rom.  Quickload is auto tracked per family.
+ROMs can be loaded either as single roms that get randomized each time you hit new run, or in a batch setup.  The batch setup is recommended and more stable.  You can see which setup is chosen for each ROM/ROM family on the initial selector page.  Tap and hold on a ROM/family in order to change which mode is desired.
 
 <p align="center">
   <img src="screenshots/rom%20family%20grouping.png" alt="ROM Family Grouping" width="300"/>
   <br/><em>ROM families grouped on the home screen, in this case ROMs were named "KaizoFR#"</em>
 </p>
 
-**To pick a specific ROM from a family**, long-press the family card. A list of all ROMs in that family will appear so you can choose the exact file to load.
+### Batch Setup
 
-**To add ROMs**, tap the folder icon in the top bar and point it at a directory. The app scans recursively, so you can organize your ROMs in subfolders however you like.
+When you load the app for the first time, click the folder in the top status bar to locate your ROMs.  This will open a file browser.   The folder you select is where you should store any ROMs you want the app to load; they can be nested within subdirectories if you want.  The batch setup is designed to be used with the Batch Generation mode of the randomizer app (either Android based, or the java one on a computer and then you manually transfer the ROMs to your computer).  Once you have a folder with a batch of ROMs in it selected, the app will autoscan and create ROM families from them for you.
+**To add ROMs in the future**, tap the folder icon in the top bar and point it at a directory. The app scans recursively, so you can organize your ROMs in subfolders however you like.
+
+The home screen groups your batch created ROMs into **families** rather than listing every file individually. A family is a set of ROMs that were batch generated together.  Families are detected by name, and then sequenced by number (i.e. all "FireRed1" "FireRed2" ... will be grouped into a single family called "FireRed". The card shows how many ROMs are in the family and which run you were on last, and when you pick it will automatically start your last played rom.  Quickload is auto tracked per family.
+
+**To pick a specific ROM from a family**, long-press the family card and type in the ROM number you want to be on.
+**To update your run count on a family**, long-press the family card and type in the run number you want to be on.
 
 ### UPR Mode (Re-randomize Each Run)
 
-Every family card shows a **BATCH** or **UPR** badge. In **UPR mode**, the family holds a single base ROM that gets re-randomized via [UPR-Android](https://github.com/Brogawon/UPR-Android) on every "Next Run" — no need to pre-generate hundreds of ROMs. The app binds to UPR-Android's `OverwriteService`, receives the randomized ROM, writes it back to disk, and reloads automatically.
+Every family card shows a **BATCH** or **UPR** badge. In **UPR mode**, the family holds a single base ROM that gets re-randomized via [UPR-Android](https://github.com/Brogawon/UPR-Android) on every "Next Run" — no need to pre-generate hundreds of ROMs. The app binds to UPR-Android's `OverwriteService`, receives the randomized ROM, writes it back to disk, and reloads automatically.  The ROM needs to be loaded into the randomizer to work.  This method works well for some, and is spotty for others.  Reach out on the discord to @doctrDNA if you need help.
 
-To switch a family to UPR mode, long-press its card and choose **Family Mode** in the settings dialog. If UPR-Android is not installed, the ROM list shows a "✗ Randomizer not installed" status at the bottom and the UPR option is disabled. When UPR-Android is detected, it shows "✓ Randomizer installed" in green.
+To switch a family to UPR mode, long-press its card and choose **UPR Mode** in the settings dialog. If UPR-Android is not installed, the ROM list shows a "✗ Randomizer not installed" status at the bottom and the UPR option is disabled. When UPR-Android is detected, it shows "✓ Randomizer installed" in green.
+
+<p align="center">
+  <img src="screenshots/Screenshot_20260328-173647.png" alt="ROM List with UPR and Batch families" width="300"/>
+  <img src="screenshots/Screenshot_20260328-173730.png" alt="Family Settings - Batch mode" width="300"/>
+  <img src="screenshots/Screenshot_20260328-173736.png" alt="Family Settings - UPR mode" width="300"/>
+  <br/><em>ROM list showing UPR and Batch family cards (left); Family Settings in Batch mode (center) and UPR mode (right)</em>
+</p>
 
 **Requirements for UPR mode:** UPR-Android installed, Android 8.1+ (API 27) for SharedMemory support.
 
@@ -146,6 +143,10 @@ Most elements in the tracker panel are interactive — tap them to get a detail 
 ## Emulator Settings
 
 Open **Emulator Settings** from the ROM list page or from the in-game Tools menu. Settings are organized into five sections:
+<p align="center">
+  <img src="screenshots/Screenshot_20260328-173653.png" alt="Emulator Settings" width="300"/>
+</p>
+
 
 ### Speed
 - **Fast Forward Speed** — multiplier applied when fast forward is active
@@ -155,11 +156,15 @@ Open **Emulator Settings** from the ROM list page or from the in-game Tools menu
 ### Input
 - **Button Bindings** — bind any physical controller button or keyboard key to emulator actions (Fast Forward, Save State, Load State, Tracker Open/Close, Next Run, Mute Toggle, Tools Menu) and all 10 GBA buttons (A, B, L, R, Start, Select, D-pad). Volume keys can also be captured and bound.
 
+<p align="center">
+  <img src="screenshots/Screenshot_20260328-173657.png" alt="Button Bindings" width="300"/>
+</p>
+
 ### Layout
 - **Tracker Size** — choose any 10%-increment split from 100%/0% to 0%/100% without restarting the game. Includes **Game Overlay** (game full-screen, tracker slides over) and **Tracker Overlay** (tracker full-screen, game slides under) modes. Font scale adjusts automatically.
 - **Collapsible tracker panel** — adds a ◀/▶ arrow strip to hide/show the tracker panel with a tap or swipe
 - **Hide collapse button** — removes the arrow strip; collapse/expand is then driven exclusively by the "Tracker Open/Close" key binding
-- **Always show on-screen controls** — disables auto-hide when a gamepad is detected
+- **Always show on-screen controls** — disables auto-hide when a gamepad is detected, which is useful if your phone shows no controls even when no gamepad is detected (this was an issue on Xiaomi phones and was fixed, but this setting remains as a fallback).
 - **Always hide on-screen controls** — permanently hides the padboard (for keyboard or gamepad-only users)
 - **Controls opacity** — slider (0–100%) to adjust on-screen controls transparency; default 70%
 - **Controls scale** — slider (50–150%) to resize the on-screen controls; default 100%
@@ -171,38 +176,7 @@ Open **Emulator Settings** from the ROM list page or from the in-game Tools menu
 ### Display
 - **Show FPS** — displays a live frames-per-second counter
 
-<p align="center">
-  <img src="screenshots/Screenshot_20260328-173653.png" alt="Emulator Settings" width="300"/>
-  <img src="screenshots/Screenshot_20260328-173657.png" alt="Button Bindings" width="300"/>
-  <br/><em>Emulator Settings dialog (left) and Button Bindings dialog (right)</em>
-</p>
-
-<p align="center">
-  <img src="screenshots/Screenshot_20260328-173647.png" alt="ROM List with UPR and Batch families" width="300"/>
-  <img src="screenshots/Screenshot_20260328-173730.png" alt="Family Settings - Batch mode" width="300"/>
-  <img src="screenshots/Screenshot_20260328-173736.png" alt="Family Settings - UPR mode" width="300"/>
-  <br/><em>ROM list showing UPR and Batch family cards (left); Family Settings in Batch mode (center) and UPR mode (right)</em>
-</p>
-
 ---
-
-## Installation
-
-IronMon Emu is distributed as an APK for sideloading. It is not on the Play Store.
-
-### Steps
-
-1. **Download** the latest `ironmon_emulator.apk` from the [Latest Release](../../releases/latest) page on this GitHub repo from your phone.
-
-2. **Enable sideloading** on your device:
-   - On Android 8+: when you open the APK, Android will prompt you to allow installs from that source (your browser or Files app). Tap **Allow**.
-   - On older Android: go to **Settings → Security → Unknown sources** and enable it.
-
-3. **Open the APK** from your Files app and tap **Install**.
-
-4. **Grant storage permission** on first launch so the app can scan for ROMs.
-
-5. Tap the **folder icon** in the top bar, select the directory where your ROMs live, and you're ready to go.  ROMs can be nested within this folder if you want further filesystem organization, the app will automatically scan within.
 
 ### Requirements
 
@@ -223,9 +197,8 @@ IronMon Emu is distributed as an APK for sideloading. It is not on the Play Stor
 - Will you put this in the actual play store
  - No, for the same reasons of Nintendo assets.
 - Something doesnt work
-  - Make an issue on github, and ill get to it!
+  - Make an issue on github, and ill get to it!  Or tag me on the discord @doctrDNA
 - Did you use AI to make this?
   - You betchya, its all vibe coded.  If you are against the concept of using AI in any way, you should avoid this app.
 - Can we donate in some way?
   - No.  I have some other apps that will be coming to the app store (ios and android) that you could buy so you get use out of it too, but otherwise no.
-  
