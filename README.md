@@ -3,7 +3,7 @@
 A GBA emulator for Android with a built-in [IronMon Tracker](https://github.com/besteon/Ironmon-Tracker) — no PC, no setup, no second screen required.
 
 <p align="center">
-  <img src="screenshots/top%20screenshot.png" alt="IronMon Emu" width="600"/>
+  <img src="screenshots/first_image.png" alt="IronMon Emu" width="600"/>
 </p>
 
 ---
@@ -170,6 +170,19 @@ Open **Emulator Settings** from the ROM list page or from the in-game Tools menu
 
 ### Display
 - **Show FPS** — displays a live frames-per-second counter
+
+<p align="center">
+  <img src="screenshots/Screenshot_20260328-173653.png" alt="Emulator Settings" width="300"/>
+  <img src="screenshots/Screenshot_20260328-173657.png" alt="Button Bindings" width="300"/>
+  <br/><em>Emulator Settings dialog (left) and Button Bindings dialog (right)</em>
+</p>
+
+<p align="center">
+  <img src="screenshots/Screenshot_20260328-173647.png" alt="ROM List with UPR and Batch families" width="300"/>
+  <img src="screenshots/Screenshot_20260328-173730.png" alt="Family Settings - Batch mode" width="300"/>
+  <img src="screenshots/Screenshot_20260328-173736.png" alt="Family Settings - UPR mode" width="300"/>
+  <br/><em>ROM list showing UPR and Batch family cards (left); Family Settings in Batch mode (center) and UPR mode (right)</em>
+</p>
 
 ---
 
