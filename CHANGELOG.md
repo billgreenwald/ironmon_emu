@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.5] - 2026-04-09
+
+### Fixed
+- **ROM launch crash on Android 10** — on devices running Android 10 (API 29) such as the Pocophone F1, tapping a ROM would crash with "Ironmon_emu has stopped" immediately. Root cause: `targetSdk=34` activates scoped storage, which blocks the native emulator core from opening ROM files via raw file paths even with `READ_EXTERNAL_STORAGE` granted. Fixed by adding `requestLegacyExternalStorage="true"` to the manifest, restoring full native file access on Android 10.
+
 ## [2.3.4] - 2026-04-08
 
 ### Fixed
