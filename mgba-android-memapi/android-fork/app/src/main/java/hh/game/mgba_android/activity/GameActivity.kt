@@ -245,6 +245,10 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         val gameNum = intent.getStringExtra("cheat")
         Log.d("GameActivity", "onCreate: gameNum='$gameNum', gamepath='$gamepath'")
         gameArgPath = gamepath
+        if (gamepath != null) {
+            val romFile = java.io.File(gamepath)
+            Log.d("GameActivity", "ROM check: exists=${romFile.exists()}, canRead=${romFile.canRead()}, length=${romFile.length()}")
+        }
         if (gamepath != null) QuickloadManager.register(applicationContext, gamepath)
 
         // super.onCreate() loads native libs, creates SDL surface, calls setContentView(mLayout)

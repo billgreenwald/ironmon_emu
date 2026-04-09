@@ -129,6 +129,13 @@ int runGame(char** argv){
         return 1;
     }
 
+    int _diagFd = args.fname ? open(args.fname, O_RDONLY) : -1;
+    if (_diagFd < 0) {
+        LOG_D("Cannot open ROM '%s': errno=%d (%s)\n", args.fname ? args.fname : "(null)", errno, strerror(errno));
+    } else {
+        LOG_D("ROM open OK: '%s'\n", args.fname);
+        close(_diagFd);
+    }
     androidrenderer.core = mCoreFind(args.fname);
     if (!androidrenderer.core) {
         LOG_D("Could not run game. Are you sure the file exists and is a compatible game?\n");
