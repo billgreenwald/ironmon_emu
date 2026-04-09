@@ -12,11 +12,11 @@ A GBA emulator for Android with a built-in [IronMon Tracker](https://github.com/
 
 IronMon Emu replicates the full feature set of the [Ironmon-Tracker](https://github.com/besteon/Ironmon-Tracker) Lua script — live, on your Android device. Everything you would see on a second monitor or stream overlay is shown in the right-hand panel while you play.
 
-The tracker panel has three tabs, which you can select by tapping the tab name or by swiping left/right anywhere on the tracker pannel:
+The tracker panel has three tabs, which you can select by tapping the tab name or by swiping left/right anywhere on the tracker panel:
 
-- **MY MON** — Your lead Pokémon's species, level, nature (with stat impact highlighted), ability, held item, base stats, moves with power/accuracy/PP, type chips, shiny/Pokérus/gender indicators, HP bar, and XP progress.
-- **OPPONENT** — When a battle starts, the opponent tab automatically populates with the enemy Pokémon's species, level, type, BST, stat markings, and moves as they are revealed. Wild vs. trainer battles are detected automatically.
-- **ROUTE** — Shows the current route and all Pokémon that can be encountered in it, so you can plan ahead without leaving the app.
+- **MY MON** — Your lead Pokémon's species, level, nature (with stat impact highlighted), ability, held item, base stats, moves with power/accuracy/PP, type chips, shiny/Pokérus/gender indicators, HP bar, XP progress, and a **GachaMon star rating** (see below).
+- **OPPONENT** — When a battle starts, the opponent tab automatically populates with the enemy Pokémon's species, level, type, BST, stat markings, and moves as they are revealed in the same column layout as the player's move table (category icon, type dot, move name, Pwr, Eff, Acc, PP). Wild vs. trainer battles are detected automatically.
+- **ROUTES** — Shows the current route and all Pokémon that can be encountered in it, with trainer defeat counts, so you can plan ahead without leaving the app.
 
 <p align="center">
   <img src="screenshots/opponent%20view.png" alt="Opponent View" width="600"/>
@@ -25,10 +25,52 @@ The tracker panel has three tabs, which you can select by tapping the tab name o
 
 <p align="center">
   <img src="screenshots/route%20view.png" alt="Route View" width="600"/>
-  <br/><em>Route tab showing current location and possible encounters</em>
+  <br/><em>Routes tab showing current location, trainer counts, and possible encounters</em>
 </p>
 
-The header bar always shows your current game, version, and run number. A **Next Run** button lets you start a fresh run at any time without leaving the emulator.
+The header bar always shows your current game, version, and run number. A **Next Run** button in the Tools menu starts a fresh run at any time without leaving the emulator.
+
+---
+
+## GachaMon Star Rating
+
+The main tracker tab displays a ★★★★☆ star rating (1–5 stars, or 5+) for your lead Pokémon, computed from the same formula used by the Lua Ironmon Tracker's GachaMon system. The score accounts for ability quality, move ratings (with STAB, accuracy, and recoil bonuses), offensive/defensive/speed base stat thresholds, and nature. The numeric score is shown alongside the stars (e.g. `★★★☆☆ (38)`).
+
+In **Emulator Settings**, a **Rating Ruleset** dropdown lets you choose which ruleset to evaluate against: Standard, Ultimate, Kaizo, Survival, Super Kaizo, or Subpar. Banned and adjusted moves/abilities are scored at 0 or 50% per the selected ruleset. Defaults to Standard and is persisted across sessions.
+
+---
+
+## Live Battle Type Tracking
+
+During battle, the tracker reads Pokémon types directly from the live battle struct (`gBattleMons`) instead of static ROM data. This means type-changing moves and abilities automatically update the displayed types and type effectiveness in real time:
+
+- **Conversion** — user's type changes to one of their move types
+- **Conversion 2** — user's type changes to resist the last move taken
+- **Camouflage** — user's type changes to match the terrain
+- **Color Change / Kecleon** — user's type changes to the type of the move just received
+
+Both player and enemy types update live. Types revert to base stats at battle end.
+
+---
+
+## Variable-Power Move Calculations in Battle
+
+Move power is computed live during battle for HP-based, weight-based, friendship-based, and weather-dependent moves. Calculated values display in gold to distinguish them from static labels:
+
+- **Flail / Reversal** — shows actual power (200/150/100/80/40/20) based on player's current HP
+- **Eruption / Water Spout** — shows computed power (1–150) based on player's current HP
+- **Low Kick** — shows weight bracket (20/40/60/80/100/120) based on enemy species weight
+- **Return / Frustration** — shows computed power when friendship is near max (≥100)
+- **Hidden Power** — shows power (30–70) computed from player's IVs
+- **Weather Ball** — shows 50 (clear) or 100 (active weather)
+
+Outside battle, all moves continue showing static labels (`>HP`, `<HP`, `WT`, `VAR`, etc.) unchanged.
+
+---
+
+## Starter Ball Randomizer
+
+When a new run begins and the player is in the starter lab with no Pokémon, the tracker displays a ball picker showing Left / Middle / Right positions. One is randomly highlighted with a ▼ arrow to tell you which starter to grab. A **Reroll** button lets you re-randomize the choice. The picker dismisses automatically once you pick up your starter — mirroring the Lua tracker's ball picker feature.
 
 ---
 
@@ -58,6 +100,25 @@ The home screen groups your ROMs into **families** rather than listing every fil
 
 **To add ROMs**, tap the folder icon in the top bar and point it at a directory. The app scans recursively, so you can organize your ROMs in subfolders however you like.
 
+### UPR Mode (Re-randomize Each Run)
+
+Every family card shows a **BATCH** or **UPR** badge. In **UPR mode**, the family holds a single base ROM that gets re-randomized via [UPR-Android](https://github.com/Brogawon/UPR-Android) on every "Next Run" — no need to pre-generate hundreds of ROMs. The app binds to UPR-Android's `OverwriteService`, receives the randomized ROM, writes it back to disk, and reloads automatically.
+
+To switch a family to UPR mode, long-press its card and choose **Family Mode** in the settings dialog. If UPR-Android is not installed, the ROM list shows a "✗ Randomizer not installed" status at the bottom and the UPR option is disabled. When UPR-Android is detected, it shows "✓ Randomizer installed" in green.
+
+**Requirements for UPR mode:** UPR-Android installed, Android 8.1+ (API 27) for SharedMemory support.
+
+---
+
+## Route Images
+
+For Fire Red and Leaf Green, tapping any route name that has associated images opens a full-screen tabbed gallery overlay with two tabs:
+
+- **Maps** — dungeon/building maps (Mt. Moon, Rock Tunnel, Power Plant, Rocket Hideout, Safari Zone, Seafoam Islands, Silph Co., Victory Road, Pokémon Mansion, Saffron Gym, S.S. Anne, and more)
+- **Hidden Items** — hidden item location images for 46 FRLG locations
+
+Routes with available images show a `↗` indicator in both the header and the Routes tab. Use the ◀ ▶ arrows to navigate between images.
+
 ---
 
 ## Tappable Info in the Tracker
@@ -72,11 +133,43 @@ Most elements in the tracker panel are interactive — tap them to get a detail 
 | **Moves** | List of what level each move is learned |
 | **Stats** | EVs, Friendship, and Hidden Power Type |
 | **Heals** | Full bag status, PP heal %, status heals |
+| **Route name** (FR/LG) | Full-screen map and hidden item image gallery |
+| **Wild Pokémon** in Routes tab | Detail sheet: types, BST, evolutions, abilities |
 
 <p align="center">
   <img src="screenshots/pop%20up%20info.png" alt="Pop-up Info" width="600"/>
   <br/><em>Tapping a move name shows its full detail sheet</em>
 </p>
+
+---
+
+## Emulator Settings
+
+Open **Emulator Settings** from the ROM list page or from the in-game Tools menu. Settings are organized into five sections:
+
+### Speed
+- **Fast Forward Speed** — multiplier applied when fast forward is active
+- **L button = Fast Forward** — intercepts the physical L button for fast forward instead of sending it to the GBA emulator (disables GBA L)
+- **Fast Forward: Toggle** — press once to activate / press again to deactivate, instead of holding
+
+### Input
+- **Button Bindings** — bind any physical controller button or keyboard key to emulator actions (Fast Forward, Save State, Load State, Tracker Open/Close, Next Run, Mute Toggle, Tools Menu) and all 10 GBA buttons (A, B, L, R, Start, Select, D-pad). Volume keys can also be captured and bound.
+
+### Layout
+- **Tracker Size** — choose any 10%-increment split from 100%/0% to 0%/100% without restarting the game. Includes **Game Overlay** (game full-screen, tracker slides over) and **Tracker Overlay** (tracker full-screen, game slides under) modes. Font scale adjusts automatically.
+- **Collapsible tracker panel** — adds a ◀/▶ arrow strip to hide/show the tracker panel with a tap or swipe
+- **Hide collapse button** — removes the arrow strip; collapse/expand is then driven exclusively by the "Tracker Open/Close" key binding
+- **Always show on-screen controls** — disables auto-hide when a gamepad is detected
+- **Always hide on-screen controls** — permanently hides the padboard (for keyboard or gamepad-only users)
+- **Controls opacity** — slider (0–100%) to adjust on-screen controls transparency; default 70%
+- **Controls scale** — slider (50–150%) to resize the on-screen controls; default 100%
+
+### Tracker
+- **Game Over Condition** — choose what triggers a run-end: "Lead Pokémon faints" (default), "Highest level faints", or "Entire party faints". Mirrors the Lua Ironmon Tracker's Game Over settings.
+- **Rating Ruleset** — choose which GachaMon ruleset to score against: Standard, Ultimate, Kaizo, Survival, Super Kaizo, or Subpar
+
+### Display
+- **Show FPS** — displays a live frames-per-second counter
 
 ---
 
@@ -108,6 +201,7 @@ IronMon Emu is distributed as an APK for sideloading. It is not on the Play Stor
 
 - Save states and battery saves are stored in the app's private storage and persist across updates.
 - If Android warns that the file may be harmful, this is a standard warning shown for all sideloaded APKs — tap **Install anyway**.
+- The app checks for updates on each launch. If a newer version is available, a banner appears on the ROM list page with a tap-to-download link.
 
 ## FAQ
 
