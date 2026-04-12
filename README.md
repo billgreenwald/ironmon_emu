@@ -1,6 +1,6 @@
 # IronMon Emu
 
-A GBA emulator for Android with a built-in [IronMon Tracker](https://github.com/besteon/Ironmon-Tracker) — no PC, no setup, no second screen required.
+An Android Ironmon / Kaizo emulator with a built-in [IronMon Tracker](https://github.com/besteon/Ironmon-Tracker) — no PC, no setup, no second screen required.
 
 <p align="center">
   <img src="screenshots/first_image.png" alt="IronMon Emu" width="600"/>
