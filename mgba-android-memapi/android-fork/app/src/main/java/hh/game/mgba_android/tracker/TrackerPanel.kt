@@ -92,6 +92,11 @@ private val LocalTrackerFontScale = staticCompositionLocalOf { 1f }
 private val PHYSICAL_TYPES = setOf(0, 1, 2, 3, 4, 5, 6, 7, 8)
 private val SPECIAL_TYPES  = setOf(10, 11, 12, 13, 14, 15, 16, 17)
 
+// NatDex species (IDs 412+) use PNG sprites; Gen I–III use GIF sprites.
+private fun spriteUrl(speciesId: Int) =
+    if (speciesId >= 412) "file:///android_asset/sprites/$speciesId.png"
+    else "file:///android_asset/sprites/$speciesId.gif"
+
 // ── Main entry point ─────────────────────────────────────────────────────────
 @Composable
 fun TrackerPanel(
@@ -434,7 +439,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
             verticalAlignment = Alignment.Top,
         ) {
             GlideImage(
-                imageModel = { "file:///android_asset/sprites/${pokemon.speciesId}.gif" },
+                imageModel = { spriteUrl(pokemon.speciesId) },
                 modifier = Modifier.size(48.dp),
                 failure = {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -708,7 +713,7 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
                                 ) {
                                     if (speciesId > 0) {
                                         GlideImage(
-                                            imageModel = { "file:///android_asset/sprites/$speciesId.gif" },
+                                            imageModel = { spriteUrl(speciesId) },
                                             modifier = Modifier.size(36.dp),
                                             failure = {
                                                 Box(
@@ -812,7 +817,7 @@ private fun EnemyView(
             verticalAlignment = Alignment.Top,
         ) {
             GlideImage(
-                imageModel = { "file:///android_asset/sprites/${enemy.speciesId}.gif" },
+                imageModel = { spriteUrl(enemy.speciesId) },
                 modifier = Modifier.size(48.dp),
                 failure = {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1476,7 +1481,7 @@ private fun RouteMonSheet(
             // ── Header: sprite + name + types ──────────────────────────────
             Row(verticalAlignment = Alignment.CenterVertically) {
                 GlideImage(
-                    imageModel = { "file:///android_asset/sprites/$speciesId.gif" },
+                    imageModel = { spriteUrl(speciesId) },
                     modifier = Modifier.size(56.dp),
                     failure = {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

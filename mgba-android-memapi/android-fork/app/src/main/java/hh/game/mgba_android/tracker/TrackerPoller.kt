@@ -286,7 +286,7 @@ object TrackerPoller {
 
         // Override lead Pokémon's types with live gBattleMons types while in battle.
         // This reflects Conversion, Conversion 2, Camouflage, and Color Change automatically.
-        val liveParty = if (battleRaw.isActive && battleRaw.playerType1 in 0..17 && party.isNotEmpty()) {
+        val liveParty = if (battleRaw.isActive && battleRaw.playerType1 in 0..18 && party.isNotEmpty()) {
             val lead = party[0].copy(type1 = battleRaw.playerType1, type2 = battleRaw.playerType2)
             listOf(lead) + party.drop(1)
         } else party
@@ -425,7 +425,7 @@ object TrackerPoller {
 
         val enemy: EnemyData? = if (enemyMon != null) {
             val speciesId = enemyMon.u16(DataHelper.BMON_SPECIES)
-            if (speciesId in 1..411) {
+            if (speciesId in 1..1235) {
                 // Use gBattlerPartyIndexes[2] to find the active enemy party slot (Lua: Battle.Combatants.LeftOther)
                 val activeEnemySlot: Int = if (addresses.gBattlerPartyIndexes != 0L) {
                     val idx = MemoryBridge.readU8(addresses.gBattlerPartyIndexes + 2L) ?: 0
@@ -474,9 +474,9 @@ object TrackerPoller {
                 // Conversion, Conversion 2, Camouflage, and Color Change (ability 16).
                 // Fall back to base stats if the battle struct read failed.
                 val type1 = (enemyMon[DataHelper.BMON_TYPE1].toInt() and 0xFF)
-                    .let { if (it < 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0 }
+                    .let { if (it <= 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0 }
                 val type2 = (enemyMon[DataHelper.BMON_TYPE2].toInt() and 0xFF)
-                    .let { if (it < 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: 0 }
+                    .let { if (it <= 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: 0 }
                 val bst = BstTable.bst(speciesId)
 
                 val currentHp = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_CURRENT_HP) else 0
