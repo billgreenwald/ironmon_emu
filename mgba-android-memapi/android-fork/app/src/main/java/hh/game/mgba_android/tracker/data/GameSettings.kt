@@ -42,4 +42,18 @@ object GameSettings {
         val b = reader(ROM_VERSION_BYTE_ADDR, 1) ?: return 0
         return b[0].toInt() and 0xFF
     }
+
+    // NatDex ROM hack detection (CyanSMP64/NatDexExtension)
+    // The NatDex ROM stores the total Pokémon count (1210) as a u32 at 0x08000170.
+    const val NATDEX_MON_COUNT_ADDR: Long = 0x08000170L
+    const val NATDEX_MON_COUNT: Int = 1210
+
+    fun isNatDex(reader: (Long, Int) -> ByteArray?): Boolean {
+        val b = reader(NATDEX_MON_COUNT_ADDR, 4) ?: return false
+        val count = (b[0].toInt() and 0xFF) or
+                    ((b[1].toInt() and 0xFF) shl 8) or
+                    ((b[2].toInt() and 0xFF) shl 16) or
+                    ((b[3].toInt() and 0xFF) shl 24)
+        return count == NATDEX_MON_COUNT
+    }
 }

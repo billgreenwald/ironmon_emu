@@ -46,6 +46,7 @@ object TrackerPoller {
 
     @Volatile var currentAddresses: GameAddresses? = null
         private set
+    @Volatile private var isNatDex: Boolean = false
 
     // Revealed enemy moves: key = speciesId * 1000L + level, persists across battles within a run
     private val revealedMovesByKey = mutableMapOf<Long, MutableList<Int>>()
@@ -152,6 +153,7 @@ object TrackerPoller {
         visitedRoutes.clear()
         currentWildBattleRecorded = false
         lastGameCode = ""  // force restore from disk on next game load
+        isNatDex = false
         recentBattleWasTutorial = false
         hasCompletedTutorial = false
     }
@@ -171,7 +173,13 @@ object TrackerPoller {
         val romTitle = MemoryBridge.readBytes(0x080000A0L, 12)
             ?.let { String(it, Charsets.ISO_8859_1).trimEnd('\u0000', ' ') } ?: ""
 
-        val addresses = DataHelper.addressesFor(game, romVersion, gameCode)
+        // ── NatDex detection: check once per ROM load (game code change) ─────────────────────────
+        if (gameCode != lastGameCode) {
+            isNatDex = GameSettings.isNatDex { addr, len -> MemoryBridge.readBytes(addr, len) }
+            Log.d(TAG, "isNatDex=$isNatDex for gameCode=$gameCode")
+        }
+
+        val addresses = DataHelper.addressesFor(game, romVersion, gameCode, isNatDex)
             ?: return TrackerState.NoGameLoaded
         currentAddresses = addresses
 
@@ -389,6 +397,7 @@ object TrackerPoller {
             visitedRoutes = visitedRoutes.toSet(),
             showBallPicker = showBallPicker,
             chosenBall = chosenBall.get(),
+            isNatDex = isNatDex,
         )
     }
 

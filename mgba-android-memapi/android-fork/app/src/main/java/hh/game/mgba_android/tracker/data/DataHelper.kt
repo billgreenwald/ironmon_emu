@@ -167,6 +167,26 @@ object DataHelper {
         experienceTables = 0x08253B54L,
     )
 
+    // NatDex FireRed (any version) — addresses from CyanSMP64/NatDexExtension, GS.game == 3 block
+    // ROM hack relocates gSpeciesInfo, gExperienceTables, SaveBlock pointers, and shifts some RAM structs.
+    private val FIRE_RED_NATDEX = FIRE_RED_V10.copy(
+        partyCount            = 0x0202402DL,   // GS.gPlayerPartyCount
+        partyBase             = 0x02024288L,   // GS.pstats
+        enemyParty            = 0x02024030L,   // GS.estats
+        baseStatsTable        = 0x0826A5FCL,   // GS.gBaseStats (gSpeciesInfo relocated)
+        experienceTables      = 0x0826995CL,   // GS.gExperienceTables
+        battleResults         = 0x03004BC0L,   // GS.gBattleResults
+        gMapHeader            = 0x020363BCL,   // GS.gMapHeader
+        saveBlock1Ptr         = 0x03004C38L,   // GS.gSaveBlock1ptr
+        saveBlock2Ptr         = 0x03004C3CL,   // GS.gSaveBlock2ptr
+        gameStatsOffset       = 0x1394,        // GS.gameStatsOffset
+        gameFlagsOffset       = 0x1074,        // GS.gameFlagsOffset
+        encryptionKeyOffset   = 0x400,         // GS.EncryptionKeyOffset
+        trainerBattleOpponent = 0x02037C6EL,   // GS.gTrainerBattleOpponent_A
+        sSpecialFlags         = 0x020366A0L,   // GS.sSpecialFlags
+        // battle addresses (gBattleMons, sideStatuses, etc.) unchanged from vanilla FR
+    )
+
     // FireRed non-English (Japanese uses 0x821118C, others vary)
     // Spanish=0x824FF4C, Italian=0x824D864, French=0x824EBD4, German=0x824EBD4-ish
     // For simplicity, we group by code suffix — added below in addressesFor
@@ -240,6 +260,10 @@ object DataHelper {
         levelUpLearnsets = 0x08207B70L,  // Pokemon Sapphire v1.1.json
     )
 
+    // NatDex Emerald — addresses from CyanSMP64/NatDexExtension, GS.game == 2 block
+    // Many battle/RAM structs shift by -4 bytes; ROM tables (gSpeciesInfo, gExperienceTables) relocated.
+    // partyCount/partyBase/enemyParty not overridden by extension → unchanged from vanilla.
+
     // Emerald (single version)
     // Addresses from Lua tracker: Pokemon Emerald.json
     val EMERALD = GameAddresses(
@@ -274,12 +298,35 @@ object DataHelper {
         sSpecialFlags           = 0x020375FCL,  // sSpecialFlags (Emerald): 3=catching tutorial (Lua tracker)
     )
 
+    private val EMERALD_NATDEX = EMERALD.copy(
+        baseStatsTable        = 0x08323840L,   // GS.gBaseStats (gSpeciesInfo relocated)
+        experienceTables      = 0x08322BA0L,   // GS.gExperienceTables
+        battleTypeFlags       = 0x02022FE8L,   // GS.gBattleTypeFlags (-4)
+        battleMons            = 0x02024080L,   // GS.gBattleMons (-4)
+        battlersCount         = 0x02024068L,   // GS.gBattlersCount (-4)
+        battleOutcome         = 0x02024336L,   // GS.gBattleOutcome (-4)
+        battleWeather         = 0x020243C8L,   // GS.gBattleWeather (-4)
+        gMapHeader            = 0x020369D0L,   // GS.gMapHeader
+        sSpecialFlags         = 0x02036CB4L,   // GS.sSpecialFlags
+        trainerBattleOpponent = 0x02038282L,   // GS.gTrainerBattleOpponent_A
+        gBattlerPartyIndexes  = 0x0202406AL,   // GS.gBattlerPartyIndexes (-4)
+        gameStatsOffset       = 0x1764,        // GS.gameStatsOffset
+        gameFlagsOffset       = 0x1438,        // GS.gameFlagsOffset
+        encryptionKeyOffset   = 0x170,         // GS.EncryptionKeyOffset
+        battleResults         = 0x03004C40L,   // GS.gBattleResults
+        saveBlock1Ptr         = 0x03004CBCL,   // GS.gSaveBlock1ptr
+        saveBlock2Ptr         = 0x03004CC0L,   // GS.gSaveBlock2ptr
+        // partyCount/partyBase/enemyParty/sideStatuses/sideTimers — not overridden, keep vanilla
+    )
+
     /**
      * Returns the correct addresses for [game] and [romVersion] (byte from 0x080000BC).
      * [gameCode] is the 4-char game code used to detect non-English variants.
+     * [isNatDex] selects NatDex ROM hack addresses when true (FireRed and Emerald only).
      */
-    fun addressesFor(game: GameVersion, romVersion: Int = 0, gameCode: String = ""): GameAddresses? = when (game) {
+    fun addressesFor(game: GameVersion, romVersion: Int = 0, gameCode: String = "", isNatDex: Boolean = false): GameAddresses? = when (game) {
         GameVersion.FIRE_RED -> when {
+            isNatDex -> FIRE_RED_NATDEX
             // Non-English FR use gSaveBlock2ptr = 0x03004F5C (per Lua tracker JSONs)
             gameCode == "BPRS" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824FF4CL, saveBlock2Ptr = 0x03004F5CL) // Spanish
             gameCode == "BPRI" -> FIRE_RED_V10.copy(baseStatsTable = 0x0824D864L, saveBlock2Ptr = 0x03004F5CL) // Italian
@@ -301,7 +348,7 @@ object DataHelper {
             romVersion >= 1 -> SAPPHIRE_V11
             else -> SAPPHIRE_V10
         }
-        GameVersion.EMERALD    -> EMERALD
+        GameVersion.EMERALD    -> if (isNatDex) EMERALD_NATDEX else EMERALD
         GameVersion.UNKNOWN    -> null
     }
 }

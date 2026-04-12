@@ -9,6 +9,9 @@ package hh.game.mgba_android.tracker.tables
  *  10=Fire,    11=Water,   12=Grass,   13=Electric,
  *  14=Psychic, 15=Ice,     16=Dragon,  17=Dark
  *
+ * NatDex ROM hack adds:
+ *  18=Fairy
+ *
  * Note: 14=Psychic and 15=Ice (NOT swapped). Verified against live game data.
  */
 object TypeChart {
@@ -19,10 +22,13 @@ object TypeChart {
         6  to "Bug",      7  to "Ghost",    8  to "Steel",
         10 to "Fire",     11 to "Water",    12 to "Grass",
         13 to "Electric", 14 to "Psychic",  15 to "Ice",
-        16 to "Dragon",   17 to "Dark",
+        16 to "Dragon",   17 to "Dark",     18 to "Fairy",
     )
 
     val ALL_TYPES = intArrayOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17)
+
+    // ALL_TYPES including Fairy — used for NatDex ROMs
+    val ALL_TYPES_NATDEX = intArrayOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18)
 
     fun typeName(typeId: Int): String = TYPE_NAMES[typeId] ?: "???"
 
@@ -38,17 +44,19 @@ object TypeChart {
     }
 
     /** Full defense chart: all attacker types → multiplier vs (defType1, defType2). */
-    fun defenseChart(defType1: Int, defType2: Int): Map<Int, Float> =
-        ALL_TYPES.associate { att -> att to effectiveness(att, defType1, defType2) }
+    fun defenseChart(defType1: Int, defType2: Int, isNatDex: Boolean = false): Map<Int, Float> {
+        val types = if (isNatDex) ALL_TYPES_NATDEX else ALL_TYPES
+        return types.associate { att -> att to effectiveness(att, defType1, defType2) }
+    }
 
     // TABLE[attackerType][defenderType] = multiplier  (only non-1.0 entries)
     private val TABLE: Map<Int, Map<Int, Float>> = mapOf(
         // Normal
         0 to mapOf(5 to 0.5f, 8 to 0.5f, 7 to 0.0f),
-        // Fighting — 2x vs Normal, Rock, Steel, Ice(15), Dark; 0.5x vs Flying, Poison, Bug, Psychic(14)
+        // Fighting — 2x vs Normal, Rock, Steel, Ice(15), Dark; 0.5x vs Flying, Poison, Bug, Psychic(14), Fairy(18)
         1 to mapOf(
             0 to 2.0f, 5 to 2.0f, 8 to 2.0f, 15 to 2.0f, 17 to 2.0f,
-            2 to 0.5f, 3 to 0.5f, 6 to 0.5f, 14 to 0.5f,
+            2 to 0.5f, 3 to 0.5f, 6 to 0.5f, 14 to 0.5f, 18 to 0.5f,
             7 to 0.0f,
         ),
         // Flying
@@ -56,9 +64,9 @@ object TypeChart {
             1 to 2.0f, 6 to 2.0f, 12 to 2.0f,
             5 to 0.5f, 8 to 0.5f, 13 to 0.5f,
         ),
-        // Poison
+        // Poison — 2x vs Grass, Fairy(18)
         3 to mapOf(
-            12 to 2.0f,
+            12 to 2.0f, 18 to 2.0f,
             3 to 0.5f, 4 to 0.5f, 5 to 0.5f, 7 to 0.5f,
             8 to 0.0f,
         ),
@@ -73,10 +81,10 @@ object TypeChart {
             2 to 2.0f, 6 to 2.0f, 10 to 2.0f, 15 to 2.0f,
             1 to 0.5f, 4 to 0.5f, 8 to 0.5f,
         ),
-        // Bug — 2x vs Grass, Psychic(14), Dark
+        // Bug — 2x vs Grass, Psychic(14), Dark; 0.5x vs Fairy(18)
         6 to mapOf(
             12 to 2.0f, 14 to 2.0f, 17 to 2.0f,
-            1 to 0.5f, 2 to 0.5f, 7 to 0.5f, 8 to 0.5f, 10 to 0.5f,
+            1 to 0.5f, 2 to 0.5f, 7 to 0.5f, 8 to 0.5f, 10 to 0.5f, 18 to 0.5f,
         ),
         // Ghost — 2x vs Ghost, Psychic(14)
         7 to mapOf(
@@ -84,9 +92,9 @@ object TypeChart {
             17 to 0.5f, 8 to 0.5f,
             0 to 0.0f,
         ),
-        // Steel — 2x vs Ice(15), Rock
+        // Steel — 2x vs Ice(15), Rock, Fairy(18)
         8 to mapOf(
-            15 to 2.0f, 5 to 2.0f,
+            15 to 2.0f, 5 to 2.0f, 18 to 2.0f,
             8 to 0.5f, 10 to 0.5f, 11 to 0.5f, 13 to 0.5f,
         ),
         // Fire — 2x vs Bug, Steel, Grass, Ice(15)
@@ -126,11 +134,20 @@ object TypeChart {
         16 to mapOf(
             16 to 2.0f,
             8 to 0.5f,
+            18 to 0.0f,  // Fairy is immune to Dragon (NatDex)
         ),
         // Dark — 2x vs Ghost, Psychic(14)
         17 to mapOf(
             7 to 2.0f, 14 to 2.0f,
             1 to 0.5f, 17 to 0.5f,
+            18 to 0.5f,  // Fairy resists Dark (NatDex)
+        ),
+        // Fairy (NatDex, type ID 18) — 2x vs Fighting(1), Dragon(16), Dark(17)
+        // 0.5x vs Fire(10), Poison(3), Steel(8); no immunities
+        // Fairy defending: weak to Poison(3), Steel(8); resists Fighting(1), Bug(6), Dark(17); immune to Dragon(16)
+        18 to mapOf(
+            1 to 2.0f, 16 to 2.0f, 17 to 2.0f,
+            10 to 0.5f, 3 to 0.5f, 8 to 0.5f,
         ),
     )
 }
