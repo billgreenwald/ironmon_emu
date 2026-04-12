@@ -481,7 +481,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                 if (target > 60f && actual < target * 0.8f) {
                     Log.w("mGBA_Perf", "FPS below target: actual=%.1f target=%.1f stalls=%d".format(actual, target, getStallCount()))
                 }
-                if (Build.VERSION.SDK_INT >= 29) {
+                if (Build.VERSION.SDK_INT >= 30) {
                     val pm = getSystemService(PowerManager::class.java)
                     val headroom = pm.getThermalHeadroom(1)
                     if (headroom < 0.5f) {
