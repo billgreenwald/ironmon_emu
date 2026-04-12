@@ -1,4 +1,4 @@
-# IronMon Emu
+# IronMon Emu — Ironmon Tracker for Android
 
 A GBA emulator for Android with a built-in [IronMon Tracker](https://github.com/besteon/Ironmon-Tracker) — no PC, no setup, no second screen required.
 
