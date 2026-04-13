@@ -1,5 +1,16 @@
 package hh.game.mgba_android.tracker.models
 
+/**
+ * A single tracked move entry — mirrors Lua Tracker.TrackMove's { id, level, minLv, maxLv }.
+ * [level] is the last-seen level (Lua: move.level, updated each sighting).
+ */
+data class TrackedMove(
+    val id: Int,
+    var level: Int,   // last-seen level
+    var minLv: Int,
+    var maxLv: Int,
+)
+
 data class EnemyData(
     val speciesId: Int,
     val name: String,
@@ -9,11 +20,16 @@ data class EnemyData(
     val ability1Id: Int,
     val ability2Id: Int,
     val bst: Int,                            // Base Stat Total from BstTable (static lookup)
-    val revealedMoveIds: List<Int>,          // move IDs seen so far in battle
+    val revealedMoveIds: List<Int>,          // display list: fourConfirmedThisBattle IDs, or top-4 from persistent
     val ppByMoveId: Map<Int, Int> = emptyMap(), // moveId → current PP (from enemy party struct)
     val status: Int,                         // status condition byte (0=none)
     val currentHp: Int,
     val maxHp: Int,
+    // ── Lua parity: Tracker.TrackMove + Tracker.BattleNotes ──────────────────
+    val totalTrackedMoveCount: Int = 0,           // full persistent list size; >4 triggers * on header
+    val fourConfirmedThisBattle: List<Int>? = null, // non-null when all 4 seen in current battle (Lua BattleNotes.FourMovesIfAllKnown)
+    val moveStaleFlags: List<Boolean> = emptyList(), // per display slot: true = may have been replaced (Lua calculateMoveStars)
+    val allTrackedMoves: List<TrackedMove> = emptyList(), // full persistent list for history sheet
 ) {
     val hpPercent: Float get() = if (maxHp > 0) currentHp.toFloat() / maxHp else 0f
 }

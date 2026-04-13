@@ -876,13 +876,26 @@ private fun EnemyView(
         }
 
         // Revealed moves
+        var showMoveHistorySheet by remember { mutableStateOf(false) }
         if (enemy.revealedMoveIds.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
             Divider(color = Color(0xFF303050), thickness = 0.5.dp)
             Spacer(Modifier.height(4.dp))
-            Text("Revealed Moves:", color = TextSecondary, fontSize = ssp(13))
+            // Header: tappable when history exists (>4 tracked), shows * to signal hidden entries
+            val movesLabel = if (enemy.totalTrackedMoveCount > 4)
+                "Revealed Moves* (${enemy.totalTrackedMoveCount})" else "Revealed Moves:"
+            Text(
+                text = movesLabel,
+                color = if (enemy.totalTrackedMoveCount > 4) Color(0xFFFFD54F) else TextSecondary,
+                fontSize = ssp(13),
+                modifier = if (enemy.totalTrackedMoveCount > 4)
+                    Modifier.clickable { showMoveHistorySheet = true } else Modifier,
+            )
             Spacer(Modifier.height(2.dp))
             EnemyMoveTable(enemy, playerLead, onClick = { showMoveSheet = it })
+        }
+        if (showMoveHistorySheet) {
+            MoveHistorySheet(enemy, onDismiss = { showMoveHistorySheet = false })
         }
 
         // ── Stat markings ─────────────────────────────────────────────────────
@@ -1142,6 +1155,8 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonDat
 }
 
 // ── Enemy move table (mirrors MoveTable but effectiveness is vs our lead) ────
+// Prefers fourConfirmedThisBattle (usage-ordered) over persistent revealedMoveIds list,
+// matching Lua Tracker.getMoves(pokemonID, level) → BattleNotes.FourMovesIfAllKnown check.
 @Composable
 private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, onClick: (MoveData) -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1153,11 +1168,16 @@ private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, onClick: 
         Text("PP",  color = TextSecondary, fontSize = ssp(12), textAlign = TextAlign.Center, modifier = Modifier.width(24.dp))
     }
     Spacer(Modifier.height(2.dp))
-    enemy.revealedMoveIds.forEach { moveId ->
+    // Use confirmed battle set (usage order) if all 4 known this battle; else persistent display list
+    val displayIds = enemy.fourConfirmedThisBattle ?: enemy.revealedMoveIds
+    displayIds.forEachIndexed { idx, moveId ->
         val stats = MoveStatsTable.get(moveId)
+        val isStale = enemy.fourConfirmedThisBattle == null
+            && idx < enemy.moveStaleFlags.size && enemy.moveStaleFlags[idx]
+        val displayName = if (isStale) MoveNames.get(moveId) + "*" else MoveNames.get(moveId)
         val moveData = MoveData(
             moveId   = moveId,
-            moveName = MoveNames.get(moveId),
+            moveName = displayName,
             pp       = enemy.ppByMoveId[moveId] ?: stats.pp,
             maxPp    = stats.pp,
             power    = stats.power,
@@ -1221,6 +1241,71 @@ private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: Poke
             text = "${move.pp}", color = TextSecondary, fontSize = ssp(13),
             textAlign = TextAlign.Center, modifier = Modifier.width(24.dp),
         )
+    }
+}
+
+// ── Move history sheet (Lua MoveHistoryScreen) ────────────────────────────────
+// Shows all tracked moves for this species, sorted by minLv descending.
+// Tappable header "Revealed Moves* (N)" opens this when totalTrackedMoveCount > 4.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MoveHistorySheet(enemy: EnemyData, onDismiss: () -> Unit) {
+    var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
+    val sorted = remember(enemy.allTrackedMoves) {
+        enemy.allTrackedMoves.sortedByDescending { it.minLv }
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = "${enemy.name} — All Tracked Moves (${enemy.allTrackedMoves.size})",
+                color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(4.dp))
+            // Column headers
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Move", color = TextSecondary, fontSize = ssp(12), modifier = Modifier.weight(1f))
+                Text("Min Lv", color = TextSecondary, fontSize = ssp(12),
+                    textAlign = TextAlign.Center, modifier = Modifier.width(46.dp))
+                Text("Max Lv", color = TextSecondary, fontSize = ssp(12),
+                    textAlign = TextAlign.Center, modifier = Modifier.width(46.dp))
+            }
+            Divider(color = Color(0xFF303050), thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+            sorted.forEach { tracked ->
+                val stats = MoveStatsTable.get(tracked.id)
+                val moveData = MoveData(
+                    moveId   = tracked.id,
+                    moveName = MoveNames.get(tracked.id),
+                    pp       = stats.pp,
+                    maxPp    = stats.pp,
+                    power    = stats.power,
+                    accuracy = stats.accuracy,
+                    moveType = stats.type,
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showMoveSheet = moveData }
+                        .padding(vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(8.dp).background(typeColor(stats.type), CircleShape))
+                    Spacer(Modifier.width(4.dp))
+                    Text(MoveNames.get(tracked.id), color = TextPrimary,
+                        fontSize = ssp(13), modifier = Modifier.weight(1f))
+                    Text("${tracked.minLv}", color = TextSecondary, fontSize = ssp(13),
+                        textAlign = TextAlign.Center, modifier = Modifier.width(46.dp))
+                    Text("${tracked.maxLv}", color = TextSecondary, fontSize = ssp(13),
+                        textAlign = TextAlign.Center, modifier = Modifier.width(46.dp))
+                }
+            }
+        }
+    }
+    showMoveSheet?.let { move ->
+        MoveDetailSheet(move, onDismiss = { showMoveSheet = null })
     }
 }
 
