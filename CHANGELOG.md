@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.1] - 2026-04-13
+
+### Fixed
+- **Thermal throttle crash on Android 11+** — reading thermal headroom was gated on API 29+ but the API requires 30+, causing a crash on some devices during heavy emulation. Now correctly guarded behind API 30.
+
 ## [2.4.0] - 2026-04-13
 
 ### Added
