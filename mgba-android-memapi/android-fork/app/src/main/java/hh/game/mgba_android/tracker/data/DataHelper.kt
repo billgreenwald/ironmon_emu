@@ -174,6 +174,7 @@ object DataHelper {
         partyBase             = 0x02024288L,   // GS.pstats
         enemyParty            = 0x02024030L,   // GS.estats
         baseStatsTable        = 0x0826A5FCL,   // GS.gBaseStats (gSpeciesInfo relocated)
+        levelUpLearnsets      = 0x0829050CL,   // gLevelUpLearnsets relocated by NatDex hack
         experienceTables      = 0x0826995CL,   // GS.gExperienceTables
         battleResults         = 0x03004BC0L,   // GS.gBattleResults
         gMapHeader            = 0x020363BCL,   // GS.gMapHeader
@@ -300,6 +301,7 @@ object DataHelper {
 
     private val EMERALD_NATDEX = EMERALD.copy(
         baseStatsTable        = 0x08323840L,   // GS.gBaseStats (gSpeciesInfo relocated)
+        levelUpLearnsets      = 0x08349750L,   // gLevelUpLearnsets relocated by NatDex hack
         experienceTables      = 0x08322BA0L,   // GS.gExperienceTables
         battleTypeFlags       = 0x02022FE8L,   // GS.gBattleTypeFlags (-4)
         battleMons            = 0x02024080L,   // GS.gBattleMons (-4)

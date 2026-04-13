@@ -305,7 +305,7 @@ object TrackerPoller {
         if (battle.isActive && battle.isWild && !currentWildBattleRecorded && !isFirstBattleFrame) {
             val encounterMapId = route?.mapLayoutId
             val sid = battle.enemy?.speciesId
-            if (encounterMapId != null && sid != null && sid in 1..411) {
+            if (encounterMapId != null && sid != null && sid in 1..1235) {
                 currentWildBattleRecorded = true
                 if (encounterMapId !in routeVisitOrder) routeVisitOrder.add(encounterMapId)
                 val list = encountersByRoute.getOrPut(encounterMapId) { mutableListOf() }
