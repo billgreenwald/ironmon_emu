@@ -41,6 +41,10 @@ data class GameAddresses(
     val gBattlerPartyIndexes: Long = 0L,
     // sSpecialFlags: u8; value 3 = catching tutorial active (Lua: Program.updateCatchingTutorial)
     val sSpecialFlags: Long = 0L,
+    // Move validation — Lua Battle.lua gHitMarker / gMoveResultFlags / gBattleCommunication
+    val gHitMarker: Long = 0L,
+    val gMoveResultFlags: Long = 0L,
+    val gBattleCommunication: Long = 0L,
 )
 
 object DataHelper {
@@ -118,6 +122,12 @@ object DataHelper {
     // ── gBattleResults offsets (from Lua tracker Program.Addresses) ──────────
     const val BATTLE_RESULTS_ENEMY_MOVE_OFFSET: Int = 0x24  // offsetBattleResultsEnemyMoveId
 
+    // ── Move validation flags (Lua Program.Addresses) ────────────────────────
+    // gHitMarker bit 19: HITMARKER_UNABLE_TO_USE_MOVE (paralysis, Truant, etc.)
+    const val HITMARKER_UNABLE_TO_USE: Long = 0x80000L  // Lua: hitmarkerFlag80000
+    // gMoveResultFlags combined mask: bits 0,3,5 = missed/no effect/failed
+    const val MOVE_RESULT_NO_EFFECT: Int = 0x29         // Lua: moveResultsFlag29
+
     // ── Map header offset ────────────────────────────────────────────────────
     const val MAP_HEADER_LAYOUT_ID_OFFSET: Int = 0x12  // u16 mapLayoutId
 
@@ -158,6 +168,9 @@ object DataHelper {
         trainerBattleOpponent   = 0x020386AEL,  // gTrainerBattleOpponent_A (English FR/LG)
         gBattlerPartyIndexes    = 0x02023BCEL,  // gBattlerPartyIndexes (English FR/LG all versions)
         sSpecialFlags           = 0x020370E0L,  // sSpecialFlags (FR/LG): 3=catching tutorial (Lua tracker)
+        gHitMarker              = 0x02023DD0L,  // gHitMarker (FR/LG all variants)
+        gMoveResultFlags        = 0x02023DCCL,  // gMoveResultFlags (FR/LG all variants)
+        gBattleCommunication    = 0x02023E82L,  // gBattleCommunication (FR/LG all variants)
     )
 
     // FireRed English v1.1 (BPRE, version byte 1)
@@ -240,6 +253,9 @@ object DataHelper {
         trainerBattleOpponent   = 0x0202FF5EL,  // gTrainerBattleOpponent_A
         gBattlerPartyIndexes    = 0x02024A6AL,  // gBattlerPartyIndexes (Ruby/Sapphire all versions)
         sSpecialFlags           = 0x0202E8E2L,  // sSpecialFlags (Ruby/Sapphire): 3=catching tutorial (Lua tracker)
+        gHitMarker              = 0x02024C6CL,  // gHitMarker (Ruby/Sapphire all variants)
+        gMoveResultFlags        = 0x02024C68L,  // gMoveResultFlags (Ruby/Sapphire all variants)
+        gBattleCommunication    = 0x02024D1EL,  // gBattleCommunication (Ruby/Sapphire all variants)
     )
 
     // Ruby v1.1 / v1.2
@@ -297,6 +313,9 @@ object DataHelper {
         trainerBattleOpponent   = 0x02038BCAL,  // gTrainerBattleOpponent_A from Emerald.json
         gBattlerPartyIndexes    = 0x0202406EL,  // gBattlerPartyIndexes from Emerald.json
         sSpecialFlags           = 0x020375FCL,  // sSpecialFlags (Emerald): 3=catching tutorial (Lua tracker)
+        gHitMarker              = 0x02024280L,  // gHitMarker from Emerald.json
+        gMoveResultFlags        = 0x0202427CL,  // gMoveResultFlags from Emerald.json
+        gBattleCommunication    = 0x02024332L,  // gBattleCommunication from Emerald.json
     )
 
     private val EMERALD_NATDEX = EMERALD.copy(

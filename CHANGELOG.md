@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.4.1] - 2026-04-13
+
+### Fixed
+- **Thermal throttle crash on Android 11+** — reading thermal headroom was gated on API 29+ but the API requires 30+, causing a crash on some devices during heavy emulation. Now correctly guarded behind API 30.
+
+## [2.4.0] - 2026-04-13
+
+### Added
+- **Move history sheet** — tapping the "Revealed Moves* (N)" header on the opponent tab opens a full history sheet listing every move ever seen from that species across all encounters, sorted by first-seen level, with min and max level columns. Each move is tappable for the full move detail sheet.
+
+### Improved
+- **Enemy move tracking now matches Lua tracker parity** — the move store is now keyed by species only (not species+level), so moves seen at level 20 persist when you encounter the same species at level 25. Mirrors the Lua tracker's `Tracker.TrackMove` persistent list.
+- **Move ordering** — new moves are inserted at the front of the display list; re-seen moves that have slipped past the display window are bubbled back to the front, matching Lua's display window logic.
+- **All-four-confirmed display** — when all 4 moves are seen in a single battle, they switch to usage order for the rest of that battle (Lua `BattleNotes.FourMovesIfAllKnown`). Reverts to persistent list at battle end.
+- **Staleness indicators** — moves that may have been replaced since last seen are marked with `*` (Lua `calculateMoveStars` logic). The header shows `*` and a total count when more than 4 moves are tracked for a species.
+- **Move validation** — moves are only recorded if they were in the enemy's starting moveset (guards against Sketch / Mimic recording incorrect moves).
+
 ## [2.3.5] - 2026-04-09
 
 ### Fixed

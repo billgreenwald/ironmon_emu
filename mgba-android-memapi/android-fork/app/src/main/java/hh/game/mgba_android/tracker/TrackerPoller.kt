@@ -20,6 +20,7 @@ import hh.game.mgba_android.tracker.tables.TrainerRouteTable
 import hh.game.mgba_android.tracker.models.BattleState
 import hh.game.mgba_android.tracker.models.EnemyData
 import hh.game.mgba_android.tracker.models.GameVersion
+import hh.game.mgba_android.tracker.models.TrackedMove
 import hh.game.mgba_android.tracker.models.TrackerState
 import hh.game.mgba_android.tracker.models.Weather
 import hh.game.mgba_android.tracker.persistence.RunRepository
@@ -48,8 +49,13 @@ object TrackerPoller {
         private set
     @Volatile private var isNatDex: Boolean = false
 
-    // Revealed enemy moves: key = speciesId * 1000L + level, persists across battles within a run
-    private val revealedMovesByKey = mutableMapOf<Long, MutableList<Int>>()
+    // Persistent move store: key = speciesId only (Lua: allPokemon[pokemonID].moves — flat, unbounded)
+    private val revealedBySpecies = mutableMapOf<Int, MutableList<TrackedMove>>()
+    // Ephemeral per-battle notes: key = speciesId*1000+level (Lua: Tracker.BattleNotes)
+    private val battleRevealedByKey = mutableMapOf<Long, MutableList<Int>>()
+    private var battleFourConfirmedKey: Long? = null  // set when all 4 confirmed this battle
+    // Starting enemy moveset snapshot at battle open — guards Sketch/Mimic (Lua BattleParties)
+    private var enemyStartingMoveset: Set<Int> = emptySet()
     private var lastEnemyMoveId: Int = 0     // last value of gBattleResults+0x24
     private var battleJustStarted: Boolean = false
     private var lastBattleActive = false
@@ -82,7 +88,10 @@ object TrackerPoller {
 
     fun resetGameOver() {
         isGameOver.set(false)
-        revealedMovesByKey.clear()
+        revealedBySpecies.clear()
+        battleRevealedByKey.clear()
+        battleFourConfirmedKey = null
+        enemyStartingMoveset = emptySet()
         lastEnemyMoveId = 0
         encountersByRoute.clear()
         routeVisitOrder.clear()
@@ -146,7 +155,10 @@ object TrackerPoller {
         pollJob?.cancel()
         pollJob = null
         _state.value = TrackerState.Disconnected
-        revealedMovesByKey.clear()
+        revealedBySpecies.clear()
+        battleRevealedByKey.clear()
+        battleFourConfirmedKey = null
+        enemyStartingMoveset = emptySet()
         lastEnemyMoveId = 0
         encountersByRoute.clear()
         routeVisitOrder.clear()
@@ -291,20 +303,18 @@ object TrackerPoller {
             listOf(lead) + party.drop(1)
         } else party
 
-        val battle = battleRaw
-
         // Reset tutorial flag at the start of each new battle (mirrors Lua Battle init reset)
-        if (!wasBattleActive && battle.isActive) recentBattleWasTutorial = false
+        if (!wasBattleActive && battleRaw.isActive) recentBattleWasTutorial = false
 
         // ── Wild encounter recording (Lua tracker: Tracker.TrackRouteEncounter) ───
         // Reset flag when battle ends so it's ready for the next encounter.
-        if (!battle.isActive) currentWildBattleRecorded = false
+        if (!battleRaw.isActive) currentWildBattleRecorded = false
         // Skip the very first active frame — gBattleMons[1] may still hold stale enemy data
         // from the previous battle (especially at 3x speed). Wait one extra poll cycle (250ms).
-        val isFirstBattleFrame = !wasBattleActive && battle.isActive
-        if (battle.isActive && battle.isWild && !currentWildBattleRecorded && !isFirstBattleFrame) {
+        val isFirstBattleFrame = !wasBattleActive && battleRaw.isActive
+        if (battleRaw.isActive && battleRaw.isWild && !currentWildBattleRecorded && !isFirstBattleFrame) {
             val encounterMapId = route?.mapLayoutId
-            val sid = battle.enemy?.speciesId
+            val sid = battleRaw.enemy?.speciesId
             if (encounterMapId != null && sid != null && sid in 1..1235) {
                 currentWildBattleRecorded = true
                 if (encounterMapId !in routeVisitOrder) routeVisitOrder.add(encounterMapId)
@@ -329,7 +339,7 @@ object TrackerPoller {
         // ── Game over detection ───────────────────────────────────────────────
         // Mirrors Lua GameOverScreen.checkForGameOver — three selectable conditions.
         // Exclude catching tutorial battle — mirrors Lua Battle.recentBattleWasTutorial guard.
-        if (wasBattleActive && !battle.isActive && !isGameOver.get() && !recentBattleWasTutorial) {
+        if (wasBattleActive && !battleRaw.isActive && !isGameOver.get() && !recentBattleWasTutorial) {
             val condition = appContext?.let { EmulatorPreferences.getGameOverCondition(it) }
                 ?: GameOverCondition.LEAD_FAINTS
             val isLost = when (condition) {
@@ -358,7 +368,10 @@ object TrackerPoller {
         // Auto-reset if party count drops to 0 (new game started / ROM reset)
         if (count == 0) {
             isGameOver.set(false)
-            revealedMovesByKey.clear()
+            revealedBySpecies.clear()
+            battleRevealedByKey.clear()
+            battleFourConfirmedKey = null
+            enemyStartingMoveset = emptySet()
             lastEnemyMoveId = 0
             // Do NOT clear encountersByRoute or visitedRoutes here — party is transiently empty at
             // ROM load, which would wipe restored data. resetGameOver() handles clearing on new run.
@@ -381,9 +394,20 @@ object TrackerPoller {
         val playerLearnset = party.firstOrNull()?.let { lead ->
             LearnsetReader.read(lead.speciesId, lead.level, addresses)
         }
-        val enemyLearnset = battle.enemy?.let { enemy ->
+        val enemyLearnset = battleRaw.enemy?.let { enemy ->
             LearnsetReader.read(enemy.speciesId, enemy.level, addresses)
         }
+
+        // ── Move staleness (Lua Utils.calculateMoveStars) — patch onto enemy after learnset read ──
+        // Only applies to the persistent-list display (not when all 4 confirmed this battle,
+        // since those moves were just used and are definitely current).
+        val battle = if (battleRaw.enemy != null && enemyLearnset != null
+                        && battleRaw.enemy.fourConfirmedThisBattle == null) {
+            val displayMoves = revealedBySpecies[battleRaw.enemy.speciesId]?.take(4) ?: emptyList()
+            val staleFlags = calculateMoveStaleFlags(
+                displayMoves, enemyLearnset.allMoveLevels, battleRaw.enemy.level)
+            battleRaw.copy(enemy = battleRaw.enemy.copy(moveStaleFlags = staleFlags))
+        } else battleRaw
 
         return TrackerState.Active(
             game = game, romVersion = romVersion, romTitle = romTitle,
@@ -408,7 +432,12 @@ object TrackerPoller {
         val isActive = battlersCount > 0 && battleOutcome == 0
 
         // Detect battle transitions
-        if (!isActive && lastBattleActive) lastEnemyMoveId = 0  // reset per-battle snapshot on end
+        if (!isActive && lastBattleActive) {
+            lastEnemyMoveId = 0
+            // Reset ephemeral battle notes on battle end (Lua: Tracker.resetBattleNotes)
+            battleRevealedByKey.clear()
+            battleFourConfirmedKey = null
+        }
         if (isActive && !lastBattleActive) battleJustStarted = true  // new battle — snapshot without recording
         lastBattleActive = isActive
 
@@ -439,22 +468,58 @@ object TrackerPoller {
 
                 val level = if (enemyRaw != null) enemyRaw[DataHelper.OFF_LEVEL].toInt() and 0xFF else 0
 
-                // ── Move revelation via gBattleResults (matches Lua tracker logic) ──────
-                // Read gBattleResults + 0x24 = offsetBattleResultsEnemyMoveId
-                val key = speciesId * 1000L + level
+                // ── Move revelation via gBattleResults (Lua tracker logic) ─────────────
                 val currentEnemyMoveId = MemoryBridge.readU16(
                     addresses.battleResults + DataHelper.BATTLE_RESULTS_ENEMY_MOVE_OFFSET
                 ) ?: 0
 
                 if (battleJustStarted) {
-                    // Snapshot without recording — value may be leftover from previous battle
+                    // Snapshot starting moveset — guards Sketch/Mimic (Lua BattleParties snapshot)
+                    val startMoves = mutableSetOf<Int>()
+                    for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
+                                              DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
+                        val m = enemyMon.u16(offset)
+                        if (m != 0) startMoves.add(m)
+                    }
+                    enemyStartingMoveset = startMoves
+                    // Reset ephemeral battle notes (Lua: Tracker.resetBattleNotes on battle start)
+                    battleRevealedByKey.clear()
+                    battleFourConfirmedKey = null
+                    // Snapshot current value without recording — may be leftover from previous battle
                     lastEnemyMoveId = currentEnemyMoveId
                     battleJustStarted = false
                 } else if (currentEnemyMoveId != 0 && currentEnemyMoveId != lastEnemyMoveId) {
-                    // Enemy used a new move — reveal it (max 4, matching Lua 5th-move suppression)
-                    val revealed = revealedMovesByKey.getOrPut(key) { mutableListOf() }
-                    if (revealed.size < 4 && currentEnemyMoveId !in revealed) {
-                        revealed.add(currentEnemyMoveId)
+                    // Validate: move must be in starting moveset to guard Sketch/Mimic
+                    // (Lua: check lastMoveByAttacker == attacker.moves[1..4])
+                    // Note: gHitMarker/gMoveResultFlags skipped — transient within one game frame,
+                    // unreliable at 250ms polling; moveset snapshot is sufficient.
+                    if (currentEnemyMoveId in enemyStartingMoveset || enemyStartingMoveset.isEmpty()) {
+                        // ── Persistent store (Lua Tracker.TrackMove — flat by speciesId, unbounded) ──
+                        val persistent = revealedBySpecies.getOrPut(speciesId) { mutableListOf() }
+                        val existingIdx = persistent.indexOfFirst { it.id == currentEnemyMoveId }
+                        if (existingIdx == -1) {
+                            // New move: insert at front (Lua: table.insert(moves, 1, entry))
+                            persistent.add(0, TrackedMove(currentEnemyMoveId, level, level, level))
+                        } else {
+                            val entry = persistent[existingIdx]
+                            entry.level = level
+                            if (level < entry.minLv) entry.minLv = level
+                            if (level > entry.maxLv) entry.maxLv = level
+                            // Bubble to front if outside display window (Lua: moveIndexSeen > 4)
+                            if (existingIdx > 3) {
+                                persistent.removeAt(existingIdx)
+                                persistent.add(0, entry)
+                            }
+                        }
+                        // ── Ephemeral battle notes (Lua Tracker.recordBattleMoveByPokemonLevel) ──
+                        val battleKey = speciesId * 1000L + level
+                        if (battleFourConfirmedKey != battleKey) {
+                            val battleRevealed = battleRevealedByKey.getOrPut(battleKey) { mutableListOf() }
+                            if (currentEnemyMoveId !in battleRevealed) {
+                                battleRevealed.add(currentEnemyMoveId)
+                                if (battleRevealed.size == 4) battleFourConfirmedKey = battleKey
+                            }
+                        }
                     }
                     lastEnemyMoveId = currentEnemyMoveId
                 }
@@ -508,20 +573,30 @@ object TrackerPoller {
                     }
                 } else emptyMap()
 
+                val persistent = revealedBySpecies[speciesId]
+                val battleKey = speciesId * 1000L + level
+                val fourConfirmed = if (battleFourConfirmedKey == battleKey)
+                    battleRevealedByKey[battleKey]?.toList() else null
+                val displayIds = fourConfirmed ?: persistent?.take(4)?.map { it.id } ?: emptyList()
+
                 EnemyData(
-                    speciesId       = speciesId,
-                    name            = SpeciesNames.get(speciesId),
-                    level           = level,
-                    type1           = type1,
-                    type2           = type2,
-                    ability1Id      = ability1Id,
-                    ability2Id      = ability2Id,
-                    bst             = bst,
-                    revealedMoveIds = revealedMovesByKey[key]?.toList() ?: emptyList(),
-                    ppByMoveId      = enemyPpByMoveId,
-                    status          = enemyMon[DataHelper.BMON_STATUS].toInt() and 0xFF,
-                    currentHp       = currentHp,
-                    maxHp           = maxHpRaw,
+                    speciesId               = speciesId,
+                    name                    = SpeciesNames.get(speciesId),
+                    level                   = level,
+                    type1                   = type1,
+                    type2                   = type2,
+                    ability1Id              = ability1Id,
+                    ability2Id              = ability2Id,
+                    bst                     = bst,
+                    revealedMoveIds         = displayIds,
+                    ppByMoveId              = enemyPpByMoveId,
+                    status                  = enemyMon[DataHelper.BMON_STATUS].toInt() and 0xFF,
+                    currentHp               = currentHp,
+                    maxHp                   = maxHpRaw,
+                    totalTrackedMoveCount   = persistent?.size ?: 0,
+                    fourConfirmedThisBattle = fourConfirmed,
+                    allTrackedMoves         = persistent?.toList() ?: emptyList(),
+                    // moveStaleFlags populated in poll() after learnset read
                 )
             } else null
         } else null
@@ -599,6 +674,38 @@ object TrackerPoller {
             playerType1        = playerType1,
             playerType2        = playerType2,
         )
+    }
+
+    /**
+     * Mirrors Lua Utils.calculateMoveStars.
+     * For each of the top-4 displayed moves, returns true if the move may have been replaced
+     * since it was last seen — i.e., the Pokémon has had enough level-up opportunities to forget it.
+     */
+    private fun calculateMoveStaleFlags(
+        displayMoves: List<TrackedMove>,
+        allMoveLevels: List<Int>,
+        currentLevel: Int,
+    ): List<Boolean> {
+        if (displayMoves.isEmpty()) return emptyList()
+        val n = displayMoves.size
+        // Count how many learnset entries lie between each move's last-seen level and currentLevel
+        val movesLearnedSince = IntArray(n) { 0 }
+        for (lv in allMoveLevels) {
+            for (i in 0 until n) {
+                val moveLv = displayMoves[i].level
+                if (lv > moveLv && lv <= currentLevel) movesLearnedSince[i]++
+            }
+        }
+        // Rank each move by age relative to the others (older = potentially more forgotten)
+        val moveAgeRank = IntArray(n) { 1 }
+        for (i in 0 until n) {
+            for (j in 0 until n) {
+                if (i != j && displayMoves[i].level > displayMoves[j].level) moveAgeRank[i]++
+            }
+        }
+        return displayMoves.mapIndexed { i, move ->
+            move.level != 1 && movesLearnedSince[i] >= moveAgeRank[i]
+        }
     }
 
     private fun ByteArray.u16(offset: Int): Int =
