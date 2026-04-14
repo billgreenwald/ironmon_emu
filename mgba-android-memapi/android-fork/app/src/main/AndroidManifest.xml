@@ -46,6 +46,10 @@
             android:exported="false"
             android:screenOrientation="sensorLandscape" />
         <activity
+            android:name=".activity.DSEmulatorActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape" />
+        <activity
             android:name=".activity.MainActivity"
             android:exported="true">
 

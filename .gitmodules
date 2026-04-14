@@ -1,0 +1,3 @@
+[submodule "melonds-android"]
+	path = melonds-android
+	url = https://github.com/rafaelvcaetano/melonDS-android.git

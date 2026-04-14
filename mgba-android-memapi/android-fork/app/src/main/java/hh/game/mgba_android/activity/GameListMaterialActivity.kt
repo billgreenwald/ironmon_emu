@@ -351,8 +351,9 @@ fun launchFamily(group: RomFamilyGroup, context: Context) {
     val targetPath = group.allMemberPaths.find { path ->
         RomFamilyUtils.parseFamily(path.substringAfterLast('/'), path).number == lastNum
     } ?: group.allMemberPaths.firstOrNull() ?: return
+    val activityClass = if (group.extension == "nds") DSEmulatorActivity::class.java else GameActivity::class.java
     context.startActivity(
-        Intent(context, GameActivity::class.java).apply {
+        Intent(context, activityClass).apply {
             putExtra("gamepath", targetPath)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }

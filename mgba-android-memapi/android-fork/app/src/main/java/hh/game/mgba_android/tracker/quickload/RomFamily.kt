@@ -13,7 +13,7 @@ enum class FamilyMode { BATCH, UPR }
 data class RomFamily(
     val prefix: String,
     val number: Int?,         // null when filename has no trailing digits
-    val extension: String,    // "gba" or "gb", always lowercased
+    val extension: String,    // "gba", "gb", or "nds", always lowercased
     val absolutePath: String,
     val fileName: String,
 )
@@ -32,8 +32,8 @@ data class RomFamilyGroup(
 
 object RomFamilyUtils {
 
-    // Matches: <prefix><digits>.<gba|gb>  — prefix is non-greedy so digits are captured last
-    private val REGEX = Regex("""^(.*?)(\d+)\.(gba|gb)$""", RegexOption.IGNORE_CASE)
+    // Matches: <prefix><digits>.<gba|gb|nds>  — prefix is non-greedy so digits are captured last
+    private val REGEX = Regex("""^(.*?)(\d+)\.(gba|gb|nds)$""", RegexOption.IGNORE_CASE)
 
     fun parseFamily(fileName: String, absolutePath: String): RomFamily {
         val m = REGEX.matchEntire(fileName)

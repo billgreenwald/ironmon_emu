@@ -59,7 +59,8 @@ class GameListViewmodel : ViewModel() {
                 result += collectRomFiles(child, context)
             } else {
                 if (!name.endsWith(".gba", ignoreCase = true) &&
-                    !name.endsWith(".gb", ignoreCase = true)) continue
+                    !name.endsWith(".gb", ignoreCase = true) &&
+                    !name.endsWith(".nds", ignoreCase = true)) continue
                 val path = child.getAbsolutePath(context) ?: continue
                 result += Pair(name, path)
             }
