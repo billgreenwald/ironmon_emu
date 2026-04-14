@@ -5,6 +5,17 @@ plugins {
     id("kotlin-parcelize")
 }
 
+// Embed current git branch at build time so branch builds show their name in the version display.
+// Strips "feature/" and "fix/" prefixes for cleaner display (e.g. "natdex-support").
+// Returns "main" on main branch, "unknown" if git is unavailable.
+val gitBranch: String by lazy {
+    try {
+        val raw = Runtime.getRuntime().exec("git rev-parse --abbrev-ref HEAD")
+            .inputStream.bufferedReader().readLine()?.trim() ?: "unknown"
+        raw.removePrefix("feature/").removePrefix("fix/").removePrefix("hotfix/")
+    } catch (e: Exception) { "unknown" }
+}
+
 android {
     namespace = "hh.game.mgba_android"
     compileSdk = 34
@@ -16,6 +27,8 @@ android {
         targetSdk = 34
         versionCode = 60
         versionName = "2.4.1"
+        // Branch name embedded at build time — shown in version display when not "main"
+        buildConfigField("String", "GIT_BRANCH", "\"$gitBranch\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -88,6 +101,7 @@ android {
         viewBinding = true
         compose = true
         prefab = true
+        buildConfig = true
     }
     sourceSets["main"].java.srcDir("src/main/cpp/sdl2/android-project/app/src/main/java")
     composeOptions {

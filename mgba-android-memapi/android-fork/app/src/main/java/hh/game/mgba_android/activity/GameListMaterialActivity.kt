@@ -1,5 +1,6 @@
 package hh.game.mgba_android.activity
 
+import hh.game.mgba_android.BuildConfig
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -195,6 +196,10 @@ class GameListMaterialActivity : ComponentActivity() {
         // Update check: load cached result from prefs (shown immediately if valid)
         @Suppress("DEPRECATION")
         val appVersionName = packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+        // Append branch suffix on non-main builds so branch APKs are identifiable in bug reports
+        val branch = BuildConfig.GIT_BRANCH
+        val displayVersionName = if (branch == "main" || branch == "unknown") appVersionName
+                                 else "$appVersionName ($branch)"
         val updatePrefs = getSharedPreferences("mGBA", Context.MODE_PRIVATE)
         val cachedTag = updatePrefs.getString("update_tag", null)
         var latestUpdateTag: String? = cachedTag?.takeIf { it != "v$appVersionName" }
@@ -256,14 +261,14 @@ class GameListMaterialActivity : ComponentActivity() {
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                                     ) {
                                         Text(
-                                            "Current version: v$appVersionName, $latestUpdateTag available — tap to download",
+                                            "Current version: v$displayVersionName, $latestUpdateTag available — tap to download",
                                             color = Color(0xFFCC3333),
                                             fontSize = 11.sp,
                                         )
                                     }
                                 } else {
                                     Text(
-                                        text = "Current version: v$appVersionName. Up to date.",
+                                        text = "Current version: v$displayVersionName. Up to date.",
                                         color = Color(0xFF555555),
                                         fontSize = 11.sp,
                                         modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp),
