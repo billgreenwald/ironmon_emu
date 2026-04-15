@@ -181,7 +181,10 @@ object DataHelper {
     )
 
     // NatDex FireRed (any version) — addresses from CyanSMP64/NatDexExtension, GS.game == 3 block
-    // ROM hack relocates gSpeciesInfo, gExperienceTables, SaveBlock pointers, and shifts some RAM structs.
+    // ROM hack relocates gSpeciesInfo, gExperienceTables, and shifts some RAM structs.
+    // gSaveBlock1ptr / gSaveBlock2ptr remain at vanilla FR IWRAM locations (0x03005008 / 0x0300500C)
+    // in the wild — the Lua extension's 0x03004C38 reads as 0 on known ROM builds.
+    // SaveBlock1/2 internal layout DID change: gameStatsOffset and encryptionKeyOffset are NatDex values.
     private val FIRE_RED_NATDEX = FIRE_RED_V10.copy(
         partyCount            = 0x0202402DL,   // GS.gPlayerPartyCount
         partyBase             = 0x02024288L,   // GS.pstats
@@ -191,11 +194,10 @@ object DataHelper {
         experienceTables      = 0x0826995CL,   // GS.gExperienceTables
         battleResults         = 0x03004BC0L,   // GS.gBattleResults
         gMapHeader            = 0x020363BCL,   // GS.gMapHeader
-        saveBlock1Ptr         = 0x03004C38L,   // GS.gSaveBlock1ptr
-        saveBlock2Ptr         = 0x03004C3CL,   // GS.gSaveBlock2ptr
-        gameStatsOffset       = 0x1394,        // GS.gameStatsOffset
+        // saveBlock1Ptr / saveBlock2Ptr: inherit vanilla FR (0x03005008 / 0x0300500C)
+        gameStatsOffset       = 0x1394,        // GS.gameStatsOffset (SaveBlock1 layout changed)
         gameFlagsOffset       = 0x1074,        // GS.gameFlagsOffset
-        encryptionKeyOffset   = 0x400,         // GS.EncryptionKeyOffset
+        encryptionKeyOffset   = 0x400,         // GS.EncryptionKeyOffset (SaveBlock2 layout changed)
         trainerBattleOpponent = 0x02037C6EL,   // GS.gTrainerBattleOpponent_A
         sSpecialFlags         = 0x020366A0L,   // GS.sSpecialFlags
         // battle addresses (gBattleMons, sideStatuses, etc.) unchanged from vanilla FR
