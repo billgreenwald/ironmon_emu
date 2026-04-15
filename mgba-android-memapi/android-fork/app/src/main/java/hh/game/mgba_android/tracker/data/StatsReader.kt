@@ -1,5 +1,6 @@
 package hh.game.mgba_android.tracker.data
 
+import android.util.Log
 import hh.game.mgba_android.tracker.MemoryBridge
 
 data class GameStats(
@@ -10,6 +11,8 @@ data class GameStats(
 
 object StatsReader {
 
+    private const val TAG = "StatsReader"
+
     // Stat indices per Lua tracker Constants.GAME_STATS (game_stat.h)
     private const val IDX_STEPS = 5
     private const val IDX_TOTAL_BATTLES = 7
@@ -19,9 +22,10 @@ object StatsReader {
     fun read(addresses: GameAddresses): GameStats? {
         // Resolve SaveBlock1 address (pointer for FR/LG/Emerald; direct address for Ruby/Sapphire)
         val saveBlock1Addr: Long = if (addresses.saveBlock1IsPointer) {
-            val ptrBytes = MemoryBridge.readBytes(addresses.saveBlock1Ptr, 4) ?: return null
+            val ptrBytes = MemoryBridge.readBytes(addresses.saveBlock1Ptr, 4)
+            if (ptrBytes == null) { Log.w(TAG, "sb1 ptr read null @ 0x${addresses.saveBlock1Ptr.toString(16)}"); return null }
             val addr = ptrBytes.toLittleEndianLong()
-            if (addr == 0L) return null
+            if (addr == 0L) { Log.w(TAG, "sb1 ptr is 0"); return null }
             addr
         } else {
             addresses.saveBlock1Ptr
@@ -32,10 +36,12 @@ object StatsReader {
         val xorKey: Long = if (addresses.saveBlock2Ptr == 0L) {
             0L
         } else {
-            val sb2PtrBytes = MemoryBridge.readBytes(addresses.saveBlock2Ptr, 4) ?: return null
+            val sb2PtrBytes = MemoryBridge.readBytes(addresses.saveBlock2Ptr, 4)
+            if (sb2PtrBytes == null) { Log.w(TAG, "sb2 ptr read null @ 0x${addresses.saveBlock2Ptr.toString(16)}"); return null }
             val sb2Addr = sb2PtrBytes.toLittleEndianLong()
-            if (sb2Addr == 0L) return null
-            val keyBytes = MemoryBridge.readBytes(sb2Addr + addresses.encryptionKeyOffset, 4) ?: return null
+            if (sb2Addr == 0L) { Log.w(TAG, "sb2 ptr is 0 (save not initialized?)"); return null }
+            val keyBytes = MemoryBridge.readBytes(sb2Addr + addresses.encryptionKeyOffset, 4)
+            if (keyBytes == null) { Log.w(TAG, "xor key read null @ 0x${(sb2Addr + addresses.encryptionKeyOffset).toString(16)}"); return null }
             keyBytes.toLittleEndianLong()
         }
 
