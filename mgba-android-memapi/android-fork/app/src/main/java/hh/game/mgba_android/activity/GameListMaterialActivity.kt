@@ -130,6 +130,8 @@ class GameListMaterialActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val version = try { packageManager.getPackageInfo(packageName, 0).versionName } catch (e: Exception) { "?" }
+        android.util.Log.i("IronmonTracker", "App started — version $version")
         checkPermission()
     }
 

@@ -15,7 +15,16 @@ android {
         minSdk = 22
         targetSdk = 34
         versionCode = 60
-        versionName = "2.4.1"
+        val baseVersion = "2.4.1"
+        val branch = try {
+            val proc = ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
+                .redirectErrorStream(true).start()
+            proc.inputStream.bufferedReader().readLine()?.trim() ?: ""
+        } catch (e: Exception) { "" }
+        val branchSuffix = branch
+            .removePrefix("feature/").removePrefix("hotfix/")
+            .let { if (it == "main" || it == "master" || it.isEmpty()) "" else "_$it" }
+        versionName = "$baseVersion$branchSuffix"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
