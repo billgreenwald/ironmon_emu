@@ -19,6 +19,29 @@ object StatsReader {
     private const val IDX_USED_POKECENTER = 15
     private const val SIZEOF_GAME_STAT = 4 // each stat is a 32-bit dword
 
+    private var iwramScanned = false
+
+    // Scan IWRAM 0x03003000–0x03005FFF for any dword that looks like a valid EWRAM pointer.
+    // Fires once per poller session to help locate gSaveBlock1ptr on unknown ROM variants.
+    fun scanIwramForEwramPointers() {
+        if (iwramScanned) return
+        iwramScanned = true
+        val results = StringBuilder()
+        var addr = 0x03003000L
+        while (addr <= 0x03005FFCL) {
+            val b = MemoryBridge.readBytes(addr, 4)
+            if (b != null) {
+                val v = (b[0].toLong() and 0xFF) or ((b[1].toLong() and 0xFF) shl 8) or
+                        ((b[2].toLong() and 0xFF) shl 16) or ((b[3].toLong() and 0xFF) shl 24)
+                if (v in 0x02000000L..0x0203FFFFL) {
+                    results.append("0x${addr.toString(16)}→0x${v.toString(16)} ")
+                }
+            }
+            addr += 4
+        }
+        Log.i(TAG, "IWRAM EWRAM-ptr scan: ${if (results.isEmpty()) "none found" else results.trim()}")
+    }
+
     fun read(addresses: GameAddresses): GameStats? {
         // Resolve SaveBlock1 address (pointer for FR/LG/Emerald; direct address for Ruby/Sapphire)
         val saveBlock1Addr: Long = if (addresses.saveBlock1IsPointer) {
@@ -28,6 +51,7 @@ object StatsReader {
             if (addr == 0L) {
                 val hex = ptrBytes.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
                 Log.w(TAG, "sb1 ptr is 0 @ 0x${addresses.saveBlock1Ptr.toString(16)} bytes=$hex")
+                scanIwramForEwramPointers()
                 return null
             }
             addr
