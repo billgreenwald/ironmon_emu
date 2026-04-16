@@ -25,7 +25,11 @@ object StatsReader {
             val ptrBytes = MemoryBridge.readBytes(addresses.saveBlock1Ptr, 4)
             if (ptrBytes == null) { Log.w(TAG, "sb1 ptr read null @ 0x${addresses.saveBlock1Ptr.toString(16)}"); return null }
             val addr = ptrBytes.toLittleEndianLong()
-            if (addr == 0L) { Log.w(TAG, "sb1 ptr is 0"); return null }
+            if (addr == 0L) {
+                val hex = ptrBytes.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+                Log.w(TAG, "sb1 ptr is 0 @ 0x${addresses.saveBlock1Ptr.toString(16)} bytes=$hex")
+                return null
+            }
             addr
         } else {
             addresses.saveBlock1Ptr
