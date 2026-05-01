@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.3] - 2026-05-01
+
+### Fixed
+- **GBA saves not persisting between sessions on Android 10** — on Android 10 (API 29) devices, the app requested `READ_EXTERNAL_STORAGE` at runtime but never requested `WRITE_EXTERNAL_STORAGE`. Without write permission, mGBA silently failed to create the `.sav` file next to the ROM, so SRAM lived only in RAM and was lost every time the app was restarted. The permission flow now also requests `WRITE_EXTERNAL_STORAGE` on API 29 and below, prompting the user once to grant it. Saves to the API 30+ path (`MANAGE_EXTERNAL_STORAGE`) are unaffected.
+
 ## [2.4.2] - 2026-05-01
 
 ### Fixed

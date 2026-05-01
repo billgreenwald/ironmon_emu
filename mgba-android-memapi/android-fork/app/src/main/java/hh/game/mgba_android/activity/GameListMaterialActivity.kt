@@ -128,6 +128,11 @@ class GameListMaterialActivity : ComponentActivity() {
             if (granted) checkPermission()
         }
 
+    val requestWriteStoragePermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) checkPermission()
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val version = try { packageManager.getPackageInfo(packageName, 0).versionName } catch (e: Exception) { "?" }
@@ -158,10 +163,16 @@ class GameListMaterialActivity : ComponentActivity() {
                 }
             }
         } else {
-            // Android 10 (API 29) and below: use READ_EXTERNAL_STORAGE
+            // Android 10 (API 29) and below: use READ_EXTERNAL_STORAGE + WRITE_EXTERNAL_STORAGE
             sharepreferences = getSharedPreferences("mGBA", Context.MODE_PRIVATE)
             if (checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE)
                 == PackageManager.PERMISSION_GRANTED) {
+                // WRITE is needed so the emulator can write .sav files next to the ROM
+                if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                    requestWriteStoragePermission.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    return
+                }
                 if (contentResolver.persistedUriPermissions.isNotEmpty()) {
                     storageid = sharepreferences?.getString(STORAGEID, null)
                     setupUI()
