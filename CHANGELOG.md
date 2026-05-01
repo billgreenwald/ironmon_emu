@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.2] - 2026-05-01
+
+### Fixed
+- **Bluetooth audio crash (SIGBUS)** — enabling Bluetooth or connecting a Bluetooth headset while a ROM was running caused a fatal `SIGBUS` crash. When Android re-routes audio to a Bluetooth device, the underlying AAudio stream is disconnected and its memory-mapped buffer is unmapped. The Oboe audio callback now implements `onErrorAfterClose` to safely restart the audio stream on a background thread after the device switch settles (~200 ms). A paired `AudioDeviceCallback` in `GameActivity` also pauses the mGBA core during the switchover so the emulation thread is not racing the stream teardown.
+
 ## [2.4.1] - 2026-04-13
 
 ### Fixed

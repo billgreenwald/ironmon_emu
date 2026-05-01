@@ -2,8 +2,13 @@ package hh.game.mgba_android.activity
 
 import android.app.Activity
 import android.content.Intent
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import android.util.TypedValue
@@ -96,6 +101,19 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var resumePending = false
     private var hasEverBeenPaused = false  // guard: don't call ResumeGame() before mCoreThread is ready
     private var isMute = false
+
+    private val audioHandler = Handler(Looper.getMainLooper())
+    private val audioDeviceCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<AudioDeviceInfo>) = handleAudioDeviceChange()
+        override fun onAudioDevicesRemoved(removedDevices: Array<AudioDeviceInfo>) = handleAudioDeviceChange()
+    }
+
+    private fun handleAudioDeviceChange() {
+        if (!hasEverBeenPaused) return // core not yet started
+        PauseGame()
+        // Resume after Oboe's 200 ms stream-restart window plus a safety buffer
+        audioHandler.postDelayed({ ResumeGame() }, 400)
+    }
     private var defaultFps = 60f
     private var secondaryFps = 60f
     private var lAsSpeed = false
@@ -359,6 +377,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         applyControlsStyle()
         (getSystemService(INPUT_SERVICE) as InputManager)
             .registerInputDeviceListener(this, null)
+        (getSystemService(AUDIO_SERVICE) as AudioManager)
+            .registerAudioDeviceCallback(audioDeviceCallback, audioHandler)
         updateOnscreenControls()
 //        GlobalScope.launch {
 //            Gameutils.getFPS().toString()
@@ -787,6 +807,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
     override fun onDestroy() {
         (getSystemService(INPUT_SERVICE) as InputManager).unregisterInputDeviceListener(this)
+        (getSystemService(AUDIO_SERVICE) as AudioManager).unregisterAudioDeviceCallback(audioDeviceCallback)
+        audioHandler.removeCallbacksAndMessages(null)
         TrackerPoller.stop()
         MemoryBridge.reader = null
         QuickloadManager.unregister(applicationContext)

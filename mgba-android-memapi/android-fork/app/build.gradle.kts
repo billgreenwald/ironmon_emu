@@ -14,8 +14,8 @@ android {
         applicationId = "hh.game.mgba_android"
         minSdk = 22
         targetSdk = 34
-        versionCode = 60
-        val baseVersion = "2.4.1"
+        versionCode = 61
+        val baseVersion = "2.4.2"
         val branch = try {
             val proc = ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
                 .redirectErrorStream(true).start()
