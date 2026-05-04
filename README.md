@@ -201,4 +201,4 @@ Open **Emulator Settings** from the ROM list page or from the in-game Tools menu
 - Did you use AI to make this?
   - You betchya, its all vibe coded.  If you are against the concept of using AI in any way, you should avoid this app.
 - Can we donate in some way?
-  - No, but I need people to use my phone app for 14 days so i can release it on the app store.  If you feel so inclined get the beta here and just open it every day for 14 days and you are the best :) https://play.google.com/store/apps/details?id=com.doctrdna.pantryExt
+  - No, but you could get some value for your money buy buying my app. http://SuiteMeal.com
