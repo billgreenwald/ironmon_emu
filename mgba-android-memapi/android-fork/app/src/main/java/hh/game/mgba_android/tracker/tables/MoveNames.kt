@@ -367,8 +367,19 @@ object MoveNames {
         "Psycho Boost",  // 354
     )
 
+    // NatDex ROM hack adds 6 Fairy-type moves (IDs 355–360)
+    private val NATDEX_MOVES = mapOf(
+        355 to "Disarming Voice",
+        356 to "Draining Kiss",
+        357 to "Play Rough",
+        358 to "Fairy Wind",
+        359 to "Moonblast",
+        360 to "Dazzling Gleam",
+    )
+
     fun get(id: Int): String = when {
         id in NAMES.indices -> NAMES[id]
+        id in NATDEX_MOVES  -> NATDEX_MOVES[id]!!
         else                -> "Move#$id"
     }
 }

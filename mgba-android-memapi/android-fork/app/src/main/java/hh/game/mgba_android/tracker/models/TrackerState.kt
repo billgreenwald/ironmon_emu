@@ -36,6 +36,8 @@ sealed class TrackerState {
         // Ball picker: shown at run start in the starter lab before the player has any Pokémon
         val showBallPicker: Boolean = false,
         val chosenBall: Int = 0,   // 1=Left, 2=Middle, 3=Right; 0=not yet chosen
+        // NatDex ROM hack (CyanSMP64/NatDexExtension): enables Fairy type, extended species/moves
+        val isNatDex: Boolean = false,
     ) : TrackerState() {
         val leadPokemon: PokemonData? get() = party.firstOrNull()
     }

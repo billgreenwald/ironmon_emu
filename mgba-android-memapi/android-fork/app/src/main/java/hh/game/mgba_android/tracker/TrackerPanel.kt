@@ -92,6 +92,11 @@ private val LocalTrackerFontScale = staticCompositionLocalOf { 1f }
 private val PHYSICAL_TYPES = setOf(0, 1, 2, 3, 4, 5, 6, 7, 8)
 private val SPECIAL_TYPES  = setOf(10, 11, 12, 13, 14, 15, 16, 17)
 
+// NatDex species (IDs 412+) use PNG sprites; Gen I–III use GIF sprites.
+private fun spriteUrl(speciesId: Int) =
+    if (speciesId >= 412) "file:///android_asset/sprites/$speciesId.png"
+    else "file:///android_asset/sprites/$speciesId.gif"
+
 // ── Main entry point ─────────────────────────────────────────────────────────
 @Composable
 fun TrackerPanel(
@@ -287,7 +292,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
                     .verticalScroll(rememberScrollState()),
             ) {
                 state.leadPokemon?.let { lead ->
-                    MainView(lead, state.battle, state.stats, state.bagDetail, state.playerLearnset)
+                    MainView(lead, state.battle, state.stats, state.bagDetail, state.playerLearnset, isNatDex = state.isNatDex)
                 } ?: StatusText("Party empty")
             }
             1 -> Column(
@@ -296,7 +301,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
                     .verticalScroll(rememberScrollState()),
             ) {
                 if (state.battle.isActive) {
-                    EnemyView(state.battle, statMarkings, state.enemyLearnset, playerLead = state.leadPokemon)
+                    EnemyView(state.battle, statMarkings, state.enemyLearnset, playerLead = state.leadPokemon, isNatDex = state.isNatDex)
                 } else {
                     StatusText("Not in battle")
                 }
@@ -414,7 +419,7 @@ private fun BallPickerPanel(chosenBall: Int, onReroll: () -> Unit) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 @Composable
-private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, bagDetail: BagDetailInfo? = null, learnset: LearnsetInfo? = null) {
+private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, bagDetail: BagDetailInfo? = null, learnset: LearnsetInfo? = null, isNatDex: Boolean = false) {
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showAbilitySheet by remember { mutableStateOf(false) }
     var showDefenseSheet by remember { mutableStateOf(false) }
@@ -434,7 +439,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
             verticalAlignment = Alignment.Top,
         ) {
             GlideImage(
-                imageModel = { "file:///android_asset/sprites/${pokemon.speciesId}.gif" },
+                imageModel = { spriteUrl(pokemon.speciesId) },
                 modifier = Modifier.size(48.dp),
                 failure = {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -595,7 +600,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         )
     }
     if (showDefenseSheet) {
-        TypeDefenseSheet(pokemon.type1, pokemon.type2, onDismiss = { showDefenseSheet = false })
+        TypeDefenseSheet(pokemon.type1, pokemon.type2, isNatDex = isNatDex, onDismiss = { showDefenseSheet = false })
     }
     if (showLearnsetSheet && learnset != null) {
         LearnsetSheet(learnset, pokemon.level, onDismiss = { showLearnsetSheet = false })
@@ -708,7 +713,7 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
                                 ) {
                                     if (speciesId > 0) {
                                         GlideImage(
-                                            imageModel = { "file:///android_asset/sprites/$speciesId.gif" },
+                                            imageModel = { spriteUrl(speciesId) },
                                             modifier = Modifier.size(36.dp),
                                             failure = {
                                                 Box(
@@ -768,6 +773,7 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
             revealedMoveIds = revealedMoveIds,
             ppByMoveId = ppByMoveId,
             encounterRoutes = encounterRoutes,
+            isNatDex = state.isNatDex,
             onDismiss = { selectedRouteSpecies = null },
         )
     }
@@ -783,6 +789,7 @@ private fun EnemyView(
     statMarkings: SnapshotStateMap<Pair<Int, String>, Int>,
     learnset: LearnsetInfo? = null,
     playerLead: PokemonData? = null,
+    isNatDex: Boolean = false,
 ) {
     val enemy = battle.enemy
     if (enemy == null) {
@@ -810,7 +817,7 @@ private fun EnemyView(
             verticalAlignment = Alignment.Top,
         ) {
             GlideImage(
-                imageModel = { "file:///android_asset/sprites/${enemy.speciesId}.gif" },
+                imageModel = { spriteUrl(enemy.speciesId) },
                 modifier = Modifier.size(48.dp),
                 failure = {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -949,7 +956,7 @@ private fun EnemyView(
         MoveDetailSheet(move, onDismiss = { showMoveSheet = null })
     }
     if (showDefenseSheet) {
-        TypeDefenseSheet(enemy.type1, enemy.type2, onDismiss = { showDefenseSheet = false })
+        TypeDefenseSheet(enemy.type1, enemy.type2, isNatDex = isNatDex, onDismiss = { showDefenseSheet = false })
     }
     if (showLearnsetSheet && learnset != null) {
         LearnsetSheet(learnset, enemy.level, onDismiss = { showLearnsetSheet = false })
@@ -1486,8 +1493,8 @@ fun AbilityDetailSheet(abilityId: Int, onDismiss: () -> Unit) {
 // ── Type defense sheet ────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TypeDefenseSheet(type1: Int, type2: Int, onDismiss: () -> Unit) {
-    val chart = TypeChart.defenseChart(type1, type2)
+fun TypeDefenseSheet(type1: Int, type2: Int, isNatDex: Boolean = false, onDismiss: () -> Unit) {
+    val chart = TypeChart.defenseChart(type1, type2, isNatDex)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
         Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
             Row {
@@ -1533,6 +1540,7 @@ private fun RouteMonSheet(
     revealedMoveIds: List<Int>,
     ppByMoveId: Map<Int, Int>,
     encounterRoutes: List<String>,
+    isNatDex: Boolean = false,
     onDismiss: () -> Unit,
 ) {
     var baseStatBytes by remember { mutableStateOf<ByteArray?>(null) }
@@ -1558,7 +1566,7 @@ private fun RouteMonSheet(
             // ── Header: sprite + name + types ──────────────────────────────
             Row(verticalAlignment = Alignment.CenterVertically) {
                 GlideImage(
-                    imageModel = { "file:///android_asset/sprites/$speciesId.gif" },
+                    imageModel = { spriteUrl(speciesId) },
                     modifier = Modifier.size(56.dp),
                     failure = {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1643,7 +1651,7 @@ private fun RouteMonSheet(
     }
 
     if (showDefenseSheet && bytes != null) {
-        TypeDefenseSheet(type1, type2, onDismiss = { showDefenseSheet = false })
+        TypeDefenseSheet(type1, type2, isNatDex = isNatDex, onDismiss = { showDefenseSheet = false })
     }
     showMoveSheet?.let { move ->
         MoveDetailSheet(move, onDismiss = { showMoveSheet = null })

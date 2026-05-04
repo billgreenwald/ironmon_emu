@@ -25,8 +25,8 @@ android {
         applicationId = "hh.game.mgba_android"
         minSdk = 22
         targetSdk = 34
-        versionCode = 60
-        versionName = "2.4.1"
+        versionCode = 62
+        versionName = "2.4.3"
         // Branch name embedded at build time — shown in version display when not "main"
         buildConfigField("String", "GIT_BRANCH", "\"$gitBranch\"")
 
