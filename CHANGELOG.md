@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.5.0] - 2026-05-05
+
+### Added
+- **NatDex ROM hack support** — the tracker now detects NatDex FireRed and NatDex Emerald ROM hacks automatically at load time. Species 412–1235 (Gen IV–IX) display correct names, sprites, base stats, types, and Fairy-type effectiveness. Learnset and route encounter lookups are extended to cover the full NatDex range.
+- **Fairy type** — Fairy-type effectiveness is now correctly calculated for all matchups (immune to Dragon; weak to Poison and Steel; resists Fighting, Bug, and Dark). Applies to both vanilla and NatDex builds.
+
+### Fixed
+- **Bluetooth audio crash (SIGBUS)** — enabling Bluetooth or plugging in headphones while a ROM was running caused a fatal crash. The Oboe audio stream now safely restarts on a background thread after the device switch settles, and the mGBA core is paused during the switchover to prevent racing on the audio buffer.
+- **GBA saves not persisting on Android 10** — `WRITE_EXTERNAL_STORAGE` was not being requested on API 29 devices, so `.sav` files were never written to disk and saves were lost on every restart. The permission flow now prompts once on affected devices.
+
 ## [2.4.3] - 2026-05-01
 
 ### Fixed
