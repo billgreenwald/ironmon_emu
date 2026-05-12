@@ -38,6 +38,10 @@ sealed class TrackerState {
         val chosenBall: Int = 0,   // 1=Left, 2=Middle, 3=Right; 0=not yet chosen
         // NatDex ROM hack (CyanSMP64/NatDexExtension): enables Fairy type, extended species/moves
         val isNatDex: Boolean = false,
+        // MaxFR/MaxEM ROM hack: enables Fairy type + Gen 4-5 moves with per-move physical/special split
+        val isMaxFr: Boolean = false,
+        // Per-move category from ROM gBattleMoves table: moveId → 1=Physical, 2=Special, 3=Status
+        val moveCategories: Map<Int, Int> = emptyMap(),
     ) : TrackerState() {
         val leadPokemon: PokemonData? get() = party.firstOrNull()
     }

@@ -10,6 +10,7 @@ import hh.game.mgba_android.tracker.data.GachaMonRuleset
 import hh.game.mgba_android.tracker.data.GameOverCondition
 import hh.game.mgba_android.tracker.data.GameAddresses
 import hh.game.mgba_android.tracker.data.GameSettings
+import hh.game.mgba_android.tracker.data.MaxFrVariant
 import hh.game.mgba_android.tracker.data.LearnsetReader
 import hh.game.mgba_android.tracker.data.PokemonDecoder
 import hh.game.mgba_android.tracker.data.RouteReader
@@ -48,6 +49,7 @@ object TrackerPoller {
     @Volatile var currentAddresses: GameAddresses? = null
         private set
     @Volatile private var isNatDex: Boolean = false
+    @Volatile private var maxFrVariant: MaxFrVariant = MaxFrVariant.NONE
 
     // Persistent move store: key = speciesId only (Lua: allPokemon[pokemonID].moves — flat, unbounded)
     private val revealedBySpecies = mutableMapOf<Int, MutableList<TrackedMove>>()
@@ -166,6 +168,7 @@ object TrackerPoller {
         currentWildBattleRecorded = false
         lastGameCode = ""  // force restore from disk on next game load
         isNatDex = false
+        maxFrVariant = MaxFrVariant.NONE
         recentBattleWasTutorial = false
         hasCompletedTutorial = false
     }
@@ -185,13 +188,16 @@ object TrackerPoller {
         val romTitle = MemoryBridge.readBytes(0x080000A0L, 12)
             ?.let { String(it, Charsets.ISO_8859_1).trimEnd('\u0000', ' ') } ?: ""
 
-        // ── NatDex detection: check once per ROM load (game code change) ─────────────────────────
+        // ── NatDex / MaxFR detection: check once per ROM load (game code change) ──────────────────
         if (gameCode != lastGameCode) {
             isNatDex = GameSettings.isNatDex { addr, len -> MemoryBridge.readBytes(addr, len) }
-            Log.d(TAG, "isNatDex=$isNatDex for gameCode=$gameCode")
+            maxFrVariant = if (game == GameVersion.EMERALD && !isNatDex)
+                GameSettings.detectMaxFr { addr, len -> MemoryBridge.readBytes(addr, len) }
+            else MaxFrVariant.NONE
+            Log.d(TAG, "isNatDex=$isNatDex maxFrVariant=$maxFrVariant for gameCode=$gameCode")
         }
 
-        val addresses = DataHelper.addressesFor(game, romVersion, gameCode, isNatDex)
+        val addresses = DataHelper.addressesFor(game, romVersion, gameCode, isNatDex, maxFrVariant)
             ?: return TrackerState.NoGameLoaded
         currentAddresses = addresses
 
@@ -251,6 +257,13 @@ object TrackerPoller {
                 }
             }
         }
+
+        // ── Per-move category (MaxFR/MaxEM: Gen IV physical/special split read from ROM) ──────────
+        val moveCategories: Map<Int, Int> = if (addresses.gBattleMoves != 0L) {
+            party.flatMap { it.moves }.map { it.moveId }.distinct()
+                .associateWith { id -> DataHelper.readMoveCategory({ addr, len -> MemoryBridge.readBytes(addr, len) }, addresses.gBattleMoves, id) }
+                .filter { it.value != 0 }
+        } else emptyMap()
 
         // ── Route ─────────────────────────────────────────────────────────────
         val route = RouteReader.read(game, addresses)
@@ -422,6 +435,8 @@ object TrackerPoller {
             showBallPicker = showBallPicker,
             chosenBall = chosenBall.get(),
             isNatDex = isNatDex,
+            isMaxFr = maxFrVariant != MaxFrVariant.NONE,
+            moveCategories = moveCategories,
         )
     }
 

@@ -76,6 +76,7 @@ private val TYPE_COLORS = mapOf(
     15 to Color(0xFF98D8D8),  // Ice      (0x0F)
     16 to Color(0xFF7038F8),  // Dragon   (0x10)
     17 to Color(0xFF705848),  // Dark     (0x11)
+    18 to Color(0xFFEE99AC),  // Fairy    (0x12) — MaxFR/MaxEM/NatDex
 )
 
 private fun typeColor(typeId: Int) = TYPE_COLORS[typeId] ?: Color(0xFF888888)
@@ -292,7 +293,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
                     .verticalScroll(rememberScrollState()),
             ) {
                 state.leadPokemon?.let { lead ->
-                    MainView(lead, state.battle, state.stats, state.bagDetail, state.playerLearnset, isNatDex = state.isNatDex)
+                    MainView(lead, state.battle, state.stats, state.bagDetail, state.playerLearnset, isNatDex = state.isNatDex, isMaxFr = state.isMaxFr, moveCategories = state.moveCategories)
                 } ?: StatusText("Party empty")
             }
             1 -> Column(
@@ -301,7 +302,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
                     .verticalScroll(rememberScrollState()),
             ) {
                 if (state.battle.isActive) {
-                    EnemyView(state.battle, statMarkings, state.enemyLearnset, playerLead = state.leadPokemon, isNatDex = state.isNatDex)
+                    EnemyView(state.battle, statMarkings, state.enemyLearnset, playerLead = state.leadPokemon, isNatDex = state.isNatDex, isMaxFr = state.isMaxFr, moveCategories = state.moveCategories)
                 } else {
                     StatusText("Not in battle")
                 }
@@ -419,7 +420,7 @@ private fun BallPickerPanel(chosenBall: Int, onReroll: () -> Unit) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 @Composable
-private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, bagDetail: BagDetailInfo? = null, learnset: LearnsetInfo? = null, isNatDex: Boolean = false) {
+private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, bagDetail: BagDetailInfo? = null, learnset: LearnsetInfo? = null, isNatDex: Boolean = false, isMaxFr: Boolean = false, moveCategories: Map<Int, Int> = emptyMap()) {
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showAbilitySheet by remember { mutableStateOf(false) }
     var showDefenseSheet by remember { mutableStateOf(false) }
@@ -537,7 +538,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
 
         Spacer(Modifier.height(4.dp))
 
-        val abilityName = AbilityTable.name(pokemon.abilityId)
+        val abilityName = AbilityTable.name(pokemon.abilityId, isMaxFr)
         Text(
             text = "Ability: $abilityName",
             color = TextPrimary, fontSize = ssp(14),
@@ -595,7 +596,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
         Spacer(Modifier.height(4.dp))
 
-        MoveTable(pokemon.moves, battle, player = pokemon, stabTypes = setOf(pokemon.type1, pokemon.type2), onClick = { showMoveSheet = it })
+        MoveTable(pokemon.moves, battle, player = pokemon, stabTypes = setOf(pokemon.type1, pokemon.type2), moveCategories = moveCategories, isMaxFr = isMaxFr, onClick = { showMoveSheet = it })
     }
 
     Spacer(Modifier.height(4.dp))
@@ -609,11 +610,12 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     if (showAbilitySheet) {
         AbilityDetailSheet(
             abilityId = pokemon.abilityId,
+            isMaxFr = isMaxFr,
             onDismiss = { showAbilitySheet = false },
         )
     }
     if (showDefenseSheet) {
-        TypeDefenseSheet(pokemon.type1, pokemon.type2, isNatDex = isNatDex, onDismiss = { showDefenseSheet = false })
+        TypeDefenseSheet(pokemon.type1, pokemon.type2, isNatDex = isNatDex || isMaxFr, onDismiss = { showDefenseSheet = false })
     }
     if (showLearnsetSheet && learnset != null) {
         LearnsetSheet(learnset, pokemon.level, onDismiss = { showLearnsetSheet = false })
@@ -625,7 +627,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         BagDetailSheet(bagDetail, onDismiss = { showBagSheet = false })
     }
     if (showCoverageSheet) {
-        CoverageCalcSheet(isNatDex = isNatDex, onDismiss = { showCoverageSheet = false })
+        CoverageCalcSheet(isNatDex = isNatDex || isMaxFr, onDismiss = { showCoverageSheet = false })
     }
 }
 
@@ -790,6 +792,7 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
             ppByMoveId = ppByMoveId,
             encounterRoutes = encounterRoutes,
             isNatDex = state.isNatDex,
+            isMaxFr = state.isMaxFr,
             onDismiss = { selectedRouteSpecies = null },
         )
     }
@@ -806,6 +809,8 @@ private fun EnemyView(
     learnset: LearnsetInfo? = null,
     playerLead: PokemonData? = null,
     isNatDex: Boolean = false,
+    isMaxFr: Boolean = false,
+    moveCategories: Map<Int, Int> = emptyMap(),
 ) {
     val enemy = battle.enemy
     if (enemy == null) {
@@ -928,10 +933,10 @@ private fun EnemyView(
                     Modifier.clickable { showMoveHistorySheet = true } else Modifier,
             )
             Spacer(Modifier.height(2.dp))
-            EnemyMoveTable(enemy, playerLead, onClick = { showMoveSheet = it })
+            EnemyMoveTable(enemy, playerLead, isMaxFr = isMaxFr, moveCategories = moveCategories, onClick = { showMoveSheet = it })
         }
         if (showMoveHistorySheet) {
-            MoveHistorySheet(enemy, onDismiss = { showMoveHistorySheet = false })
+            MoveHistorySheet(enemy, isMaxFr = isMaxFr, onDismiss = { showMoveHistorySheet = false })
         }
 
         // ── Stat markings ─────────────────────────────────────────────────────
@@ -985,13 +990,13 @@ private fun EnemyView(
         MoveDetailSheet(move, onDismiss = { showMoveSheet = null })
     }
     if (showDefenseSheet) {
-        TypeDefenseSheet(enemy.type1, enemy.type2, isNatDex = isNatDex, onDismiss = { showDefenseSheet = false })
+        TypeDefenseSheet(enemy.type1, enemy.type2, isNatDex = isNatDex || isMaxFr, onDismiss = { showDefenseSheet = false })
     }
     if (showLearnsetSheet && learnset != null) {
         LearnsetSheet(learnset, enemy.level, onDismiss = { showLearnsetSheet = false })
     }
     if (showCoverageSheet) {
-        CoverageCalcSheet(isNatDex = isNatDex, onDismiss = { showCoverageSheet = false })
+        CoverageCalcSheet(isNatDex = isNatDex || isMaxFr, onDismiss = { showCoverageSheet = false })
     }
 }
 
@@ -1074,14 +1079,18 @@ private val SPECIAL_PIXELS = arrayOf(
 )
 
 @Composable
-private fun MoveCategoryIcon(typeId: Int, power: Int, modifier: Modifier = Modifier) {
+private fun MoveCategoryIcon(typeId: Int, power: Int, romCategory: Int = 0, modifier: Modifier = Modifier) {
     val pixels: Array<IntArray>?
     val color: Color
+    // romCategory 1=Physical, 2=Special, 3=Status (Gen IV per-move split from ROM)
     when {
-        power == 0               -> { pixels = null; color = Color.Transparent }
-        typeId in PHYSICAL_TYPES -> { pixels = PHYSICAL_PIXELS; color = Color(0xFFF08030) }
-        typeId in SPECIAL_TYPES  -> { pixels = SPECIAL_PIXELS;  color = Color(0xFF6890F0) }
-        else                     -> { pixels = null; color = Color.Transparent }
+        power == 0 && romCategory != 3 -> { pixels = null; color = Color.Transparent }
+        romCategory == 1             -> { pixels = PHYSICAL_PIXELS; color = Color(0xFFF08030) }
+        romCategory == 2             -> { pixels = SPECIAL_PIXELS;  color = Color(0xFF6890F0) }
+        romCategory == 3             -> { pixels = SPECIAL_PIXELS;  color = Color(0xFFF85888) }  // Status: pink
+        typeId in PHYSICAL_TYPES     -> { pixels = PHYSICAL_PIXELS; color = Color(0xFFF08030) }
+        typeId in SPECIAL_TYPES      -> { pixels = SPECIAL_PIXELS;  color = Color(0xFF6890F0) }
+        else                         -> { pixels = null; color = Color.Transparent }
     }
     Canvas(modifier = modifier) {
         if (pixels == null) return@Canvas
@@ -1103,7 +1112,7 @@ private fun MoveCategoryIcon(typeId: Int, power: Int, modifier: Modifier = Modif
 
 // ── Move table ────────────────────────────────────────────────────────────────
 @Composable
-private fun MoveTable(moves: List<MoveData>, battle: BattleState, player: PokemonData? = null, stabTypes: Set<Int> = emptySet(), onClick: (MoveData) -> Unit) {
+private fun MoveTable(moves: List<MoveData>, battle: BattleState, player: PokemonData? = null, stabTypes: Set<Int> = emptySet(), moveCategories: Map<Int, Int> = emptyMap(), isMaxFr: Boolean = false, onClick: (MoveData) -> Unit) {
     // Column header
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(18.dp))  // category icon column
@@ -1115,12 +1124,15 @@ private fun MoveTable(moves: List<MoveData>, battle: BattleState, player: Pokemo
     }
     Spacer(Modifier.height(2.dp))
     moves.forEach { move ->
-        MoveTableRow(move, battle, player = player, isStab = move.moveType in stabTypes, onClick = { onClick(move) })
+        MoveTableRow(move, battle, player = player, isStab = move.moveType in stabTypes,
+            romCategory = moveCategories[move.moveId] ?: MoveStatsTable.get(move.moveId, isMaxFr).category,
+            isMaxFr = isMaxFr,
+            onClick = { onClick(move) })
     }
 }
 
 @Composable
-private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonData? = null, isStab: Boolean = false, onClick: () -> Unit) {
+private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonData? = null, isStab: Boolean = false, romCategory: Int = 0, isMaxFr: Boolean = false, onClick: () -> Unit) {
     val effectiveness = battle.enemy?.let { enemy ->
         TypeChart.effectiveness(move.moveType, enemy.type1, enemy.type2)
     }
@@ -1137,9 +1149,10 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonDat
     ) {
         // Category icon (physical starburst / special diamond, matching Lua Constants.PixelImages)
         MoveCategoryIcon(
-            typeId = move.moveType,
-            power  = move.power,
-            modifier = Modifier.size(width = 14.dp, height = 14.dp),
+            typeId      = move.moveType,
+            power       = move.power,
+            romCategory = romCategory,
+            modifier    = Modifier.size(width = 14.dp, height = 14.dp),
         )
         Spacer(Modifier.width(4.dp))
         // Type dot + name
@@ -1159,7 +1172,7 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonDat
         }
         // Power — use live-calculated value in battle when available, else static display
         Text(
-            text = calcPower ?: MoveStatsTable.get(move.moveId).displayPower ?: if (move.power > 0) "${move.power}" else "—",
+            text = calcPower ?: MoveStatsTable.get(move.moveId, isMaxFr).displayPower ?: if (move.power > 0) "${move.power}" else "—",
             color = if (calcPower != null) Color(0xFFFFD700) else TextSecondary,
             fontSize = ssp(13), textAlign = TextAlign.Center,
             modifier = Modifier.width(28.dp),
@@ -1197,7 +1210,7 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonDat
 // Prefers fourConfirmedThisBattle (usage-ordered) over persistent revealedMoveIds list,
 // matching Lua Tracker.getMoves(pokemonID, level) → BattleNotes.FourMovesIfAllKnown check.
 @Composable
-private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, onClick: (MoveData) -> Unit) {
+private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, isMaxFr: Boolean = false, moveCategories: Map<Int, Int> = emptyMap(), onClick: (MoveData) -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(18.dp))
         Text("Move", color = TextSecondary, fontSize = ssp(12), modifier = Modifier.weight(1f))
@@ -1210,10 +1223,10 @@ private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, onClick: 
     // Use confirmed battle set (usage order) if all 4 known this battle; else persistent display list
     val displayIds = enemy.fourConfirmedThisBattle ?: enemy.revealedMoveIds
     displayIds.forEachIndexed { idx, moveId ->
-        val stats = MoveStatsTable.get(moveId)
+        val stats = MoveStatsTable.get(moveId, isMaxFr)
         val isStale = enemy.fourConfirmedThisBattle == null
             && idx < enemy.moveStaleFlags.size && enemy.moveStaleFlags[idx]
-        val displayName = if (isStale) MoveNames.get(moveId) + "*" else MoveNames.get(moveId)
+        val displayName = if (isStale) MoveNames.get(moveId, isMaxFr) + "*" else MoveNames.get(moveId, isMaxFr)
         val moveData = MoveData(
             moveId   = moveId,
             moveName = displayName,
@@ -1223,12 +1236,15 @@ private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, onClick: 
             accuracy = stats.accuracy,
             moveType = stats.type,
         )
-        EnemyMoveTableRow(moveData, enemy, playerLead, onClick = { onClick(moveData) })
+        EnemyMoveTableRow(moveData, enemy, playerLead,
+            romCategory = moveCategories[moveId] ?: stats.category,
+            isMaxFr = isMaxFr,
+            onClick = { onClick(moveData) })
     }
 }
 
 @Composable
-private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: PokemonData?, onClick: () -> Unit) {
+private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: PokemonData?, romCategory: Int = 0, isMaxFr: Boolean = false, onClick: () -> Unit) {
     val isStab = move.moveType == enemy.type1 || move.moveType == enemy.type2
     val effectiveness = playerLead?.let {
         TypeChart.effectiveness(move.moveType, it.type1, it.type2)
@@ -1240,7 +1256,7 @@ private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: Poke
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MoveCategoryIcon(typeId = move.moveType, power = move.power, modifier = Modifier.size(width = 14.dp, height = 14.dp))
+        MoveCategoryIcon(typeId = move.moveType, power = move.power, romCategory = romCategory, modifier = Modifier.size(width = 14.dp, height = 14.dp))
         Spacer(Modifier.width(4.dp))
         Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(8.dp).background(typeColor(move.moveType), CircleShape))
@@ -1253,7 +1269,7 @@ private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: Poke
             )
         }
         Text(
-            text = MoveStatsTable.get(move.moveId).displayPower ?: if (move.power > 0) "${move.power}" else "—",
+            text = MoveStatsTable.get(move.moveId, isMaxFr).displayPower ?: if (move.power > 0) "${move.power}" else "—",
             color = TextSecondary, fontSize = ssp(13), textAlign = TextAlign.Center,
             modifier = Modifier.width(28.dp),
         )
@@ -1288,7 +1304,7 @@ private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: Poke
 // Tappable header "Revealed Moves* (N)" opens this when totalTrackedMoveCount > 4.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MoveHistorySheet(enemy: EnemyData, onDismiss: () -> Unit) {
+private fun MoveHistorySheet(enemy: EnemyData, isMaxFr: Boolean = false, onDismiss: () -> Unit) {
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     val sorted = remember(enemy.allTrackedMoves) {
         enemy.allTrackedMoves.sortedByDescending { it.minLv }
@@ -1314,10 +1330,10 @@ private fun MoveHistorySheet(enemy: EnemyData, onDismiss: () -> Unit) {
             }
             Divider(color = Color(0xFF303050), thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
             sorted.forEach { tracked ->
-                val stats = MoveStatsTable.get(tracked.id)
+                val stats = MoveStatsTable.get(tracked.id, isMaxFr)
                 val moveData = MoveData(
                     moveId   = tracked.id,
-                    moveName = MoveNames.get(tracked.id),
+                    moveName = MoveNames.get(tracked.id, isMaxFr),
                     pp       = stats.pp,
                     maxPp    = stats.pp,
                     power    = stats.power,
@@ -1333,7 +1349,7 @@ private fun MoveHistorySheet(enemy: EnemyData, onDismiss: () -> Unit) {
                 ) {
                     Box(Modifier.size(8.dp).background(typeColor(stats.type), CircleShape))
                     Spacer(Modifier.width(4.dp))
-                    Text(MoveNames.get(tracked.id), color = TextPrimary,
+                    Text(MoveNames.get(tracked.id, isMaxFr), color = TextPrimary,
                         fontSize = ssp(13), modifier = Modifier.weight(1f))
                     Text("${tracked.minLv}", color = TextSecondary, fontSize = ssp(13),
                         textAlign = TextAlign.Center, modifier = Modifier.width(46.dp))
@@ -1510,8 +1526,8 @@ fun MoveDetailSheet(move: MoveData, battlePower: String? = null, onDismiss: () -
 // ── Ability detail sheet ──────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AbilityDetailSheet(abilityId: Int, onDismiss: () -> Unit) {
-    val info = AbilityTable.get(abilityId)
+fun AbilityDetailSheet(abilityId: Int, isMaxFr: Boolean = false, onDismiss: () -> Unit) {
+    val info = AbilityTable.get(abilityId, isMaxFr)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
         Column(Modifier.padding(16.dp)) {
             Text(info.name, color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
@@ -1573,6 +1589,7 @@ private fun RouteMonSheet(
     ppByMoveId: Map<Int, Int>,
     encounterRoutes: List<String>,
     isNatDex: Boolean = false,
+    isMaxFr: Boolean = false,
     onDismiss: () -> Unit,
 ) {
     var baseStatBytes by remember { mutableStateOf<ByteArray?>(null) }
@@ -1652,14 +1669,14 @@ private fun RouteMonSheet(
                 Text("Revealed Moves:", color = TextSecondary, fontSize = ssp(13))
                 Spacer(Modifier.height(2.dp))
                 revealedMoveIds.forEach { moveId ->
-                    val stats = MoveStatsTable.get(moveId)
+                    val stats = MoveStatsTable.get(moveId, isMaxFr)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
                                 showMoveSheet = MoveData(
                                     moveId   = moveId,
-                                    moveName = MoveNames.get(moveId),
+                                    moveName = MoveNames.get(moveId, isMaxFr),
                                     pp       = stats.pp,
                                     maxPp    = stats.pp,
                                     power    = stats.power,
@@ -1673,7 +1690,7 @@ private fun RouteMonSheet(
                         Box(Modifier.size(8.dp).background(typeColor(stats.type), CircleShape))
                         Spacer(Modifier.width(4.dp))
                         val ppText = ppByMoveId[moveId]?.let { " (${it}PP)" } ?: ""
-                        Text(MoveNames.get(moveId) + ppText, color = TextPrimary, fontSize = ssp(14))
+                        Text(MoveNames.get(moveId, isMaxFr) + ppText, color = TextPrimary, fontSize = ssp(14))
                     }
                 }
             }
@@ -1683,7 +1700,7 @@ private fun RouteMonSheet(
     }
 
     if (showDefenseSheet && bytes != null) {
-        TypeDefenseSheet(type1, type2, isNatDex = isNatDex, onDismiss = { showDefenseSheet = false })
+        TypeDefenseSheet(type1, type2, isNatDex = isNatDex || isMaxFr, onDismiss = { showDefenseSheet = false })
     }
     showMoveSheet?.let { move ->
         MoveDetailSheet(move, onDismiss = { showMoveSheet = null })

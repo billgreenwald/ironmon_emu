@@ -1,6 +1,6 @@
 package hh.game.mgba_android.tracker.tables
 
-data class MoveStats(val power: Int, val accuracy: Int, val type: Int, val pp: Int, val displayPower: String? = null)
+data class MoveStats(val power: Int, val accuracy: Int, val type: Int, val pp: Int, val displayPower: String? = null, val category: Int = 0)
 
 object MoveStatsTable {
 
@@ -724,7 +724,161 @@ object MoveStatsTable {
         moves[354] = MoveStats(140, 90,  14, 5)
     }
 
-    fun get(moveId: Int): MoveStats {
+    // MaxFR/MaxEM moves 355–500 plus 559 (Fusion Bolt).
+    // Type IDs match Gen III ROM IDs (0=Normal,1=Fighting,2=Flying,3=Poison,4=Ground,5=Rock,
+    //   6=Bug,7=Ghost,8=Steel,10=Fire,11=Water,12=Grass,13=Electric,14=Psychic,15=Ice,16=Dragon,17=Dark).
+    // category: 1=Physical, 2=Special, 3=Status.
+    private val MAX_FR_STATS: Map<Int, MoveStats> = mapOf(
+        355 to MoveStats(75,  100, 0,  10, category = 2),  // Relic Song
+        356 to MoveStats(0,   0,   17, 15, category = 3),  // Hone Claws
+        357 to MoveStats(0,   0,   14, 40, category = 3),  // Miracle Eye
+        358 to MoveStats(70,  100, 1,  10, category = 1),  // Wake-Up Slap
+        359 to MoveStats(100, 90,  1,  10, category = 1),  // Hammer Arm
+        360 to MoveStats(1,   100, 8,  5,  "<SP", 1),      // Gyro Ball
+        361 to MoveStats(0,   0,   14, 10, category = 3),  // Healing Wish
+        362 to MoveStats(65,  100, 11, 10, category = 2),  // Brine
+        363 to MoveStats(0,   0,   14, 10, category = 3),  // Guard Split
+        364 to MoveStats(50,  100, 0,  10, category = 1),  // Feint
+        365 to MoveStats(60,  100, 10, 15, category = 2),  // Incinerate
+        366 to MoveStats(0,   0,   14, 10, category = 3),  // Power Split
+        367 to MoveStats(0,   0,   0,  30, category = 3),  // Acupressure
+        368 to MoveStats(0,   100, 8,  10, category = 1),  // Metal Burst
+        369 to MoveStats(70,  100, 6,  20, category = 1),  // U-turn
+        370 to MoveStats(120, 100, 1,  5,  category = 1),  // Close Combat
+        371 to MoveStats(50,  100, 17, 10, category = 1),  // Payback
+        372 to MoveStats(60,  100, 17, 10, category = 1),  // Assurance
+        373 to MoveStats(0,   0,   6,  20, category = 3),  // Quiver Dance
+        374 to MoveStats(0,   0,   3,  20, category = 3),  // Coil
+        375 to MoveStats(0,   100, 14, 10, category = 3),  // Psycho Shift
+        376 to MoveStats(1,   0,   0,  5,  "<PP", 2),      // Trump Card
+        377 to MoveStats(50,  0,   3,  15, category = 2),  // Clear Smog
+        378 to MoveStats(1,   100, 0,  5,  ">HP", 2),      // Wring Out
+        379 to MoveStats(0,   0,   14, 10, category = 3),  // Power Trick
+        380 to MoveStats(0,   100, 3,  10, category = 3),  // Gastro Acid
+        381 to MoveStats(0,   0,   0,  15, category = 3),  // Shell Smash
+        382 to MoveStats(0,   0,   0,  20, category = 3),  // Me First
+        383 to MoveStats(0,   0,   0,  20, category = 3),  // Copycat
+        384 to MoveStats(0,   0,   14, 10, category = 3),  // Power Swap
+        385 to MoveStats(0,   0,   14, 10, category = 3),  // Guard Swap
+        386 to MoveStats(1,   100, 17, 5,  "STA", 1),      // Punishment
+        387 to MoveStats(140, 100, 0,  5,  category = 1),  // Last Resort
+        388 to MoveStats(0,   100, 12, 10, category = 3),  // Worry Seed
+        389 to MoveStats(80,  100, 17, 5,  category = 1),  // Sucker Punch
+        390 to MoveStats(0,   0,   8,  10, category = 3),  // Shift Gear
+        391 to MoveStats(0,   0,   14, 10, category = 3),  // Heart Swap
+        392 to MoveStats(1,   100, 1,  5,  "HP",  2),      // Final Gambit
+        393 to MoveStats(0,   0,   0,  30, category = 3),  // Work Up
+        394 to MoveStats(120, 100, 10, 15, category = 1),  // Flare Blitz
+        395 to MoveStats(60,  100, 1,  10, category = 1),  // Force Palm
+        396 to MoveStats(90,  0,   1,  20, category = 2),  // Aura Sphere
+        397 to MoveStats(0,   0,   5,  20, category = 3),  // Rock Polish
+        398 to MoveStats(80,  100, 3,  20, category = 1),  // Poison Jab
+        399 to MoveStats(80,  100, 17, 15, category = 2),  // Dark Pulse
+        400 to MoveStats(70,  100, 17, 15, category = 1),  // Night Slash
+        401 to MoveStats(90,  90,  11, 10, category = 1),  // Aqua Tail
+        402 to MoveStats(80,  100, 12, 15, category = 1),  // Seed Bomb
+        403 to MoveStats(75,  95,  2,  20, category = 2),  // Air Slash
+        404 to MoveStats(80,  100, 6,  15, category = 1),  // X-Scissor
+        405 to MoveStats(90,  100, 6,  10, category = 2),  // Bug Buzz
+        406 to MoveStats(90,  100, 16, 10, category = 2),  // Dragon Pulse
+        407 to MoveStats(100, 75,  16, 10, category = 1),  // Dragon Rush
+        408 to MoveStats(80,  100, 5,  20, category = 2),  // Power Gem
+        409 to MoveStats(75,  100, 1,  10, category = 1),  // Drain Punch
+        410 to MoveStats(40,  100, 1,  30, category = 2),  // Vacuum Wave
+        411 to MoveStats(120, 70,  1,  5,  category = 2),  // Focus Blast
+        412 to MoveStats(90,  100, 12, 10, category = 2),  // Energy Ball
+        413 to MoveStats(120, 100, 2,  15, category = 1),  // Brave Bird
+        414 to MoveStats(90,  100, 4,  10, category = 2),  // Earth Power
+        415 to MoveStats(0,   100, 17, 10, category = 3),  // Switcheroo
+        416 to MoveStats(150, 90,  0,  5,  category = 1),  // Giga Impact
+        417 to MoveStats(0,   0,   17, 20, category = 3),  // Nasty Plot
+        418 to MoveStats(40,  100, 8,  30, category = 1),  // Bullet Punch
+        419 to MoveStats(60,  100, 15, 10, category = 1),  // Avalanche
+        420 to MoveStats(40,  100, 15, 30, category = 1),  // Ice Shard
+        421 to MoveStats(70,  100, 7,  15, category = 1),  // Shadow Claw
+        422 to MoveStats(65,  95,  13, 15, category = 1),  // Thunder Fang
+        423 to MoveStats(65,  95,  15, 15, category = 1),  // Ice Fang
+        424 to MoveStats(65,  95,  10, 15, category = 1),  // Fire Fang
+        425 to MoveStats(40,  100, 7,  30, category = 1),  // Shadow Sneak
+        426 to MoveStats(65,  85,  4,  10, category = 2),  // Mud Bomb
+        427 to MoveStats(70,  100, 14, 20, category = 1),  // Psycho Cut
+        428 to MoveStats(80,  90,  14, 15, category = 1),  // Zen Headbutt
+        429 to MoveStats(65,  85,  8,  10, category = 2),  // Mirror Shot
+        430 to MoveStats(80,  100, 8,  10, category = 2),  // Flash Cannon
+        431 to MoveStats(90,  85,  0,  20, category = 1),  // Rock Climb
+        432 to MoveStats(0,   0,   2,  15, category = 3),  // Defog
+        433 to MoveStats(100, 100, 10, 5,  category = 2),  // Fusion Flare
+        434 to MoveStats(140, 90,  16, 5,  category = 2),  // Draco Meteor
+        435 to MoveStats(80,  100, 13, 15, category = 2),  // Discharge
+        436 to MoveStats(80,  100, 10, 15, category = 2),  // Lava Plume
+        437 to MoveStats(140, 90,  12, 5,  category = 2),  // Leaf Storm
+        438 to MoveStats(120, 85,  12, 10, category = 1),  // Power Whip
+        439 to MoveStats(150, 90,  5,  5,  category = 1),  // Rock Wrecker
+        440 to MoveStats(70,  100, 3,  20, category = 1),  // Cross Poison
+        441 to MoveStats(120, 80,  3,  5,  category = 1),  // Gunk Shot
+        442 to MoveStats(80,  100, 8,  15, category = 1),  // Iron Head
+        443 to MoveStats(60,  0,   8,  20, category = 1),  // Magnet Bomb
+        444 to MoveStats(100, 80,  5,  5,  category = 1),  // Stone Edge
+        445 to MoveStats(0,   100, 0,  20, category = 3),  // Captivate
+        447 to MoveStats(1,   100, 12, 20, "WT",  2),      // Grass Knot
+        448 to MoveStats(65,  100, 2,  20, category = 2),  // Chatter
+        449 to MoveStats(100, 100, 0,  10, category = 2),  // Judgment
+        450 to MoveStats(50,  100, 6,  20, category = 2),  // Struggle Bug
+        451 to MoveStats(50,  90,  13, 10, category = 2),  // Charge Beam
+        452 to MoveStats(120, 100, 12, 15, category = 1),  // Wood Hammer
+        453 to MoveStats(40,  100, 11, 20, category = 1),  // Aqua Jet
+        454 to MoveStats(90,  100, 6,  15, category = 1),  // Attack Order
+        455 to MoveStats(0,   0,   6,  10, category = 3),  // Defend Order
+        456 to MoveStats(0,   0,   6,  10, category = 3),  // Heal Order
+        457 to MoveStats(150, 80,  5,  5,  category = 1),  // Head Smash
+        458 to MoveStats(35,  90,  0,  10, category = 1),  // Double Hit
+        459 to MoveStats(150, 90,  16, 5,  category = 2),  // Roar of Time
+        460 to MoveStats(100, 95,  16, 5,  category = 2),  // Spacial Rend
+        461 to MoveStats(0,   0,   14, 10, category = 3),  // Lunar Dance
+        462 to MoveStats(1,   100, 0,  5,  ">HP", 1),      // Crush Grip
+        463 to MoveStats(120, 75,  10, 5,  category = 2),  // Magma Storm
+        464 to MoveStats(0,   80,  17, 10, category = 3),  // Dark Void
+        465 to MoveStats(120, 85,  12, 5,  category = 2),  // Seed Flare
+        466 to MoveStats(60,  100, 7,  5,  category = 2),  // Ominous Wind
+        467 to MoveStats(120, 100, 7,  5,  category = 1),  // Shadow Force
+        468 to MoveStats(65,  100, 3,  10, category = 2),  // Venoshock
+        469 to MoveStats(95,  100, 3,  10, category = 2),  // Sludge Wave
+        470 to MoveStats(50,  100, 10, 20, category = 1),  // Flame Charge
+        471 to MoveStats(65,  100, 1,  20, category = 1),  // Low Sweep
+        472 to MoveStats(40,  100, 3,  20, category = 2),  // Acid Spray
+        473 to MoveStats(80,  100, 11, 15, category = 2),  // Scald
+        474 to MoveStats(65,  100, 7,  10, category = 2),  // Hex
+        475 to MoveStats(100, 50,  10, 5,  category = 2),  // Inferno
+        476 to MoveStats(70,  100, 13, 20, category = 2),  // Volt Switch
+        477 to MoveStats(60,  100, 4,  20, category = 1),  // Bulldoze
+        478 to MoveStats(55,  95,  13, 15, category = 2),  // Electroweb
+        479 to MoveStats(90,  100, 13, 15, category = 1),  // Wild Charge
+        480 to MoveStats(80,  95,  4,  10, category = 1),  // Drill Run
+        481 to MoveStats(40,  90,  16, 15, category = 1),  // Dual Chop
+        482 to MoveStats(60,  100, 14, 25, category = 1),  // Heart Stamp
+        483 to MoveStats(75,  100, 12, 10, category = 1),  // Horn Leech
+        484 to MoveStats(75,  95,  11, 10, category = 1),  // Razor Shell
+        485 to MoveStats(65,  90,  12, 10, category = 2),  // Leaf Tornado
+        486 to MoveStats(65,  100, 6,  20, category = 1),  // Steamroller
+        487 to MoveStats(85,  95,  17, 10, category = 2),  // Night Daze
+        488 to MoveStats(25,  85,  0,  10, category = 1),  // Tail Slap
+        489 to MoveStats(120, 70,  2,  10, category = 2),  // Hurricane
+        490 to MoveStats(120, 100, 0,  15, category = 1),  // Head Charge
+        491 to MoveStats(50,  85,  8,  15, category = 1),  // Gear Grind
+        492 to MoveStats(100, 100, 10, 5,  category = 2),  // Searing Shot
+        493 to MoveStats(65,  95,  15, 10, category = 2),  // Glaciate
+        494 to MoveStats(130, 85,  13, 5,  category = 1),  // Bolt Strike
+        495 to MoveStats(130, 85,  10, 5,  category = 2),  // Blue Flare
+        496 to MoveStats(80,  100, 10, 10, category = 2),  // Fiery Dance
+        497 to MoveStats(140, 90,  15, 5,  category = 1),  // Freeze Shock
+        498 to MoveStats(140, 90,  15, 5,  category = 2),  // Ice Burn
+        499 to MoveStats(55,  95,  17, 15, category = 2),  // Snarl
+        500 to MoveStats(85,  90,  15, 10, category = 1),  // Icicle Crash
+        559 to MoveStats(100, 100, 13, 5,  category = 1),  // Fusion Bolt
+    )
+
+    fun get(moveId: Int, isMaxFr: Boolean = false): MoveStats {
+        if (isMaxFr) MAX_FR_STATS[moveId]?.let { return it }
         if (moveId < 1 || moveId > 354) return DEFAULT
         return moves[moveId] ?: DEFAULT
     }

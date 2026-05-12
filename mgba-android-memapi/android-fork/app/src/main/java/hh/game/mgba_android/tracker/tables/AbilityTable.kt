@@ -85,9 +85,67 @@ object AbilityTable {
         AbilityInfo("Air Lock",       "Negates weather effects."),                  // 77
     )
 
-    fun get(abilityId: Int): AbilityInfo =
-        if (abilityId in 1 until ABILITIES.size) ABILITIES[abilityId] ?: AbilityInfo("???", "")
-        else AbilityInfo("None", "")
+    // MaxFR/MaxEM ROM hack redefines Gen III ability 77 (Air Lock → Tangled Feet)
+    // and adds 50 new abilities (IDs 78–127). From maxData/abilities.lua.
+    private val MAX_FR_ABILITIES = mapOf(
+        77  to AbilityInfo("Tangled Feet",  "Doubles evasion when confused."),
+        78  to AbilityInfo("Motor Drive",   "Absorbs electric moves, raising Speed one stage."),
+        79  to AbilityInfo("Rivalry",       "1.25x damage vs same gender, 0.75x vs opposite."),
+        80  to AbilityInfo("Steadfast",     "Raises Speed one stage upon flinching."),
+        81  to AbilityInfo("Snow Cloak",    "Boosts evasion in hail; immune to hail damage."),
+        82  to AbilityInfo("Heatproof",     "Halves damage from fire moves and burns."),
+        83  to AbilityInfo("Simple",        "Doubles all stat modifiers."),
+        84  to AbilityInfo("Dry Skin",      "Absorbs Water; takes extra Fire; hurts in sun, heals in rain."),
+        85  to AbilityInfo("Iron Fist",     "Strengthens punch moves to 1.2x power."),
+        86  to AbilityInfo("Adaptability",  "STAB bonus increases from 1.5x to 2x."),
+        87  to AbilityInfo("Skill Link",    "Multi-hit moves always hit max times."),
+        88  to AbilityInfo("Hydration",     "Cures status ailment after each turn during rain."),
+        89  to AbilityInfo("Solar Power",   "1.5x Special Attack in sun; costs 1/8 max HP/turn."),
+        90  to AbilityInfo("Quick Feet",    "1.5x Speed when statused."),
+        91  to AbilityInfo("Sniper",        "Critical hits deal 3x damage instead of 2x."),
+        92  to AbilityInfo("No Guard",      "All moves by/against user hit without fail."),
+        93  to AbilityInfo("Technician",    "Moves with ≤60 base power deal 1.5x damage."),
+        94  to AbilityInfo("Leaf Guard",    "Prevents status ailments in strong sunlight."),
+        95  to AbilityInfo("Super Luck",    "Raises critical hit rate by one stage."),
+        96  to AbilityInfo("Unaware",       "Ignores opponents' stat modifiers."),
+        97  to AbilityInfo("Tinted Lens",   "Not-very-effective moves deal 2x damage."),
+        98  to AbilityInfo("Filter",        "Super-effective moves deal 0.75x damage."),
+        99  to AbilityInfo("Scrappy",       "Normal/Fighting moves hit Ghost; ignores Intimidate."),
+        100 to AbilityInfo("Storm Drain",   "Absorbs Water moves, raising Special Attack."),
+        101 to AbilityInfo("Ice Body",      "Heals 1/16 max HP per turn in hail; immune to hail."),
+        102 to AbilityInfo("Snow Warning",  "Summons permanent hail on entry; immune to hail."),
+        103 to AbilityInfo("Reckless",      "Recoil moves deal 1.2x damage."),
+        104 to AbilityInfo("Contrary",      "Inverts stat changes."),
+        105 to AbilityInfo("Defiant",       "Raises Attack two stages when any stat is lowered."),
+        106 to AbilityInfo("Weak Armor",    "Physical hits raise Speed, lower Defense by one stage."),
+        107 to AbilityInfo("Multiscale",    "Halves damage taken from full HP."),
+        108 to AbilityInfo("Toxic Boost",   "1.5x Attack when poisoned."),
+        109 to AbilityInfo("Flare Boost",   "1.5x Special Attack when burned."),
+        110 to AbilityInfo("Overcoat",      "Immune to weather damage."),
+        111 to AbilityInfo("Big Pecks",     "Defense cannot be lowered."),
+        112 to AbilityInfo("Sand Rush",     "2x Speed in sandstorm; immune to sand damage."),
+        113 to AbilityInfo("Wonder Skin",   "Lowers non-damaging moves' accuracy to 50%."),
+        114 to AbilityInfo("Analytic",      "1.3x power when moving last."),
+        115 to AbilityInfo("Infiltrator",   "Bypasses Light Screen, Reflect, and Safeguard."),
+        116 to AbilityInfo("Justified",     "Dark-type hits raise Attack one stage."),
+        117 to AbilityInfo("Rattled",       "Dark/Ghost/Bug hits or Intimidate raise Speed one stage."),
+        118 to AbilityInfo("Sap Sipper",    "Absorbs Grass moves, raising Attack one stage."),
+        119 to AbilityInfo("Sand Force",    "Rock/Ground/Steel moves 1.3x in sand; immune to sand."),
+        120 to AbilityInfo("Download",      "Raises Attack or Sp. Atk based on foe's weaker Defense."),
+        121 to AbilityInfo("Flower Gift",   "1.5x Attack and Sp. Def for allies in strong sunlight."),
+        122 to AbilityInfo("Moody",         "Raises one random stat +2, lowers another −1 each turn."),
+        123 to AbilityInfo("Prankster",     "Non-damaging moves get +1 priority."),
+        124 to AbilityInfo("Victory Star",  "1.3x accuracy for self and allies."),
+        125 to AbilityInfo("Anger Point",   "Critical hits raise Attack to +6."),
+        126 to AbilityInfo("Aftermath",     "50% chance to deal 1/4 attacker max HP on contact KO."),
+        127 to AbilityInfo("Moxie",         "50% chance to raise Attack one stage on KO."),
+    )
 
-    fun name(abilityId: Int): String = get(abilityId).name
+    fun get(abilityId: Int, isMaxFr: Boolean = false): AbilityInfo {
+        if (isMaxFr) MAX_FR_ABILITIES[abilityId]?.let { return it }
+        return if (abilityId in 1 until ABILITIES.size) ABILITIES[abilityId] ?: AbilityInfo("???", "")
+        else AbilityInfo("None", "")
+    }
+
+    fun name(abilityId: Int, isMaxFr: Boolean = false): String = get(abilityId, isMaxFr).name
 }

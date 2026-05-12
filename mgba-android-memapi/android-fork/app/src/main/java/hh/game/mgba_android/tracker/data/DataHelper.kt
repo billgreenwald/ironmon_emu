@@ -45,6 +45,10 @@ data class GameAddresses(
     val gHitMarker: Long = 0L,
     val gMoveResultFlags: Long = 0L,
     val gBattleCommunication: Long = 0L,
+    // MaxFR/MaxEM ROM hack: relocated move table address (0L = vanilla, no per-move category)
+    val gBattleMoves: Long = 0L,
+    // Whether Fairy type (ID 18) is active — true for MaxFR/MaxEM hacks
+    val hasFairy: Boolean = false,
 )
 
 object DataHelper {
@@ -342,12 +346,35 @@ object DataHelper {
         // partyCount/partyBase/enemyParty/sideStatuses/sideTimers — not overridden, keep vanilla
     )
 
+    // MaxFR/MaxEM ROM hacks — Emerald-based; all RAM addresses identical to vanilla Emerald.
+    // Only ROM table addresses (gBattleMoves, levelUpLearnsets, experienceTables) differ.
+    // Addresses from maxData/*.json (provided by ROM hack creator).
+    private val EMERALD_MAX_FR = EMERALD.copy(
+        gBattleMoves     = 0x08262C08L,  // maxData/max-fr.json gBattleMoves
+        levelUpLearnsets = 0x08272628L,  // maxData/max-fr.json gLevelUpLearnsets
+        experienceTables = 0x0826650CL,  // maxData/max-fr.json gExperienceTables
+        hasFairy         = true,
+    )
+    private val EMERALD_MAX_FR_GEN4 = EMERALD.copy(
+        gBattleMoves     = 0x082643E4L,  // maxData/max-fr-gen4.json gBattleMoves
+        levelUpLearnsets = 0x08275E0CL,  // maxData/max-fr-gen4.json gLevelUpLearnsets
+        experienceTables = 0x08268260L,  // maxData/max-fr-gen4.json gExperienceTables
+        hasFairy         = true,
+    )
+    private val EMERALD_MAX_EM = EMERALD.copy(
+        gBattleMoves     = 0x0832C9A0L,  // maxData/max-em.json gBattleMoves
+        levelUpLearnsets = 0x08339B5CL,  // maxData/max-em.json gLevelUpLearnsets
+        experienceTables = 0x0832FF0CL,  // maxData/max-em.json gExperienceTables
+        hasFairy         = true,
+    )
+
     /**
      * Returns the correct addresses for [game] and [romVersion] (byte from 0x080000BC).
      * [gameCode] is the 4-char game code used to detect non-English variants.
      * [isNatDex] selects NatDex ROM hack addresses when true (FireRed and Emerald only).
+     * [maxFr] selects a MaxFR/MaxEM ROM hack variant when non-NONE (Emerald only).
      */
-    fun addressesFor(game: GameVersion, romVersion: Int = 0, gameCode: String = "", isNatDex: Boolean = false): GameAddresses? = when (game) {
+    fun addressesFor(game: GameVersion, romVersion: Int = 0, gameCode: String = "", isNatDex: Boolean = false, maxFr: MaxFrVariant = MaxFrVariant.NONE): GameAddresses? = when (game) {
         GameVersion.FIRE_RED -> when {
             isNatDex -> FIRE_RED_NATDEX
             // Non-English FR use gSaveBlock2ptr = 0x03004F5C (per Lua tracker JSONs)
@@ -371,7 +398,24 @@ object DataHelper {
             romVersion >= 1 -> SAPPHIRE_V11
             else -> SAPPHIRE_V10
         }
-        GameVersion.EMERALD    -> if (isNatDex) EMERALD_NATDEX else EMERALD
+        GameVersion.EMERALD    -> when {
+            isNatDex                       -> EMERALD_NATDEX
+            maxFr == MaxFrVariant.MAX_FR_GEN4 -> EMERALD_MAX_FR_GEN4
+            maxFr == MaxFrVariant.MAX_FR      -> EMERALD_MAX_FR
+            maxFr == MaxFrVariant.MAX_EM      -> EMERALD_MAX_EM
+            else                           -> EMERALD
+        }
         GameVersion.UNKNOWN    -> null
+    }
+
+    /** Reads the Gen IV per-move category from the ROM gBattleMoves table.
+     *  Move struct is 12 bytes; byte 8 = flags with category at bits 5-6.
+     *  Returns 1=Physical, 2=Special, 3=Status, 0=unknown/unavailable. */
+    fun readMoveCategory(reader: (Long, Int) -> ByteArray?, gBattleMovesAddr: Long, moveId: Int): Int {
+        if (gBattleMovesAddr == 0L || moveId <= 0) return 0
+        val addr = gBattleMovesAddr + moveId.toLong() * 12L
+        val bytes = reader(addr, 9) ?: return 0
+        val flags = bytes[8].toInt() and 0xFF
+        return (flags ushr 5) and 3
     }
 }

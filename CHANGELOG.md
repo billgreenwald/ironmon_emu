@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.0.0] - 2026-05-12
+
+### Added
+- **MaxFR / MaxEM ROM hack support** — the tracker now auto-detects three Emerald-based ROM hack variants (MaxFR, MaxFR-Gen4, MaxEM) at load time by fingerprinting the ROM's `gBattleMoves` table. No configuration needed; the correct address set is selected automatically.
+- **146 new Gen IV–V moves (IDs 355–500 + Fusion Bolt 559)** — all added moves display correct name, type, base power, accuracy, and PP. Includes Relic Song, Close Combat, Flare Blitz, Aura Sphere, Brave Bird, Earth Power, Draco Meteor, Leaf Storm, and more.
+- **51 new abilities (IDs 77–127)** — full name and description for all MaxFR abilities including Technician, Multiscale, Contrary, Prankster, Moxie, and others. Ability 77 correctly resolves to Tangled Feet (instead of vanilla Air Lock) on MaxFR ROMs.
+- **Gen IV physical/special split** — move category (Physical / Special / Status) is now read live from the ROM's move struct rather than inferred from type. Physical moves show the orange icon, Special moves show blue, Status moves show pink. Applies to both player and enemy moves.
+- **Fairy-type color** — Fairy (type 18) now displays with its canonical pink color (`#EE99AC`) in type chips and coverage sheets on MaxFR and NatDex ROMs.
+
 ## [2.5.1] - 2026-05-11
 
 ### Added
