@@ -426,6 +426,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     var showLearnsetSheet by remember { mutableStateOf(false) }
     var showIvSheet by remember { mutableStateOf(false) }
     var showBagSheet by remember { mutableStateOf(false) }
+    var showCoverageSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -490,11 +491,23 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
                     }
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                    modifier = Modifier.clickable { showDefenseSheet = true },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    TypeChip(pokemon.type1, small = true)
-                    if (pokemon.type2 != pokemon.type1) TypeChip(pokemon.type2, small = true)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        modifier = Modifier.clickable { showDefenseSheet = true },
+                    ) {
+                        TypeChip(pokemon.type1, small = true)
+                        if (pokemon.type2 != pokemon.type1) TypeChip(pokemon.type2, small = true)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "Coverage ›",
+                        color = AccentBlue.copy(alpha = 0.8f),
+                        fontSize = ssp(11),
+                        modifier = Modifier.clickable { showCoverageSheet = true },
+                    )
                 }
                 Spacer(Modifier.height(2.dp))
                 HpBar(pokemon)
@@ -610,6 +623,9 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     }
     if (showBagSheet && bagDetail != null) {
         BagDetailSheet(bagDetail, onDismiss = { showBagSheet = false })
+    }
+    if (showCoverageSheet) {
+        CoverageCalcSheet(isNatDex = isNatDex, onDismiss = { showCoverageSheet = false })
     }
 }
 
@@ -800,6 +816,7 @@ private fun EnemyView(
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showDefenseSheet by remember { mutableStateOf(false) }
     var showLearnsetSheet by remember { mutableStateOf(false) }
+    var showCoverageSheet by remember { mutableStateOf(false) }
 
     // Stat keys matching Lua tracker (Constants.lua STAT_STATES)
     val statKeys = listOf("atk", "def", "spa", "spd", "spe", "acc", "eva")
@@ -837,11 +854,23 @@ private fun EnemyView(
                     Text("Lv.${enemy.level}", color = TextSecondary, fontSize = ssp(16))
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                    modifier = Modifier.clickable { showDefenseSheet = true },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    TypeChip(enemy.type1)
-                    if (enemy.type2 != enemy.type1) TypeChip(enemy.type2)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        modifier = Modifier.clickable { showDefenseSheet = true },
+                    ) {
+                        TypeChip(enemy.type1)
+                        if (enemy.type2 != enemy.type1) TypeChip(enemy.type2)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "Coverage ›",
+                        color = AccentBlue.copy(alpha = 0.8f),
+                        fontSize = ssp(11),
+                        modifier = Modifier.clickable { showCoverageSheet = true },
+                    )
                 }
                 Spacer(Modifier.height(2.dp))
                 HpBar(enemy.hpPercent, enemy.currentHp, enemy.maxHp)
@@ -960,6 +989,9 @@ private fun EnemyView(
     }
     if (showLearnsetSheet && learnset != null) {
         LearnsetSheet(learnset, enemy.level, onDismiss = { showLearnsetSheet = false })
+    }
+    if (showCoverageSheet) {
+        CoverageCalcSheet(isNatDex = isNatDex, onDismiss = { showCoverageSheet = false })
     }
 }
 
@@ -1758,6 +1790,119 @@ private fun BagSection(title: String, items: List<hh.game.mgba_android.tracker.d
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
             Text(entry.name, color = TextPrimary, fontSize = ssp(13), modifier = Modifier.weight(1f))
             Text("×${entry.quantity}", color = TextSecondary, fontSize = ssp(13))
+        }
+    }
+}
+
+// ── Coverage calculator sheet ─────────────────────────────────────────────────
+// Shows all defender types sorted by best offensive effectiveness of selected move types.
+// Matches Lua CoverageCalcScreen.lua logic: max effectiveness across up to 4 chosen types.
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun CoverageCalcSheet(isNatDex: Boolean = false, onDismiss: () -> Unit) {
+    val types = remember(isNatDex) {
+        if (isNatDex) TypeChart.ALL_TYPES_NATDEX.toList() else TypeChart.ALL_TYPES.toList()
+    }
+    var selectedTypes by remember { mutableStateOf(emptySet<Int>()) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+        Column(
+            Modifier
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Coverage Calculator",
+                    color = TextPrimary,
+                    fontSize = ssp(16),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                if (selectedTypes.isNotEmpty()) {
+                    Text(
+                        "Clear",
+                        color = AccentBlue,
+                        fontSize = ssp(13),
+                        modifier = Modifier.clickable { selectedTypes = emptySet() },
+                    )
+                }
+            }
+            Text("Tap up to 4 move types", color = TextSecondary, fontSize = ssp(12))
+            Spacer(Modifier.height(10.dp))
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                types.forEach { typeId ->
+                    val selected = typeId in selectedTypes
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                typeColor(typeId).copy(alpha = if (selected) 0.85f else 0.2f),
+                                RoundedCornerShape(3.dp),
+                            )
+                            .clickable {
+                                selectedTypes = if (selected) {
+                                    selectedTypes - typeId
+                                } else if (selectedTypes.size < 4) {
+                                    selectedTypes + typeId
+                                } else {
+                                    selectedTypes
+                                }
+                            }
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            TypeChart.typeName(typeId),
+                            color = Color.White.copy(alpha = if (selected) 1f else 0.35f),
+                            fontSize = ssp(14),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Divider(color = Color(0xFF303050), thickness = 0.5.dp)
+            Spacer(Modifier.height(8.dp))
+
+            if (selectedTypes.isEmpty()) {
+                Text("Tap types above to see coverage", color = TextSecondary, fontSize = ssp(13))
+            } else {
+                val results = types.map { defType ->
+                    defType to selectedTypes.maxOf { att -> TypeChart.effectiveness(att, defType) }
+                }.sortedByDescending { it.second }
+
+                results.forEach { (defType, mult) ->
+                    val multStr = when {
+                        mult >= 4.0f -> "4×"
+                        mult >= 2.0f -> "2×"
+                        mult == 0.0f -> "0×  immune"
+                        mult <= 0.25f -> "¼×"
+                        mult < 1.0f  -> "½×"
+                        else         -> "1×"
+                    }
+                    val multColor = when {
+                        mult >= 2.0f -> Color(0xFF4CAF50)
+                        mult == 0.0f -> Color(0xFF888888)
+                        mult < 1.0f  -> Color(0xFFFF6B6B)
+                        else         -> TextSecondary
+                    }
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TypeChip(defType)
+                        Spacer(Modifier.weight(1f))
+                        Text(multStr, color = multColor, fontSize = ssp(13), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

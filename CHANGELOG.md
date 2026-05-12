@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.5.1] - 2026-05-11
+
+### Added
+- **Coverage Calculator** — tap "Coverage ›" next to your Pokémon's types on the MY MON or OPPONENT tab to open an offensive coverage sheet. Select up to 4 move types to see how well they cover all 17 defender types, sorted best to worst and color-coded (green = super-effective, red = resisted, gray = immune). Fairy type is included automatically on NatDex ROMs.
+
 ## [2.5.0] - 2026-05-05
 
 ### Added
