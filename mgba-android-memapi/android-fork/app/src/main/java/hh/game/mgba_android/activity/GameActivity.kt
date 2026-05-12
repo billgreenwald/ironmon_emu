@@ -363,6 +363,34 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             constraintSet.applyTo(overlay)
         }
 
+        // Apply controls inversion if preference is set
+        if (EmulatorPreferences.getInvertControlsLayout(this) && overlay is ConstraintLayout) {
+            val cs2 = ConstraintSet()
+            cs2.clone(overlay)
+            cs2.clear(R.id.tools_btn, ConstraintSet.BOTTOM)
+            cs2.connect(R.id.tools_btn, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP)
+            cs2.setMargin(R.id.tools_btn, ConstraintSet.TOP, (8 * resources.displayMetrics.density).toInt())
+            cs2.applyTo(overlay)
+
+            val marginPx = (24 * resources.displayMetrics.density).toInt()
+            overlay.findViewById<View>(R.id.centerAnchor)
+                ?.let { it.layoutParams = (it.layoutParams as RelativeLayout.LayoutParams).apply {
+                    removeRule(RelativeLayout.ALIGN_PARENT_TOP)
+                    addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+                    topMargin = 0; bottomMargin = marginPx
+                }}
+            overlay.findViewById<View>(R.id.selectBtn)
+                ?.let { it.layoutParams = (it.layoutParams as RelativeLayout.LayoutParams).apply {
+                    removeRule(RelativeLayout.ALIGN_TOP)
+                    addRule(RelativeLayout.ALIGN_BOTTOM, R.id.centerAnchor)
+                }}
+            overlay.findViewById<View>(R.id.startBtn)
+                ?.let { it.layoutParams = (it.layoutParams as RelativeLayout.LayoutParams).apply {
+                    removeRule(RelativeLayout.ALIGN_TOP)
+                    addRule(RelativeLayout.ALIGN_BOTTOM, R.id.centerAnchor)
+                }}
+        }
+
         // Load speed preferences before addGameControler so lAsSpeed is known
         defaultFps = EmulatorPreferences.getDefaultFps(this)
         secondaryFps = EmulatorPreferences.getSecondaryFps(this)

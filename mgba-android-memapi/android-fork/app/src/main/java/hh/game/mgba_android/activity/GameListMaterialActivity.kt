@@ -565,6 +565,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
     var selectedGameOverCondition by remember { mutableStateOf(EmulatorPreferences.getGameOverCondition(context)) }
     var lAsSpeed by remember { mutableStateOf(EmulatorPreferences.getLAsSpeed(context)) }
     var speedToggleMode by remember { mutableStateOf(EmulatorPreferences.getSpeedToggleMode(context)) }
+    var invertControlsLayout by remember { mutableStateOf(EmulatorPreferences.getInvertControlsLayout(context)) }
     val labelColor = Color(0xFF111111)
     val unselectedColor = Color(0xFF444444)
     val selectedColor = Color(0xFF4090FF)
@@ -682,6 +683,17 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         Text("For keyboard or gamepad-only users", fontSize = 11.sp, color = Color(0xFF888888))
                     }
                     Switch(checked = hideOnScreenControls, onCheckedChange = { hideOnScreenControls = it })
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Invert tools and start/select", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                        Text("Tools at top, start/select at bottom", fontSize = 11.sp, color = Color(0xFF888888))
+                    }
+                    Switch(checked = invertControlsLayout, onCheckedChange = { invertControlsLayout = it })
                 }
                 Text(
                     "Controls Opacity: ${(controlsAlpha * 100).toInt()}%",
@@ -814,6 +826,7 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                     hideOnScreenControls = hideOnScreenControls,
                     lAsSpeed = lAsSpeed,
                     speedToggleMode = speedToggleMode,
+                    invertControlsLayout = invertControlsLayout,
                 )
                 EmulatorPreferences.setControlsAlpha(context, controlsAlpha)
                 EmulatorPreferences.setControlsScale(context, controlsScale)

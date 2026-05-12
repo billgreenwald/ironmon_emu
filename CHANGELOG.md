@@ -4,6 +4,7 @@
 
 ### Added
 - **Coverage Calculator** — tap "Coverage ›" next to your Pokémon's types on the MY MON or OPPONENT tab to open an offensive coverage sheet. Select up to 4 move types to see how well they cover all 17 defender types, sorted best to worst and color-coded (green = super-effective, red = resisted, gray = immune). Fairy type is included automatically on NatDex ROMs.
+- **Invert controls layout toggle** — Settings → Layout now has an "Invert tools and start/select" switch. When enabled, the tools button moves to the top of the game zone and the start/select buttons move to the bottom (default keeps tools at bottom, start/select at top).
 
 ## [2.5.0] - 2026-05-05
 
