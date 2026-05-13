@@ -46,6 +46,8 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import hh.game.mgba_android.R
 import hh.game.mgba_android.tracker.MemoryBridge
+import hh.game.mgba_android.tracker.NamingOverlay
+import hh.game.mgba_android.tracker.NamingReplayEngine
 import hh.game.mgba_android.tracker.TrackerPanel
 import hh.game.mgba_android.tracker.TrackerPoller
 import hh.game.mgba_android.tracker.quickload.QuickloadManager
@@ -131,6 +133,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var trackerExpanded by mutableStateOf(true)
     private var trackerFontScale by mutableStateOf(1.0f)
     private var effectiveCollapsible by mutableStateOf(false)
+    private var showNamingOverlay by mutableStateOf(false)
     private var screenWidthPx = 0
     private var trackerViewRef: ComposeView? = null
     private var templateResult = ArrayList<Pair<Int, Int>>()
@@ -328,6 +331,21 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                     isExpanded = trackerExpanded,
                     onToggleExpand = { applyTrackerExpansion(!trackerExpanded) },
                 )
+                if (showNamingOverlay) {
+                    NamingOverlay(
+                        onConfirm = { name ->
+                            showNamingOverlay = false
+                            lifecycleScope.launch(Dispatchers.Main) {
+                                NamingReplayEngine.replay(
+                                    name,
+                                    setSpeed   = { Forward(60f) },
+                                    restoreSpeed = { Forward(setFPS) },
+                                )
+                            }
+                        },
+                        onDismiss = { showNamingOverlay = false },
+                    )
+                }
             }
         }
         trackerViewRef = trackerView
@@ -435,7 +453,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         
         // Initialize Tools Button
         findViewById<View>(R.id.tools_btn).setOnClickListener {
-            val options = arrayOf("Shaders", "Memory Tools", "Save State", "Load State", "Cheats", "Sound", "Next Run →", "Tracker Size", "Settings", "Close ROM")
+            val options = arrayOf("Shaders", "Memory Tools", "Save State", "Load State", "Cheats", "Sound", "Next Run →", "Tracker Size", "Settings", "Name Entry Keyboard", "Close ROM")
             AlertDialog.Builder(this)
                 .setTitle("Tools")
                 .setItems(options) { _, which ->
@@ -505,7 +523,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                         6 -> doNextRun()
                         7 -> showTrackerSizeDialog()
                         8 -> showSettingsDialog()
-                        9 -> AlertDialog.Builder(this)
+                        9 -> openNameEntryKeyboard()
+                        10 -> AlertDialog.Builder(this)
                             .setTitle("Close ROM")
                             .setMessage("Return to game list?")
                             .setPositiveButton("Close") { _, _ ->
@@ -1023,6 +1042,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                 kc != -1 && kc == (actionBindings[BindableAction.TOOLS_MENU] ?: -1) -> {
                     findViewById<View>(R.id.tools_btn)?.performClick(); handled = true
                 }
+                kc != -1 && kc == (actionBindings[BindableAction.OPEN_NAME_KEYBOARD] ?: -1) -> {
+                    openNameEntryKeyboard(); handled = true
+                }
             }
         }
         return handled || super.dispatchKeyEvent(event)
@@ -1075,6 +1097,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         }?.second
     }
 
+
+    private fun openNameEntryKeyboard() { showNamingOverlay = true }
 
     private fun searchMemory(value: Int, isNewSearch: Boolean = false) {
         var mem = ArrayList<Pair<Int, Int>>()

@@ -8,6 +8,7 @@
 - **51 new abilities (IDs 77–127)** — full name and description for all MaxFR abilities including Technician, Multiscale, Contrary, Prankster, Moxie, and others. Ability 77 correctly resolves to Tangled Feet (instead of vanilla Air Lock) on MaxFR ROMs.
 - **Gen IV physical/special split** — move category (Physical / Special / Status) is now read live from the ROM's move struct rather than inferred from type. Physical moves show the orange icon, Special moves show blue, Status moves show pink. Applies to both player and enemy moves.
 - **Fairy-type color** — Fairy (type 18) now displays with its canonical pink color (`#EE99AC`) in type chips and coverage sheets on MaxFR and NatDex ROMs.
+- **Name Entry Keyboard** — a new overlay lets you type a Pokémon name on your Android keyboard and automatically navigates the in-game Gen III naming screen cursor and presses A for each character. Open it from the Tools menu or bind it to a controller button in Settings → Input → Set Keybindings. Supports uppercase, lowercase, and multi-page cycling (special character page pass-through). Name is confirmed automatically with START + A when done.
 
 ## [2.5.1] - 2026-05-11
 
