@@ -335,8 +335,12 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                     NamingOverlay(
                         onConfirm = { name ->
                             showNamingOverlay = false
-                            lifecycleScope.launch(Dispatchers.Default) {
-                                NamingReplayEngine.replay(name)
+                            lifecycleScope.launch(Dispatchers.Main) {
+                                NamingReplayEngine.replay(
+                                    name,
+                                    setSpeed   = { Forward(60f) },
+                                    restoreSpeed = { Forward(setFPS) },
+                                )
                             }
                         },
                         onDismiss = { showNamingOverlay = false },

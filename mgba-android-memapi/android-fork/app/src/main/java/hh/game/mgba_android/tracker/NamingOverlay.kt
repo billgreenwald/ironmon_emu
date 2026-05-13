@@ -44,7 +44,7 @@ fun NamingOverlay(
                     singleLine = true,
                     label = { Text("Name (max $MAX_NAME_LENGTH chars)") },
                     keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Characters,
+                        capitalization = KeyboardCapitalization.Sentences,
                         keyboardType = KeyboardType.Ascii,
                     ),
                     modifier = Modifier.fillMaxWidth(),

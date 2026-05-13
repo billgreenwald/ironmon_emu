@@ -15,35 +15,40 @@ object NamingReplayEngine {
     private const val PRESS_MS  = 80L  // key-down hold duration
     private const val RELEASE_MS = 40L // gap after key-up before next action
 
+    // Set to true if the game auto-advances the cursor right after each A press
+    var cursorAutoAdvances = false
+
     private var curRow  = 0
     private var curCol  = 0
     private var curPage = 0
 
     /**
      * Navigates the naming screen to type [name], then presses OK.
-     * Must be called from a coroutine. Sends key events on the calling thread.
+     * [setSpeed] and [restoreSpeed] are called before/after to ensure 1x emulation speed.
+     * Must be called from a coroutine on the main thread.
      */
-    suspend fun replay(name: String) {
+    suspend fun replay(name: String, setSpeed: () -> Unit, restoreSpeed: () -> Unit) {
         curRow = 0; curCol = 0; curPage = 0
-        for (ch in name) {
+        setSpeed()
+        try { for (ch in name) {
             val found = NamingScreenData.findChar(ch) ?: continue
             val (targetPage, targetRow, targetCol) = found
             switchToPage(targetPage)
             navigateTo(targetRow, targetCol)
             pressKey(GBAKeys.GBA_KEY_A.key)
+            if (cursorAutoAdvances && curCol < NamingScreenData.PAGES[curPage][curRow].size - 1) curCol++
         }
-        // Navigate to OK and confirm
-        switchToPage(0)  // OK is same position on all pages; stay on current page
-        navigateTo(NamingScreenData.OK_ROW, NamingScreenData.OK_COL)
+        // START + A confirms the name
+        pressKey(GBAKeys.GBA_KEY_START.key)
         pressKey(GBAKeys.GBA_KEY_A.key)
+        } finally { restoreSpeed() }
     }
 
     private suspend fun switchToPage(targetPage: Int) {
         while (curPage != targetPage) {
-            navigateTo(NamingScreenData.PAGE_TOGGLE_ROW, NamingScreenData.PAGE_TOGGLE_COL)
-            pressKey(GBAKeys.GBA_KEY_A.key)
+            pressKey(GBAKeys.GBA_KEY_SELECT.key)
+            delay(500) // wait for page transition before navigating
             curPage = (curPage + 1) % NamingScreenData.PAGES.size
-            // Cursor stays at the toggle position after pressing it
         }
     }
 

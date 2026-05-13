@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.6.0] - 2026-05-12
+
+### Added
+- **Name Entry Keyboard** — a new overlay lets you type a Pokémon name on your Android keyboard and automatically navigates the in-game Gen III naming screen cursor and presses A for each character. Open it from the Tools menu or bind it to a controller button in Settings → Input → Set Keybindings. Supports uppercase, lowercase, and multi-page cycling (special character page pass-through). Name is confirmed automatically with START + A when done.
+
 ## [2.5.1] - 2026-05-11
 
 ### Added
