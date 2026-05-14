@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.0.0] - 2026-05-12
+## [3.0.0] - 2026-05-14
 
 ### Added
 - **MaxFR / MaxEM ROM hack support** — the tracker now auto-detects three Emerald-based ROM hack variants (MaxFR, MaxFR-Gen4, MaxEM) at load time by fingerprinting the ROM's `gBattleMoves` table. No configuration needed; the correct address set is selected automatically.
@@ -9,6 +9,7 @@
 - **Gen IV physical/special split** — move category (Physical / Special / Status) is now read live from the ROM's move struct rather than inferred from type. Physical moves show the orange icon, Special moves show blue, Status moves show pink. Applies to both player and enemy moves.
 - **Fairy-type color** — Fairy (type 18) now displays with its canonical pink color (`#EE99AC`) in type chips and coverage sheets on MaxFR and NatDex ROMs.
 - **Name Entry Keyboard** — a new overlay lets you type a Pokémon name on your Android keyboard and automatically navigates the in-game Gen III naming screen cursor and presses A for each character. Open it from the Tools menu or bind it to a controller button in Settings → Input → Set Keybindings. Supports uppercase, lowercase, and multi-page cycling (special character page pass-through). Name is confirmed automatically with START + A when done.
+- **MaxFR Gen5 species/BST/ability/move data from Lua** — Gen5 FireRed and Gen4 variants now load species names, BSTs, ability descriptions, and move descriptions directly from the ROM hack's bundled Lua data files (`gen5.lua`, `gen4.lua`, `abilities.lua`, `moves.lua`). This fixes incorrect BST display (e.g. Cottonee showing Audino's BST) and ensures kaizo-buffed stats and custom abilities/moves show correct data.
 
 ## [2.5.1] - 2026-05-11
 

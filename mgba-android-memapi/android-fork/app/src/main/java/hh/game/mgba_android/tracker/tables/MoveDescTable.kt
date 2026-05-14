@@ -360,5 +360,6 @@ object MoveDescTable {
     )
 
     fun get(moveId: Int): String =
-        if (moveId in descs.indices) descs[moveId] else ""
+        hh.game.mgba_android.tracker.data.MaxExtDataStore.moveMap[moveId]?.description
+            ?: if (moveId in descs.indices) descs[moveId] else ""
 }

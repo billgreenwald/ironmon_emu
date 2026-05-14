@@ -10,6 +10,7 @@ import hh.game.mgba_android.tracker.data.GachaMonRuleset
 import hh.game.mgba_android.tracker.data.GameOverCondition
 import hh.game.mgba_android.tracker.data.GameAddresses
 import hh.game.mgba_android.tracker.data.GameSettings
+import hh.game.mgba_android.tracker.data.MaxFrAddressLoader
 import hh.game.mgba_android.tracker.data.MaxFrVariant
 import hh.game.mgba_android.tracker.data.LearnsetReader
 import hh.game.mgba_android.tracker.data.PokemonDecoder
@@ -50,6 +51,8 @@ object TrackerPoller {
         private set
     @Volatile private var isNatDex: Boolean = false
     @Volatile private var maxFrVariant: MaxFrVariant = MaxFrVariant.NONE
+    // Cached MaxFR GameAddresses — loaded once per ROM via JSON asset, cleared on game code change.
+    @Volatile private var cachedMaxFrAddresses: GameAddresses? = null
 
     // Persistent move store: key = speciesId only (Lua: allPokemon[pokemonID].moves — flat, unbounded)
     private val revealedBySpecies = mutableMapOf<Int, MutableList<TrackedMove>>()
@@ -169,6 +172,8 @@ object TrackerPoller {
         lastGameCode = ""  // force restore from disk on next game load
         isNatDex = false
         maxFrVariant = MaxFrVariant.NONE
+        cachedMaxFrAddresses = null
+        hh.game.mgba_android.tracker.data.MaxExtDataStore.clear()
         recentBattleWasTutorial = false
         hasCompletedTutorial = false
     }
@@ -188,16 +193,24 @@ object TrackerPoller {
         val romTitle = MemoryBridge.readBytes(0x080000A0L, 12)
             ?.let { String(it, Charsets.ISO_8859_1).trimEnd('\u0000', ' ') } ?: ""
 
-        // ── NatDex / MaxFR detection: check once per ROM load (game code change) ──────────────────
+        // ── NatDex / MaxFR detection: run once per ROM load (game code change) ─────────────────────
         if (gameCode != lastGameCode) {
             isNatDex = GameSettings.isNatDex { addr, len -> MemoryBridge.readBytes(addr, len) }
-            maxFrVariant = if (game == GameVersion.EMERALD && !isNatDex)
-                GameSettings.detectMaxFr { addr, len -> MemoryBridge.readBytes(addr, len) }
-            else MaxFrVariant.NONE
+            val ctx = appContext
+            if (!isNatDex && ctx != null && game in setOf(
+                    GameVersion.EMERALD, GameVersion.FIRE_RED, GameVersion.LEAF_GREEN)) {
+                val detected = MaxFrAddressLoader.detectAndLoad(ctx) { addr, len -> MemoryBridge.readBytes(addr, len) }
+                maxFrVariant = detected?.first ?: MaxFrVariant.NONE
+                cachedMaxFrAddresses = detected?.second
+            } else {
+                maxFrVariant = MaxFrVariant.NONE
+                cachedMaxFrAddresses = null
+            }
             Log.d(TAG, "isNatDex=$isNatDex maxFrVariant=$maxFrVariant for gameCode=$gameCode")
         }
 
-        val addresses = DataHelper.addressesFor(game, romVersion, gameCode, isNatDex, maxFrVariant)
+        val addresses = cachedMaxFrAddresses
+            ?: DataHelper.addressesFor(game, romVersion, gameCode, isNatDex)
             ?: return TrackerState.NoGameLoaded
         currentAddresses = addresses
 
@@ -237,13 +250,15 @@ object TrackerPoller {
                 val pokemon = PokemonDecoder.decode(
                     slot      = slot,
                     raw       = raw,
-                    nameTable = { id -> SpeciesNames.get(id) },
-                    moveTable = { id -> MoveNames.get(id) },
+                    nameTable = { id -> addresses.extPokemonMap[id]?.name ?: SpeciesNames.get(id) },
+                    moveTable = { id -> MoveNames.get(id, maxFrVariant != MaxFrVariant.NONE) },
                     baseStatsReader = { speciesId ->
                         val addr = addresses.baseStatsTable +
                             speciesId * DataHelper.BASE_STATS_ENTRY_SIZE
                         MemoryBridge.readBytes(addr, DataHelper.BASE_STATS_ENTRY_SIZE)
                     },
+                    bstLookup = { id -> addresses.extPokemonMap[id]?.bst ?: BstTable.bst(id) },
+                    isMaxFr = maxFrVariant != MaxFrVariant.NONE,
                 )
                 if (pokemon != null) {
                     val rated = if (slot == 0) {
@@ -557,7 +572,7 @@ object TrackerPoller {
                     .let { if (it <= 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0 }
                 val type2 = (enemyMon[DataHelper.BMON_TYPE2].toInt() and 0xFF)
                     .let { if (it <= 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: 0 }
-                val bst = BstTable.bst(speciesId)
+                val bst = addresses.extPokemonMap[speciesId]?.bst ?: BstTable.bst(speciesId)
 
                 val currentHp = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_CURRENT_HP) else 0
                 val maxHpRaw = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_MAX_HP) else 0

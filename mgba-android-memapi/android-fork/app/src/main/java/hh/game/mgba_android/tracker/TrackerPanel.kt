@@ -523,8 +523,8 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
             }
         }
 
-        // Steps / battles / centers — shown right below the sprite row
-        stats?.let { gs ->
+        // Steps / battles / centers — hidden for MaxFR variants (gameStatsOffset unverified)
+        if (!isMaxFr) stats?.let { gs ->
             Spacer(Modifier.height(2.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

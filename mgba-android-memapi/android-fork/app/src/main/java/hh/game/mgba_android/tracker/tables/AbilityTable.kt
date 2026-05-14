@@ -142,7 +142,11 @@ object AbilityTable {
     )
 
     fun get(abilityId: Int, isMaxFr: Boolean = false): AbilityInfo {
-        if (isMaxFr) MAX_FR_ABILITIES[abilityId]?.let { return it }
+        if (isMaxFr) {
+            hh.game.mgba_android.tracker.data.MaxExtDataStore.abilityMap[abilityId]
+                ?.let { return AbilityInfo(it.name, it.description) }
+            MAX_FR_ABILITIES[abilityId]?.let { return it }
+        }
         return if (abilityId in 1 until ABILITIES.size) ABILITIES[abilityId] ?: AbilityInfo("???", "")
         else AbilityInfo("None", "")
     }

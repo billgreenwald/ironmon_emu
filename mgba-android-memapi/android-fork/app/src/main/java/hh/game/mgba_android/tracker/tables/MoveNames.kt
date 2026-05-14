@@ -529,9 +529,11 @@ object MoveNames {
     )
 
     fun get(id: Int, isMaxFr: Boolean = false): String = when {
-        isMaxFr && id in MAX_FR_MOVES -> MAX_FR_MOVES[id]!!
-        id in NAMES.indices            -> NAMES[id]
-        id in NATDEX_MOVES             -> NATDEX_MOVES[id]!!
-        else                           -> "Move#$id"
+        isMaxFr -> hh.game.mgba_android.tracker.data.MaxExtDataStore.moveMap[id]?.name
+            ?: MAX_FR_MOVES[id]
+            ?: if (id in NAMES.indices) NAMES[id] else if (id in NATDEX_MOVES) NATDEX_MOVES[id]!! else "Move#$id"
+        id in NAMES.indices -> NAMES[id]
+        id in NATDEX_MOVES  -> NATDEX_MOVES[id]!!
+        else                -> "Move#$id"
     }
 }

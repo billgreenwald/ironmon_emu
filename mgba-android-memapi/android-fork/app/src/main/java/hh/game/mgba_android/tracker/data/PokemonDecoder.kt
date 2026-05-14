@@ -45,6 +45,8 @@ object PokemonDecoder {
         nameTable: (Int) -> String,
         moveTable: (Int) -> String,
         baseStatsReader: ((speciesId: Int) -> ByteArray?)? = null,
+        bstLookup: ((speciesId: Int) -> Int)? = null,
+        isMaxFr: Boolean = false,
     ): PokemonData? {
         require(raw.size >= 100) { "Raw bytes must be at least 100, got ${raw.size}" }
 
@@ -153,7 +155,7 @@ object PokemonDecoder {
         // ── Base stats from ROM (type, gender, ability, exp group) ───────────
         val baseStats = baseStatsReader?.invoke(speciesId)
 
-        val bst        = BstTable.bst(speciesId)
+        val bst = bstLookup?.invoke(speciesId) ?: BstTable.bst(speciesId)
         val type1      = baseStats?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0
         val type2      = baseStats?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: type1
         val genderRatio = baseStats?.get(DataHelper.BASE_STATS_GENDER_RATIO)?.toInt()?.and(0xFF) ?: 0xFF
@@ -176,10 +178,10 @@ object PokemonDecoder {
         }
 
         val moves = listOfNotNull(
-            moveOrNull(move1Id, pp1, moveTable),
-            moveOrNull(move2Id, pp2, moveTable),
-            moveOrNull(move3Id, pp3, moveTable),
-            moveOrNull(move4Id, pp4, moveTable),
+            moveOrNull(move1Id, pp1, moveTable, isMaxFr),
+            moveOrNull(move2Id, pp2, moveTable, isMaxFr),
+            moveOrNull(move3Id, pp3, moveTable, isMaxFr),
+            moveOrNull(move4Id, pp4, moveTable, isMaxFr),
         )
 
         return PokemonData(
@@ -233,9 +235,9 @@ object PokemonDecoder {
         )
     }
 
-    private fun moveOrNull(moveId: Int, pp: Int, moveTable: (Int) -> String): MoveData? {
+    private fun moveOrNull(moveId: Int, pp: Int, moveTable: (Int) -> String, isMaxFr: Boolean = false): MoveData? {
         if (moveId == 0) return null
-        val stats = MoveStatsTable.get(moveId)
+        val stats = MoveStatsTable.get(moveId, isMaxFr)
         return MoveData(
             moveId   = moveId,
             moveName = moveTable(moveId),

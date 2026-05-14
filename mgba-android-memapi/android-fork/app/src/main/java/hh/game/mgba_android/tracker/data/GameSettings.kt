@@ -2,7 +2,9 @@ package hh.game.mgba_android.tracker.data
 
 import hh.game.mgba_android.tracker.models.GameVersion
 
-enum class MaxFrVariant { NONE, MAX_FR, MAX_FR_GEN4, MAX_EM }
+// MAX_FR_GEN5_FR: distinct FireRed-based MaxFR gen5 build (BPRE, gBattleMoves 0x08266370).
+// Not described by any of the 3 bundled JSON files — uses hardcoded addresses from ROM git source.
+enum class MaxFrVariant { NONE, MAX_FR, MAX_FR_GEN4, MAX_EM, MAX_FR_GEN5_FR }
 
 object GameSettings {
 
@@ -60,13 +62,14 @@ object GameSettings {
     }
 
     // MaxFR/MaxEM ROM hack detection.
-    // Three variants exist, all Emerald-based with different gBattleMoves ROM offsets.
     // Detection: read Move 1 (Pound) at each candidate gBattleMoves address;
     // verify power=40, type=0 (Normal), accuracy=100, pp=35 at struct bytes 1-4.
     // Move struct is 12 bytes: gBattleMoves + moveId*12. Bytes 1-4 = power/type/acc/pp.
-    private const val MAX_FR_BATTLE_MOVES:      Long = 0x08262C08L
-    private const val MAX_FR_GEN4_BATTLE_MOVES: Long = 0x082643E4L
-    private const val MAX_EM_BATTLE_MOVES:      Long = 0x0832C9A0L
+    // Probe addresses match gBattleMoves in the corresponding maxdata/*.json files.
+    // MAX_FR_GEN4 probe covers both gen4 and gen5 variants (identical addresses in both JSONs).
+    private const val MAX_FR_GEN4_BATTLE_MOVES: Long = 0x082643E4L  // max-fr-gen4.json = max-fr-gen5.json
+    private const val MAX_FR_BATTLE_MOVES:      Long = 0x08262C08L  // max-fr.json
+    private const val MAX_EM_BATTLE_MOVES:      Long = 0x0832C9A0L  // max-em.json
 
     fun detectMaxFr(reader: (Long, Int) -> ByteArray?): MaxFrVariant {
         val candidates = listOf(
@@ -75,7 +78,7 @@ object GameSettings {
             MaxFrVariant.MAX_EM      to MAX_EM_BATTLE_MOVES,
         )
         for ((variant, base) in candidates) {
-            val bytes = reader(base + 12L, 5) ?: continue  // move 1 entry at offset 12
+            val bytes = reader(base + 12L, 5) ?: continue  // move 1 (Pound) at offset 12
             if (bytes[1].toInt() and 0xFF == 40  &&  // power
                 bytes[2].toInt() and 0xFF == 0   &&  // type (Normal)
                 bytes[3].toInt() and 0xFF == 100 &&  // accuracy
