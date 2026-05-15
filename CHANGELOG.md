@@ -1,10 +1,14 @@
 # Changelog
 
+## [3.0.2] - 2026-05-14
+
+### Fixed
+- **MaxFR Gen5 / Gen4 species names** — Gen4 Pokémon on MaxFR Gen5 FR and MaxFR Gen4 ROMs were mapped to wrong names (e.g. Skuntank appearing as Hippowdon). The internal species ID base is now correctly set to 412, matching the NatDex extension species ID scheme used by these ROM hacks.
+
 ## [3.0.1] - 2026-05-14
 
 ### Fixed
 - **ROM select run count sync** — the run count editor on the ROM select page (long-press a ROM family → Settings) now reads and writes the same key as the in-game tracker, so edits made there are reflected correctly when you load the ROM.
-- **MaxFR Gen4 species names** — Gen4 Pokémon (e.g. Lucario) were displaying as raw numeric IDs (e.g. 16669) instead of their names. The internal species ID base for MaxFR Gen4 is now correctly set to 16608 (0x40E0), matching the ROM hack's actual species table layout.
 - **Steps/battles/centers hidden on NatDex** — the stats row (steps, battles, Pokémon Center visits) is now hidden when running a NatDex ROM hack, matching the existing behavior for MaxFR variants where those offsets are unverified.
 
 ## [3.0.0] - 2026-05-14
