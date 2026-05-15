@@ -60,6 +60,8 @@ data class PokemonData(
     // GachaMon star rating (computed by TrackerPoller for the lead Pokémon; 0 = not rated)
     val ratingScore: Int = 0,
     val starRating: Int = 0,
+    // National dex ID for sprite lookup (differs from speciesId in ROM hacks with non-ndex internal IDs)
+    val natDexId: Int = speciesId,
 ) {
     val isAlive: Boolean get() = currentHp > 0
     val hpPercent: Float get() = if (maxHp > 0) currentHp.toFloat() / maxHp else 0f

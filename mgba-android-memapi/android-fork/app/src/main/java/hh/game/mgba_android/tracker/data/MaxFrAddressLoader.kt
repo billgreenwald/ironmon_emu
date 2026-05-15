@@ -59,12 +59,13 @@ object MaxFrAddressLoader {
 
     private fun hexInt(o: JsonObject, key: String): Int = hex(o, key).toInt()
 
-    private fun loadLua(context: Context, root: JsonObject, fileKey: String, startIdKey: String): Map<Int, MaxExtPokemon> {
-        val file    = root.get(fileKey)?.asString ?: return emptyMap()
-        val startId = root.get(startIdKey)?.asInt ?: return emptyMap()
+    private fun loadLua(context: Context, root: JsonObject, fileKey: String, startIdKey: String, spriteStartKey: String): Map<Int, MaxExtPokemon> {
+        val file        = root.get(fileKey)?.asString ?: return emptyMap()
+        val startId     = root.get(startIdKey)?.asInt ?: return emptyMap()
+        val spriteStart = root.get(spriteStartKey)?.asInt ?: startId
         return try {
             val lua = context.assets.open(file).bufferedReader().use { it.readText() }
-            MaxExtPokemonParser.parseFirstBlock(lua, startId)
+            MaxExtPokemonParser.parseFirstBlock(lua, startId, spriteStart)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load $file", e)
             emptyMap()
@@ -73,8 +74,8 @@ object MaxFrAddressLoader {
 
     private fun build(context: Context, root: JsonObject, a: JsonObject): GameAddresses {
         val extMap = buildMap<Int, MaxExtPokemon> {
-            putAll(loadLua(context, root, "gen4File", "gen4StartId"))
-            putAll(loadLua(context, root, "gen5File", "gen5StartId"))
+            putAll(loadLua(context, root, "gen4File", "gen4StartId", "gen4SpriteStart"))
+            putAll(loadLua(context, root, "gen5File", "gen5StartId", "gen5SpriteStart"))
         }
         // Load abilities and moves into the global store
         MaxExtDataStore.abilityMap = loadAbilities(context, root)

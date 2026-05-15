@@ -1,10 +1,12 @@
 {
   "abilitiesFile": "maxdata/abilities.lua",
   "movesFile":     "maxdata/moves.lua",
-  "gen4File":    "maxdata/gen4.lua",
-  "gen4StartId": 397,
-  "gen5File":    "maxdata/gen5.lua",
-  "gen5StartId": 505,
+  "gen4File":        "maxdata/gen4.lua",
+  "gen4StartId":     397,
+  "gen4SpriteStart": 412,
+  "gen5File":        "maxdata/gen5.lua",
+  "gen5StartId":     505,
+  "gen5SpriteStart": 520,
   "Addresses": {
     "gBattleMoves":             "0X08266370",
     "gBaseStats":               "826B6C0",

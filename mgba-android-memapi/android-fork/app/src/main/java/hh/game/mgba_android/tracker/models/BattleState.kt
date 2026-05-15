@@ -13,6 +13,7 @@ data class TrackedMove(
 
 data class EnemyData(
     val speciesId: Int,
+    val natDexId: Int = speciesId,
     val name: String,
     val level: Int,
     val type1: Int,

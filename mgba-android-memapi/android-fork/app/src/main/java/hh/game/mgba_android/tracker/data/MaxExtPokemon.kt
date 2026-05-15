@@ -1,6 +1,6 @@
 package hh.game.mgba_android.tracker.data
 
-data class MaxExtPokemon(val name: String, val bst: Int)
+data class MaxExtPokemon(val name: String, val bst: Int, val spriteId: Int)
 data class MaxExtAbility(val name: String, val description: String)
 data class MaxExtMove(val name: String, val description: String)
 
@@ -13,13 +13,13 @@ object MaxExtPokemonParser {
      * Parses a gen4.lua / gen5.lua style file and returns speciesId → MaxExtPokemon.
      * Only the first top-level block is consumed (main-game Pokemon).
      */
-    fun parseFirstBlock(lua: String, startId: Int): Map<Int, MaxExtPokemon> {
+    fun parseFirstBlock(lua: String, startId: Int, spriteStart: Int): Map<Int, MaxExtPokemon> {
         val firstBlock = lua.substringBefore("\n},{")
         val names = NAME_RE.findAll(firstBlock).map { it.groupValues[1] }.toList()
         val bsts  = BST_RE.findAll(firstBlock).map { it.groupValues[1].toInt() }.toList()
         return buildMap {
             for (i in 0 until minOf(names.size, bsts.size)) {
-                put(startId + i, MaxExtPokemon(names[i], bsts[i]))
+                put(startId + i, MaxExtPokemon(names[i], bsts[i], spriteStart + i))
             }
         }
     }

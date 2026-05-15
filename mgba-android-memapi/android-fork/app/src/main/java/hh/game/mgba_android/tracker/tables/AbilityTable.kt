@@ -143,9 +143,10 @@ object AbilityTable {
 
     fun get(abilityId: Int, isMaxFr: Boolean = false): AbilityInfo {
         if (isMaxFr) {
-            hh.game.mgba_android.tracker.data.MaxExtDataStore.abilityMap[abilityId]
+            // ROM ability IDs are +1 relative to the Lua abilities.lua table
+            hh.game.mgba_android.tracker.data.MaxExtDataStore.abilityMap[abilityId - 1]
                 ?.let { return AbilityInfo(it.name, it.description) }
-            MAX_FR_ABILITIES[abilityId]?.let { return it }
+            MAX_FR_ABILITIES[abilityId - 1]?.let { return it }
         }
         return if (abilityId in 1 until ABILITIES.size) ABILITIES[abilityId] ?: AbilityInfo("???", "")
         else AbilityInfo("None", "")

@@ -1,1 +1,441 @@
-{"GameInfo": {"GameCode": 1112556869, "GameName": "Pokemon Emerald (U)", "GameNumber": 2, "Language": "English", "VersionColor": "Emerald", "VersionGroup": 1, "VersionName": "Pok\u00e9mon Emerald"}, "Addresses": {"gameStatsOffset": "159C", "gBattleScriptingBattler": "202448B", "gBattleTerrain": "0X02022B50", "sEvoStructPtr": "203AB80", "gHitMarker": "2024280", "BattleIntroDrawPartySummaryScreens": "0X080133A0", "gBattleMoves": "0X082643E4", "gSpecialVar_Result": "0X020370D0", "gMoveResultFlags": "202427C", "gPaydayMoney": "20243D0", "sSpecialFlags": "0X020370E0", "gBattlerAttacker": "202420B", "gTrainerBattleOpponent_B": "2038BCC", "Task_EvolutionScene": "0X080D5EC4", "badgeOffset": "137C", "gLevelUpLearnsets": "0X08275E0C", "gBattleStructPtr": "202449C", "gBattlerTarget": "202420C", "BattleScript_FocusPunchSetUp": "0X081E99D5", "gWishFutureKnock": "20243D0", "gBattleResults": "3005D10", "sBattleBuffersTransferData": "2022D10", "Task_HandleConfirmStarterInput_NatDex_113": "8134DC0", "bagPocket_KeyItems_Size": "1E", "gMapHeader": "0X02036DFC", "gDisableStructs_NatDex_113": "20242B8", "gStatuses3_NatDex_113": "20242A8", "gMoveToLearn": "0X02024022", "sSaveDialogDelay": "2037620", "gBattleOutcome": "202433A", "gWishFutureKnock_NatDex_113": "20243CC", "BattleScript_MoveUsedIsInLove": "0X081E9C21", "gBattleWeather": "20243CC", "bagPocket_Berries_offset": "790", "gameVarsOffset": "139C", "gTrainers": "0X08250E44", "BattleScript_LearnMoveLoop": "82DABD9", "BattleScript_RanAwayUsingMonAbility": "0X081E92CF", "gTrainerClassNames_NatDex_113": "830C120", "gPlayerPartyCount": "0X02024029", "gSideTimers": "2024294", "BattleScript_LearnMoveReturn": "0X081E9423", "gTasks": "3005E00", "BattleScript_MoveUsedIsFrozen": "0X081E9A49", "gTrainerClassNames": "0X082508D4", "bagPocket_Items_Size": "1E", "gLevelUpLearnsets_NatDex_113": "8349750", "BattleScript_SnatchedMove": "0X081E9982", "gBattleTypeFlags": "2022FEC", "bagPocket_KeyItems_offset": "5D8", "BattleScript_MoveUsedIsConfusedNoMore": "0X081E9BFA", "gLockedMoves_NatDex_113": "2024264", "bagPocket_TmHm_offset": "690", "bagPocket_Items_offset": "560", "gBattleMons": "2024084", "BattleScript_MoveUsedIsConfused2": "82DB2C9", "ReturnFromBattleToOverworld": "0X08015C8C", "gSideTimers_NatDex_113": "2024290", "bagPocket_Berries_Size": "2E", "gBattleTextBuff1": "2022F58", "gSaveBlock2ptr": "3005D90", "HandleTurnActionSelectionState": "0X080140B8", "gameFlagsOffset": "1270", "gSideStatuses": "202428E", "gPaydayMoney_NatDex_113": "202432A", "FriendshipRequiredToEvo": "806D1D6", "BattleScript_MoveUsedUnfroze": "0X081E9A56", "gStatuses3": "20242AC", "gActionsByTurnOrder": "202407A", "BattleScript_MoveUsedUnfroze2": "82DB281", "Task_HandleConfirmStarterInput": "8134400", "gTrainerBattleOpponent_A": "0X020386AE", "gTrainers_NatDex_113": "8311190", "gExperienceTables": "0X08268260", "gCurrentTurnActionNumber": "2024082", "gMultiUsePlayerCursor": "3005D74", "BattleIntroOpponentSendsOutMonAnimation": "803B315", "gameRegItemOffset": "496", "sStartMenuWindowId": "203CD8C", "BattleScript_MoveUsedWokeUp": "0X081E99F6", "gBaseStats": "83203CC", "BattleScript_MoveUsedIsFrozen2": "82DB270", "BattleScript_MoveUsedIsConfused": "0X081E9BB7", "EncryptionKeyOffset": "AC", "gBattleControllerExecFlags": "2024068", "gBattleCommunication": "2024332", "gBattleMainFunc": "3005D04", "gBattlerPartyIndexes": "202406E", "BattleScript_MoveUsedIsFrozen3": "82DB272", "sBattlerAbilities": "203ABA4", "gBattlersCount": "202406C", "gSideStatuses_NatDex_113": "202428A", "bagPocket_Balls_Size": "10", "estats": "2024744", "gDisableStructs": "20242BC", "BattleScript_MoveUsedIsInLove2": "82DB333", "gLockedMoves": "2024268", "sMonSummaryScreen": "203CF1C", "bagPocket_TmHm_Size": "40", "gTakenDmg": "20241F8", "gBattlescriptCurrInstr": "2024214", "bagPocket_Balls_offset": "650", "gSaveBlock1ptr": "3005D8C", "gSpecialVar_ItemId": "0X0203AD34", "pstats": "20244EC", "sTMHMMoves": "0X084808E8"}, "AbilityAddresses": {"MonMadeMoveUseless": {"address": "0X081E9F3E", "abilityIds": [10, 11], "sourceTrigger": "ATTACKER"}, "ColorChangeActivates": {"address": "0X081EA015", "abilityIds": [16], "sourceTrigger": "ATTACKER"}, "FlashFireBoost": {"address": "0X081E9F70", "abilityIds": [18], "sourceTrigger": "ATTACKER"}, "AbsorbUpdateHp": {"address": "0X081E7161", "abilityIds": [64], "sourceTrigger": "ATTACKER"}, "MoveEffectSleep": {"address": "0X081E9C9D", "abilityIds": [27], "sourceTrigger": "STATUS_INFLICT"}, "CantMakeAsleep": {"address": "0X081E7102", "abilityIds": [15, 72], "sourceTrigger": "ATTACKER"}, "PerishSongNotAffected": {"address": "0X081E810B", "abilityIds": [43], "sourceTrigger": "BATTLER"}, "MoveHPDrain": {"address": "0X081E9F06", "abilityIds": [10, 11], "sourceTrigger": "ATTACKER"}, "SandstreamActivates": {"address": "0X081E9DC6", "abilityIds": [45], "sourceTrigger": "BATTLER"}, "PrintAbilityMadeIneffective": {"address": "0X081E8BC9", "abilityIds": [15, 72], "sourceTrigger": "ATTACKER"}, "BRNPrevention": {"address": "0X081E9F99", "abilityIds": [28, 41], "sourceTrigger": "ATTACKER"}, "MoveUsedLoafingAround": {"address": "0X081EA06B", "abilityIds": [54], "sourceTrigger": "REVERSE_ATTACKER"}, "TraceActivates": {"address": "0X081E9D85", "abilityIds": [36], "sourceTrigger": "BATTLER"}, "MoveEffectBurn": {"address": "0X081E9CC8", "abilityIds": [28, 49], "sourceTrigger": "STATUS_INFLICT"}, "AbilityPreventsPhasingOut": {"address": "0X081E9F81", "abilityIds": [21], "sourceTrigger": "ATTACKER"}, "CuteCharmActivates": {"address": "0X081EA037", "abilityIds": [56], "sourceTrigger": "ATTACKER"}, "RainDishActivates": {"address": "0X081E9DAB", "abilityIds": [44], "sourceTrigger": "REVERSE_ATTACKER"}, "IntimidateFail": {"address": "0X081E9E89", "abilityIds": [22], "sourceTrigger": "BATTLER"}, "AbilityNoStatLoss": {"address": "0X081E9F8F", "abilityIds": [29, 73], "sourceTrigger": "BATTLER"}, "IntimidateFailReverse": {"address": "82DB522", "abilityIds": [29, 52, 73], "sourceTrigger": "REVERSE_BATTLER"}, "DrizzleActivates": {"address": "0X081E9D63", "abilityIds": [2], "sourceTrigger": "BATTLER"}, "SoundproofProtected": {"address": "0X081E9FE7", "abilityIds": [43], "sourceTrigger": "BATTLE_TARGET", "scope": "self"}, "FlinchPrevention": {"address": "0X081E9FCB", "abilityIds": [39], "sourceTrigger": "ATTACKER"}, "RoughSkinActivates": {"address": "0X081EA01C", "abilityIds": [24], "sourceTrigger": "ATTACKER"}, "MoveEffectPoison": {"address": "0X081E9CB9", "abilityIds": [27, 28, 38], "sourceTrigger": "STATUS_INFLICT"}, "OwnTempoPrevents": {"address": "0X081E9FD9", "abilityIds": [20], "sourceTrigger": "ATTACKER"}, "LeechSeedTurnPrintAndUpdateHp": {"address": "0X081E9545", "abilityIds": [64], "sourceTrigger": "BATTLE_TARGET", "scope": "other"}, "ShedSkinActivates": {"address": "0X081E9DDA", "abilityIds": [61], "sourceTrigger": "BATTLER"}, "DroughtActivates": {"address": "0X081E9EAD", "abilityIds": [70], "sourceTrigger": "BATTLER"}, "SturdyPreventsOHKO": {"address": "0X081E9EE9", "abilityIds": [5], "sourceTrigger": "ATTACKER"}, "StickyHoldActivates": {"address": "0X081EA007", "abilityIds": [60], "sourceTrigger": "ATTACKER"}, "PRLZPrevention": {"address": "0X081E9FA5", "abilityIds": [7, 28], "sourceTrigger": "ATTACKER"}, "TookAttack": {"address": "0X081E9ED5", "abilityIds": [31], "sourceTrigger": "ATTACKER"}, "PSNPrevention": {"address": "0X081E9FB1", "abilityIds": [17, 28], "sourceTrigger": "ATTACKER"}, "AbilityNoSpecificStatLoss": {"address": "0X081E9FF7", "abilityIds": [51, 52], "sourceTrigger": "BATTLER"}, "IntimidateActivationAnimLoop": {"address": "0X081E9E23", "abilityIds": [22], "sourceTrigger": "BATTLER"}, "SpeedBoostActivates": {"address": "0X081E9D77", "abilityIds": [3], "sourceTrigger": "BATTLER"}, "EffectHealBell": {"address": "0X081E7E19", "abilityIds": [43], "sourceTrigger": "BATTLE_TARGET", "scope": "self"}, "MoveEffectParalysis": {"address": "0X081E9CE6", "abilityIds": [9, 27, 28], "sourceTrigger": "STATUS_INFLICT"}, "DampStopsExplosion": {"address": "0X081E9EF7", "abilityIds": [6], "sourceTrigger": "BATTLE_TARGET", "scope": "both"}, "RestCantSleep": {"address": "0X081E7682", "abilityIds": [15, 72], "sourceTrigger": "REVERSE_ATTACKER"}, "ObliviousPreventsAttraction": {"address": "0X081E9FBD", "abilityIds": [12], "sourceTrigger": "ATTACKER"}}, "gen4File": "maxdata/gen4.lua", "gen4StartId": 397, "abilitiesFile": "maxdata/abilities.lua", "movesFile": "maxdata/moves.lua"}
+{
+  "GameInfo": {
+    "GameCode": 1112556869,
+    "GameName": "Pokemon Emerald (U)",
+    "GameNumber": 2,
+    "Language": "English",
+    "VersionColor": "Emerald",
+    "VersionGroup": 1,
+    "VersionName": "Pok\u00e9mon Emerald"
+  },
+  "Addresses": {
+    "gameStatsOffset": "159C",
+    "gBattleScriptingBattler": "202448B",
+    "gBattleTerrain": "0X02022B50",
+    "sEvoStructPtr": "203AB80",
+    "gHitMarker": "2024280",
+    "BattleIntroDrawPartySummaryScreens": "0X080133A0",
+    "gBattleMoves": "0X082643E4",
+    "gSpecialVar_Result": "0X020370D0",
+    "gMoveResultFlags": "202427C",
+    "gPaydayMoney": "20243D0",
+    "sSpecialFlags": "0X020370E0",
+    "gBattlerAttacker": "202420B",
+    "gTrainerBattleOpponent_B": "2038BCC",
+    "Task_EvolutionScene": "0X080D5EC4",
+    "badgeOffset": "137C",
+    "gLevelUpLearnsets": "0X08275E0C",
+    "gBattleStructPtr": "202449C",
+    "gBattlerTarget": "202420C",
+    "BattleScript_FocusPunchSetUp": "0X081E99D5",
+    "gWishFutureKnock": "20243D0",
+    "gBattleResults": "3005D10",
+    "sBattleBuffersTransferData": "2022D10",
+    "Task_HandleConfirmStarterInput_NatDex_113": "8134DC0",
+    "bagPocket_KeyItems_Size": "1E",
+    "gMapHeader": "0X02036DFC",
+    "gDisableStructs_NatDex_113": "20242B8",
+    "gStatuses3_NatDex_113": "20242A8",
+    "gMoveToLearn": "0X02024022",
+    "sSaveDialogDelay": "2037620",
+    "gBattleOutcome": "202433A",
+    "gWishFutureKnock_NatDex_113": "20243CC",
+    "BattleScript_MoveUsedIsInLove": "0X081E9C21",
+    "gBattleWeather": "20243CC",
+    "bagPocket_Berries_offset": "790",
+    "gameVarsOffset": "139C",
+    "gTrainers": "0X08250E44",
+    "BattleScript_LearnMoveLoop": "82DABD9",
+    "BattleScript_RanAwayUsingMonAbility": "0X081E92CF",
+    "gTrainerClassNames_NatDex_113": "830C120",
+    "gPlayerPartyCount": "0X02024029",
+    "gSideTimers": "2024294",
+    "BattleScript_LearnMoveReturn": "0X081E9423",
+    "gTasks": "3005E00",
+    "BattleScript_MoveUsedIsFrozen": "0X081E9A49",
+    "gTrainerClassNames": "0X082508D4",
+    "bagPocket_Items_Size": "1E",
+    "gLevelUpLearnsets_NatDex_113": "8349750",
+    "BattleScript_SnatchedMove": "0X081E9982",
+    "gBattleTypeFlags": "2022FEC",
+    "bagPocket_KeyItems_offset": "5D8",
+    "BattleScript_MoveUsedIsConfusedNoMore": "0X081E9BFA",
+    "gLockedMoves_NatDex_113": "2024264",
+    "bagPocket_TmHm_offset": "690",
+    "bagPocket_Items_offset": "560",
+    "gBattleMons": "2024084",
+    "BattleScript_MoveUsedIsConfused2": "82DB2C9",
+    "ReturnFromBattleToOverworld": "0X08015C8C",
+    "gSideTimers_NatDex_113": "2024290",
+    "bagPocket_Berries_Size": "2E",
+    "gBattleTextBuff1": "2022F58",
+    "gSaveBlock2ptr": "3005D90",
+    "HandleTurnActionSelectionState": "0X080140B8",
+    "gameFlagsOffset": "1270",
+    "gSideStatuses": "202428E",
+    "gPaydayMoney_NatDex_113": "202432A",
+    "FriendshipRequiredToEvo": "806D1D6",
+    "BattleScript_MoveUsedUnfroze": "0X081E9A56",
+    "gStatuses3": "20242AC",
+    "gActionsByTurnOrder": "202407A",
+    "BattleScript_MoveUsedUnfroze2": "82DB281",
+    "Task_HandleConfirmStarterInput": "8134400",
+    "gTrainerBattleOpponent_A": "0X020386AE",
+    "gTrainers_NatDex_113": "8311190",
+    "gExperienceTables": "0X08268260",
+    "gCurrentTurnActionNumber": "2024082",
+    "gMultiUsePlayerCursor": "3005D74",
+    "BattleIntroOpponentSendsOutMonAnimation": "803B315",
+    "gameRegItemOffset": "496",
+    "sStartMenuWindowId": "203CD8C",
+    "BattleScript_MoveUsedWokeUp": "0X081E99F6",
+    "gBaseStats": "83203CC",
+    "BattleScript_MoveUsedIsFrozen2": "82DB270",
+    "BattleScript_MoveUsedIsConfused": "0X081E9BB7",
+    "EncryptionKeyOffset": "AC",
+    "gBattleControllerExecFlags": "2024068",
+    "gBattleCommunication": "2024332",
+    "gBattleMainFunc": "3005D04",
+    "gBattlerPartyIndexes": "202406E",
+    "BattleScript_MoveUsedIsFrozen3": "82DB272",
+    "sBattlerAbilities": "203ABA4",
+    "gBattlersCount": "202406C",
+    "gSideStatuses_NatDex_113": "202428A",
+    "bagPocket_Balls_Size": "10",
+    "estats": "2024744",
+    "gDisableStructs": "20242BC",
+    "BattleScript_MoveUsedIsInLove2": "82DB333",
+    "gLockedMoves": "2024268",
+    "sMonSummaryScreen": "203CF1C",
+    "bagPocket_TmHm_Size": "40",
+    "gTakenDmg": "20241F8",
+    "gBattlescriptCurrInstr": "2024214",
+    "bagPocket_Balls_offset": "650",
+    "gSaveBlock1ptr": "3005D8C",
+    "gSpecialVar_ItemId": "0X0203AD34",
+    "pstats": "20244EC",
+    "sTMHMMoves": "0X084808E8"
+  },
+  "AbilityAddresses": {
+    "MonMadeMoveUseless": {
+      "address": "0X081E9F3E",
+      "abilityIds": [
+        10,
+        11
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "ColorChangeActivates": {
+      "address": "0X081EA015",
+      "abilityIds": [
+        16
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "FlashFireBoost": {
+      "address": "0X081E9F70",
+      "abilityIds": [
+        18
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "AbsorbUpdateHp": {
+      "address": "0X081E7161",
+      "abilityIds": [
+        64
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "MoveEffectSleep": {
+      "address": "0X081E9C9D",
+      "abilityIds": [
+        27
+      ],
+      "sourceTrigger": "STATUS_INFLICT"
+    },
+    "CantMakeAsleep": {
+      "address": "0X081E7102",
+      "abilityIds": [
+        15,
+        72
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "PerishSongNotAffected": {
+      "address": "0X081E810B",
+      "abilityIds": [
+        43
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "MoveHPDrain": {
+      "address": "0X081E9F06",
+      "abilityIds": [
+        10,
+        11
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "SandstreamActivates": {
+      "address": "0X081E9DC6",
+      "abilityIds": [
+        45
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "PrintAbilityMadeIneffective": {
+      "address": "0X081E8BC9",
+      "abilityIds": [
+        15,
+        72
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "BRNPrevention": {
+      "address": "0X081E9F99",
+      "abilityIds": [
+        28,
+        41
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "MoveUsedLoafingAround": {
+      "address": "0X081EA06B",
+      "abilityIds": [
+        54
+      ],
+      "sourceTrigger": "REVERSE_ATTACKER"
+    },
+    "TraceActivates": {
+      "address": "0X081E9D85",
+      "abilityIds": [
+        36
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "MoveEffectBurn": {
+      "address": "0X081E9CC8",
+      "abilityIds": [
+        28,
+        49
+      ],
+      "sourceTrigger": "STATUS_INFLICT"
+    },
+    "AbilityPreventsPhasingOut": {
+      "address": "0X081E9F81",
+      "abilityIds": [
+        21
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "CuteCharmActivates": {
+      "address": "0X081EA037",
+      "abilityIds": [
+        56
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "RainDishActivates": {
+      "address": "0X081E9DAB",
+      "abilityIds": [
+        44
+      ],
+      "sourceTrigger": "REVERSE_ATTACKER"
+    },
+    "IntimidateFail": {
+      "address": "0X081E9E89",
+      "abilityIds": [
+        22
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "AbilityNoStatLoss": {
+      "address": "0X081E9F8F",
+      "abilityIds": [
+        29,
+        73
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "IntimidateFailReverse": {
+      "address": "82DB522",
+      "abilityIds": [
+        29,
+        52,
+        73
+      ],
+      "sourceTrigger": "REVERSE_BATTLER"
+    },
+    "DrizzleActivates": {
+      "address": "0X081E9D63",
+      "abilityIds": [
+        2
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "SoundproofProtected": {
+      "address": "0X081E9FE7",
+      "abilityIds": [
+        43
+      ],
+      "sourceTrigger": "BATTLE_TARGET",
+      "scope": "self"
+    },
+    "FlinchPrevention": {
+      "address": "0X081E9FCB",
+      "abilityIds": [
+        39
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "RoughSkinActivates": {
+      "address": "0X081EA01C",
+      "abilityIds": [
+        24
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "MoveEffectPoison": {
+      "address": "0X081E9CB9",
+      "abilityIds": [
+        27,
+        28,
+        38
+      ],
+      "sourceTrigger": "STATUS_INFLICT"
+    },
+    "OwnTempoPrevents": {
+      "address": "0X081E9FD9",
+      "abilityIds": [
+        20
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "LeechSeedTurnPrintAndUpdateHp": {
+      "address": "0X081E9545",
+      "abilityIds": [
+        64
+      ],
+      "sourceTrigger": "BATTLE_TARGET",
+      "scope": "other"
+    },
+    "ShedSkinActivates": {
+      "address": "0X081E9DDA",
+      "abilityIds": [
+        61
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "DroughtActivates": {
+      "address": "0X081E9EAD",
+      "abilityIds": [
+        70
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "SturdyPreventsOHKO": {
+      "address": "0X081E9EE9",
+      "abilityIds": [
+        5
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "StickyHoldActivates": {
+      "address": "0X081EA007",
+      "abilityIds": [
+        60
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "PRLZPrevention": {
+      "address": "0X081E9FA5",
+      "abilityIds": [
+        7,
+        28
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "TookAttack": {
+      "address": "0X081E9ED5",
+      "abilityIds": [
+        31
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "PSNPrevention": {
+      "address": "0X081E9FB1",
+      "abilityIds": [
+        17,
+        28
+      ],
+      "sourceTrigger": "ATTACKER"
+    },
+    "AbilityNoSpecificStatLoss": {
+      "address": "0X081E9FF7",
+      "abilityIds": [
+        51,
+        52
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "IntimidateActivationAnimLoop": {
+      "address": "0X081E9E23",
+      "abilityIds": [
+        22
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "SpeedBoostActivates": {
+      "address": "0X081E9D77",
+      "abilityIds": [
+        3
+      ],
+      "sourceTrigger": "BATTLER"
+    },
+    "EffectHealBell": {
+      "address": "0X081E7E19",
+      "abilityIds": [
+        43
+      ],
+      "sourceTrigger": "BATTLE_TARGET",
+      "scope": "self"
+    },
+    "MoveEffectParalysis": {
+      "address": "0X081E9CE6",
+      "abilityIds": [
+        9,
+        27,
+        28
+      ],
+      "sourceTrigger": "STATUS_INFLICT"
+    },
+    "DampStopsExplosion": {
+      "address": "0X081E9EF7",
+      "abilityIds": [
+        6
+      ],
+      "sourceTrigger": "BATTLE_TARGET",
+      "scope": "both"
+    },
+    "RestCantSleep": {
+      "address": "0X081E7682",
+      "abilityIds": [
+        15,
+        72
+      ],
+      "sourceTrigger": "REVERSE_ATTACKER"
+    },
+    "ObliviousPreventsAttraction": {
+      "address": "0X081E9FBD",
+      "abilityIds": [
+        12
+      ],
+      "sourceTrigger": "ATTACKER"
+    }
+  },
+  "gen4File": "maxdata/gen4.lua",
+  "gen4StartId": 397,
+  "abilitiesFile": "maxdata/abilities.lua",
+  "movesFile": "maxdata/moves.lua",
+  "gen4SpriteStart": 412
+}

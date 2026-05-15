@@ -93,10 +93,10 @@ private val LocalTrackerFontScale = staticCompositionLocalOf { 1f }
 private val PHYSICAL_TYPES = setOf(0, 1, 2, 3, 4, 5, 6, 7, 8)
 private val SPECIAL_TYPES  = setOf(10, 11, 12, 13, 14, 15, 16, 17)
 
-// NatDex species (IDs 412+) use PNG sprites; Gen I–III use GIF sprites.
-private fun spriteUrl(speciesId: Int) =
-    if (speciesId >= 412) "file:///android_asset/sprites/$speciesId.png"
-    else "file:///android_asset/sprites/$speciesId.gif"
+// natDexId 412+ use PNG sprites; Gen I–III use GIF sprites.
+private fun spriteUrl(natDexId: Int) =
+    if (natDexId >= 412) "file:///android_asset/sprites/$natDexId.png"
+    else "file:///android_asset/sprites/$natDexId.gif"
 
 // ── Main entry point ─────────────────────────────────────────────────────────
 @Composable
@@ -441,7 +441,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
             verticalAlignment = Alignment.Top,
         ) {
             GlideImage(
-                imageModel = { spriteUrl(pokemon.speciesId) },
+                imageModel = { spriteUrl(pokemon.natDexId) },
                 modifier = Modifier.size(48.dp),
                 failure = {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -786,8 +786,10 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
         val encounterRoutes = state.routeEncounters.entries
             .filter { sid in it.value }
             .map { RouteNames.get(it.key, isHoenn) }
+        val natDexId = enemy?.takeIf { it.speciesId == sid }?.natDexId ?: sid
         RouteMonSheet(
             speciesId = sid,
+            natDexId = natDexId,
             revealedMoveIds = revealedMoveIds,
             ppByMoveId = ppByMoveId,
             encounterRoutes = encounterRoutes,
@@ -839,7 +841,7 @@ private fun EnemyView(
             verticalAlignment = Alignment.Top,
         ) {
             GlideImage(
-                imageModel = { spriteUrl(enemy.speciesId) },
+                imageModel = { spriteUrl(enemy.natDexId) },
                 modifier = Modifier.size(48.dp),
                 failure = {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1585,6 +1587,7 @@ fun TypeDefenseSheet(type1: Int, type2: Int, isNatDex: Boolean = false, onDismis
 @Composable
 private fun RouteMonSheet(
     speciesId: Int,
+    natDexId: Int = speciesId,
     revealedMoveIds: List<Int>,
     ppByMoveId: Map<Int, Int>,
     encounterRoutes: List<String>,
@@ -1615,7 +1618,7 @@ private fun RouteMonSheet(
             // ── Header: sprite + name + types ──────────────────────────────
             Row(verticalAlignment = Alignment.CenterVertically) {
                 GlideImage(
-                    imageModel = { spriteUrl(speciesId) },
+                    imageModel = { spriteUrl(natDexId) },
                     modifier = Modifier.size(56.dp),
                     failure = {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

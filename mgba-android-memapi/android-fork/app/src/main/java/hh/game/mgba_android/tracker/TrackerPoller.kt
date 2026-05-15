@@ -261,13 +261,15 @@ object TrackerPoller {
                     isMaxFr = maxFrVariant != MaxFrVariant.NONE,
                 )
                 if (pokemon != null) {
+                    val spriteId = addresses.extPokemonMap[pokemon.speciesId]?.spriteId ?: pokemon.speciesId
+                    val withNatDex = if (spriteId != pokemon.speciesId) pokemon.copy(natDexId = spriteId) else pokemon
                     val rated = if (slot == 0) {
                         val ruleset = appContext?.let { EmulatorPreferences.getRuleset(it) }
                             ?: GachaMonRuleset.STANDARD
-                        val score = GachaMonRating.calculateRatingScore(pokemon, ruleset)
+                        val score = GachaMonRating.calculateRatingScore(withNatDex, ruleset)
                         val stars = GachaMonRating.calculateStars(score)
-                        pokemon.copy(ratingScore = score, starRating = stars)
-                    } else pokemon
+                        withNatDex.copy(ratingScore = score, starRating = stars)
+                    } else withNatDex
                     add(rated)
                 }
             }
@@ -611,7 +613,8 @@ object TrackerPoller {
 
                 EnemyData(
                     speciesId               = speciesId,
-                    name                    = SpeciesNames.get(speciesId),
+                    natDexId                = addresses.extPokemonMap[speciesId]?.spriteId ?: speciesId,
+                    name                    = addresses.extPokemonMap[speciesId]?.name ?: SpeciesNames.get(speciesId),
                     level                   = level,
                     type1                   = type1,
                     type2                   = type2,

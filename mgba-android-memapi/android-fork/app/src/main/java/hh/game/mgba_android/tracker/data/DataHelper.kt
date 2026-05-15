@@ -395,6 +395,6 @@ object DataHelper {
         val addr = gBattleMovesAddr + moveId.toLong() * 12L
         val bytes = reader(addr, 9) ?: return 0
         val flags = bytes[8].toInt() and 0xFF
-        return (flags ushr 5) and 3
+        return (flags ushr 6) and 3
     }
 }
