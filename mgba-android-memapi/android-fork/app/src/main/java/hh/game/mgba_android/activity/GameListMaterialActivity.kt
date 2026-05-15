@@ -73,7 +73,6 @@ import androidx.compose.ui.unit.sp
 import hh.game.mgba_android.tracker.TrackerPoller
 import hh.game.mgba_android.tracker.persistence.RunRepository
 import java.io.File
-import java.io.RandomAccessFile
 import androidx.documentfile.provider.DocumentFile
 import com.anggrayudi.storage.SimpleStorageHelper
 import com.anggrayudi.storage.file.getStorageId
@@ -1008,23 +1007,9 @@ fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit, onSetting
         catch (_: PackageManager.NameNotFoundException) { false }
     }
 
-    // Read game code from ROM file header (offset 0xAC, 4 bytes)
-    val gameCode = remember(group) {
-        try {
-            val romFile = File(group.allMemberPaths.first())
-            RandomAccessFile(romFile, "r").use { raf ->
-                raf.seek(0xAC)
-                val buf = ByteArray(4)
-                raf.read(buf)
-                String(buf, Charsets.US_ASCII)
-            }
-        } catch (_: Exception) { "" }
-    }
-
     val currentRomNum = QuickloadManager.getLastNumber(context, group.prefix)
-    val currentRuns = remember(gameCode) {
-        if (gameCode.isEmpty()) 0
-        else RunRepository.load(context, gameCode).stats.attempts
+    val currentRuns = remember(group.prefix) {
+        RunRepository.load(context, group.prefix).stats.attempts
     }
 
     var selectedMode by remember { mutableStateOf(QuickloadManager.getFamilyMode(context, group.prefix)) }
@@ -1102,11 +1087,9 @@ fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit, onSetting
                     }
                     totalRunsText.toIntOrNull()?.let { n ->
                         TrackerPoller.setRunAttempts(n)
-                        if (gameCode.isNotEmpty()) {
-                            val data = RunRepository.load(context, gameCode)
-                            data.stats.attempts = n
-                            RunRepository.save(context, gameCode, data)
-                        }
+                        val data = RunRepository.load(context, group.prefix)
+                        data.stats.attempts = n
+                        RunRepository.save(context, group.prefix, data)
                     }
                     onSettingsChanged()
                     onDismiss()

@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.1] - 2026-05-14
+
+### Fixed
+- **ROM select run count sync** — the run count editor on the ROM select page (long-press a ROM family → Settings) now reads and writes the same key as the in-game tracker, so edits made there are reflected correctly when you load the ROM.
+
 ## [3.0.0] - 2026-05-14
 
 ### Added

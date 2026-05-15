@@ -89,6 +89,7 @@ object TrackerPoller {
     // Run persistence
     private var appContext: Context? = null
     private var lastGameCode: String = ""
+    private var romFamilyKey: String = ""  // derived from ROM filename prefix; key for RunRepository
     @Volatile private var runAttempts: Int = 0
 
     fun resetGameOver() {
@@ -104,11 +105,11 @@ object TrackerPoller {
         currentWildBattleRecorded = false
         // Clear persisted route encounters for new run
         appContext?.let { ctx ->
-            if (lastGameCode.isNotEmpty()) {
-                val data = RunRepository.load(ctx, lastGameCode)
+            if (romFamilyKey.isNotEmpty()) {
+                val data = RunRepository.load(ctx, romFamilyKey)
                 data.routeEncounters.clear()
                 data.visitedRoutes.clear()
-                RunRepository.save(ctx, lastGameCode, data)
+                RunRepository.save(ctx, romFamilyKey, data)
             }
         }
     }
@@ -117,10 +118,10 @@ object TrackerPoller {
     fun setRunAttempts(n: Int) {
         runAttempts = n
         val ctx = appContext ?: return
-        if (lastGameCode.isEmpty()) return
-        val data = RunRepository.load(ctx, lastGameCode)
+        if (romFamilyKey.isEmpty()) return
+        val data = RunRepository.load(ctx, romFamilyKey)
         data.stats.attempts = n
-        RunRepository.save(ctx, lastGameCode, data)
+        RunRepository.save(ctx, romFamilyKey, data)
     }
 
     /** Called when the user triggers "Next Run" (banner or tools menu).
@@ -133,10 +134,10 @@ object TrackerPoller {
         if (!isGameOver.getAndSet(true)) {
             runAttempts++
             val ctx = appContext ?: return
-            if (lastGameCode.isEmpty()) return
-            val data = RunRepository.load(ctx, lastGameCode)
+            if (romFamilyKey.isEmpty()) return
+            val data = RunRepository.load(ctx, romFamilyKey)
             data.stats.attempts = runAttempts
-            RunRepository.save(ctx, lastGameCode, data)
+            RunRepository.save(ctx, romFamilyKey, data)
         }
         // Always clear route encounters and revealed moves for the new run,
         // and reset isGameOver so the next death can be detected.
@@ -145,8 +146,12 @@ object TrackerPoller {
 
     private var pollJob: Job? = null
 
-    fun start(context: Context, scope: CoroutineScope) {
+    fun start(context: Context, scope: CoroutineScope, romPath: String? = null) {
         appContext = context.applicationContext
+        if (romPath != null) {
+            val fileName = java.io.File(romPath).name
+            romFamilyKey = hh.game.mgba_android.tracker.quickload.RomFamilyUtils.parseFamily(fileName, romPath).prefix
+        }
         pollJob?.cancel()
         pollJob = scope.launch(Dispatchers.Default) {
             while (isActive) {
@@ -220,7 +225,7 @@ object TrackerPoller {
             chosenBall.set(0)  // new ROM — reset ball picker
             Log.d(TAG, "gameCode changed to $gameCode — restoring run data")
             appContext?.let { ctx ->
-                val runData = RunRepository.load(ctx, gameCode)
+                val runData = RunRepository.load(ctx, romFamilyKey)
                 runAttempts = runData.stats.attempts
                 // Restore encounter map from saved data
                 encountersByRoute.clear()
@@ -290,10 +295,10 @@ object TrackerPoller {
         if (mapId != null && mapId !in visitedRoutes) {
             visitedRoutes.add(mapId)
             appContext?.let { ctx ->
-                val data = RunRepository.load(ctx, gameCode)
+                val data = RunRepository.load(ctx, romFamilyKey)
                 if (mapId !in data.visitedRoutes) {
                     data.visitedRoutes.add(mapId)
-                    RunRepository.save(ctx, gameCode, data)
+                    RunRepository.save(ctx, romFamilyKey, data)
                 }
             }
         }
@@ -354,11 +359,11 @@ object TrackerPoller {
                     Log.d(TAG, "new encounter sid=$sid mapId=$encounterMapId gameCode=$gameCode — saving")
                     // Persist to RunData so encounters survive app restarts
                     appContext?.let { ctx ->
-                        val data = RunRepository.load(ctx, gameCode)
+                        val data = RunRepository.load(ctx, romFamilyKey)
                         val routeList = data.routeEncounters.getOrPut(encounterMapId.toString()) { mutableListOf() }
                         if (sid !in routeList) routeList.add(sid)
                         Log.d(TAG, "saving routeEncounters=${data.routeEncounters}")
-                        RunRepository.save(ctx, gameCode, data)
+                        RunRepository.save(ctx, romFamilyKey, data)
                     }
                 } else {
                     Log.d(TAG, "encounter sid=$sid mapId=$encounterMapId already in list=$list — skipping")
@@ -389,9 +394,9 @@ object TrackerPoller {
             if (isLost && isGameOver.compareAndSet(false, true)) {
                 runAttempts++
                 appContext?.let { ctx ->
-                    val data = RunRepository.load(ctx, gameCode)
+                    val data = RunRepository.load(ctx, romFamilyKey)
                     data.stats.attempts = runAttempts
-                    RunRepository.save(ctx, gameCode, data)
+                    RunRepository.save(ctx, romFamilyKey, data)
                 }
             }
         }

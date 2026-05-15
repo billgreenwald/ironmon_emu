@@ -314,7 +314,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         }
 
         MemoryBridge.reader = { addr, len -> getMemoryRange(addr, len) }
-        TrackerPoller.start(applicationContext, lifecycleScope)
+        TrackerPoller.start(applicationContext, lifecycleScope, gamepath)
 
         val trackerView = ComposeView(this).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
