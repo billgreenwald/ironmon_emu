@@ -459,6 +459,8 @@ object TrackerPoller {
             isNatDex = isNatDex,
             isMaxFr = maxFrVariant != MaxFrVariant.NONE,
             moveCategories = moveCategories,
+            speciesName = { id -> addresses.extPokemonMap[id]?.name ?: SpeciesNames.get(id) },
+            natDexId = { id -> addresses.extPokemonMap[id]?.spriteId ?: id },
         )
     }
 

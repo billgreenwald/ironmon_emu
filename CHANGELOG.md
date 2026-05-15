@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.0.3] - 2026-05-15
+
+### Fixed
+- **MaxFR Gen5 route encounter species names and sprites** — wild Pokémon on the route tracker now show correct names and sprites for Gen5 species. Names and sprites now use the same `extPokemonMap` lookup as the player and opponent panels (single source of truth).
+- **MaxFR Gen5 species ID base corrected** — Gen4 species ID base updated to 412 (matching the NatDex extension scheme) for both the Gen4 and Gen5 FR ROM variants.
+
+### Note
+⚠️ **Run counts reset on update.** After installing this update your run counter will be reset to 0. To restore your previous count, long-press your ROM on the ROM select screen → Settings and enter the number manually.
+
 ## [3.0.2] - 2026-05-14
 
 ### Fixed

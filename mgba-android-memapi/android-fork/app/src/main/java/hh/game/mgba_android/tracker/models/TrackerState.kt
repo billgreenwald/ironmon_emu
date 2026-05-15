@@ -42,6 +42,10 @@ sealed class TrackerState {
         val isMaxFr: Boolean = false,
         // Per-move category from ROM gBattleMoves table: moveId → 1=Physical, 2=Special, 3=Status
         val moveCategories: Map<Int, Int> = emptyMap(),
+        // Species name resolver: checks extPokemonMap first, falls back to SpeciesNames table
+        val speciesName: (Int) -> String = { id -> hh.game.mgba_android.tracker.tables.SpeciesNames.get(id) },
+        // Sprite ID resolver: maps ROM speciesId → natDexId/spriteId via extPokemonMap
+        val natDexId: (Int) -> Int = { id -> id },
     ) : TrackerState() {
         val leadPokemon: PokemonData? get() = party.firstOrNull()
     }

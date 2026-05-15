@@ -731,7 +731,7 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
                                 ) {
                                     if (speciesId > 0) {
                                         GlideImage(
-                                            imageModel = { spriteUrl(speciesId) },
+                                            imageModel = { spriteUrl(state.natDexId(speciesId)) },
                                             modifier = Modifier.size(36.dp),
                                             failure = {
                                                 Box(
@@ -741,7 +741,7 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
                                             },
                                         )
                                         Text(
-                                            text = SpeciesNames.get(speciesId),
+                                            text = state.speciesName(speciesId),
                                             color = TextPrimary, fontSize = ssp(9),
                                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                                         )
@@ -789,12 +789,13 @@ private fun RouteView(state: TrackerState.Active, onOpenGallery: (String) -> Uni
         val natDexId = enemy?.takeIf { it.speciesId == sid }?.natDexId ?: sid
         RouteMonSheet(
             speciesId = sid,
-            natDexId = natDexId,
+            natDexId = state.natDexId(sid),
             revealedMoveIds = revealedMoveIds,
             ppByMoveId = ppByMoveId,
             encounterRoutes = encounterRoutes,
             isNatDex = state.isNatDex,
             isMaxFr = state.isMaxFr,
+            speciesName = state.speciesName,
             onDismiss = { selectedRouteSpecies = null },
         )
     }
@@ -1593,6 +1594,7 @@ private fun RouteMonSheet(
     encounterRoutes: List<String>,
     isNatDex: Boolean = false,
     isMaxFr: Boolean = false,
+    speciesName: (Int) -> String = { id -> SpeciesNames.get(id) },
     onDismiss: () -> Unit,
 ) {
     var baseStatBytes by remember { mutableStateOf<ByteArray?>(null) }
@@ -1629,7 +1631,7 @@ private fun RouteMonSheet(
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        SpeciesNames.get(speciesId),
+                        speciesName(speciesId),
                         color = TextPrimary, fontSize = ssp(22), fontWeight = FontWeight.Bold,
                     )
                     if (bytes != null) {
