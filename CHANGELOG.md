@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.1.2] - 2026-05-16
+
+### Fixed
+- **NatDex steps/battles/centers now show correct values** — NatDex FireRed relocates the `gSaveBlock1ptr` and `gSaveBlock2ptr` variables to different IWRAM addresses (`0x03004C38/3C`). Reading the vanilla FR locations gave a garbage pointer, producing garbage stat values. The correct NatDex pointer addresses are now used.
+
 ## [3.1.1] - 2026-05-16
 
 ### Fixed
