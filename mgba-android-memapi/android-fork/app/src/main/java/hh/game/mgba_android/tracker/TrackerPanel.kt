@@ -523,8 +523,8 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
             }
         }
 
-        // Steps / battles / centers — hidden for MaxFR/NatDex variants (gameStatsOffset unverified)
-        if (!isMaxFr && !isNatDex) stats?.let { gs ->
+        // Steps / battles / centers — offsets verified for all supported variants
+        stats?.let { gs ->
             Spacer(Modifier.height(2.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

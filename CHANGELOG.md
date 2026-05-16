@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.1.1] - 2026-05-16
+
+### Fixed
+- **Steps/battles/centers now visible on MaxFR and NatDex ROMs** — the stat row was hidden while offsets were unverified. Offsets are now computed and confirmed for all supported variants: MaxFR Gen5 FR (`0x1220`), MaxFR Gen4 (`0x15A9`), NatDex FR (`0x1394`), NatDex Emerald (`0x1764`).
+
 ## [3.1.0] - 2026-05-16
 
 ### Added

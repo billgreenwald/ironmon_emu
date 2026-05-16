@@ -25,7 +25,7 @@
     "gMapHeader":               "2036DFC",
     "gSaveBlock1ptr":           "3005008",
     "gSaveBlock2ptr":           "300500C",
-    "gameStatsOffset":          "1200",
+    "gameStatsOffset":          "1220",
     "gameFlagsOffset":          "EE0",
     "EncryptionKeyOffset":      "F20",
     "gHitMarker":               "2023DD0",
