@@ -805,6 +805,51 @@ fun SpeedSettingsDialog(onDismiss: () -> Unit) {
                         }
                     }
                 }
+                // ══ NAME ENTRY ════════════════════════════════════════════════
+                SectionHeader("Name Entry")
+                var nameEntryEnabled by remember { mutableStateOf(EmulatorPreferences.getNameEntryEnabled(context)) }
+                var trainerName by remember { mutableStateOf(EmulatorPreferences.getTrainerName(context)) }
+                var rivalName   by remember { mutableStateOf(EmulatorPreferences.getRivalName(context)) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Show name entry buttons during intro", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = labelColor)
+                        Text("Adds tName / rName overlay buttons at run start", fontSize = 11.sp, color = Color(0xFF888888))
+                    }
+                    Switch(checked = nameEntryEnabled, onCheckedChange = {
+                        nameEntryEnabled = it
+                        EmulatorPreferences.setNameEntryEnabled(context, it)
+                    })
+                }
+                if (nameEntryEnabled) {
+                    OutlinedTextField(
+                        value = trainerName,
+                        onValueChange = { new ->
+                            if (new.length <= 10) {
+                                trainerName = new
+                                EmulatorPreferences.setTrainerName(context, new)
+                            }
+                        },
+                        singleLine = true,
+                        label = { Text("Trainer name (max 10 chars)", color = labelColor) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = rivalName,
+                        onValueChange = { new ->
+                            if (new.length <= 10) {
+                                rivalName = new
+                                EmulatorPreferences.setRivalName(context, new)
+                            }
+                        },
+                        singleLine = true,
+                        label = { Text("Rival name (max 10 chars)", color = labelColor) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 // ══ DISPLAY ═══════════════════════════════════════════════════
                 SectionHeader("Display")
                 Row(

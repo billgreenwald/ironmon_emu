@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0] - 2026-05-16
+
+### Added
+- **Intro name entry buttons** — a new Settings → Name Entry toggle adds two overlay buttons (**tName** / **rName**) to the game screen at run start. When tapped, they auto-type your pre-configured trainer or rival name using the existing naming-screen replay engine. Buttons appear between L and the D-pad, centered vertically, and auto-hide once the intro ends (detected via map load). Also hidden when a gamepad is connected. Names are configured in Settings → Name Entry.
+- **Enter Trainer Name / Enter Rival Name keybindings** — two new bindable actions in Settings → Input → Set Keybindings. Triggers the same name replay as the on-screen buttons, usable with a controller even when the on-screen buttons are hidden.
+
 ## [3.0.3] - 2026-05-15
 
 ### Fixed

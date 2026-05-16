@@ -134,6 +134,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var trackerFontScale by mutableStateOf(1.0f)
     private var effectiveCollapsible by mutableStateOf(false)
     private var showNamingOverlay by mutableStateOf(false)
+    private var nameEntryEnabled = false
+    private var introEnded = false
     private var screenWidthPx = 0
     private var trackerViewRef: ComposeView? = null
     private var templateResult = ArrayList<Pair<Int, Int>>()
@@ -357,6 +359,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             ).apply { leftMargin = trackerLeft },
         )
         // ── End tracker setup ──────────────────────────────────────────────────
+
+        nameEntryEnabled = EmulatorPreferences.getNameEntryEnabled(this)
 
         // Cheats can only be processed after native libs are loaded (resetARDSCheats is JNI)
         var cheatRefPath = getExternalFilesDir("cheats")?.absolutePath + "/$gameNum.cheats"
@@ -653,6 +657,11 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         }
     }
 
+    private fun updateNameEntryButtons() {
+        val visible = if (nameEntryEnabled && !introEnded && !hasGamepadConnected()) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.nameEntryContainer)?.visibility = visible
+    }
+
     private fun updateOnscreenControls() {
         val alwaysShow = EmulatorPreferences.getAlwaysShowControls(this)
         val hideControls = EmulatorPreferences.getHideOnScreenControls(this)
@@ -738,6 +747,17 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                 applyTrackerSize(fractions[which])
             }
             .show()
+    }
+
+    private fun triggerNameReplay(name: String) {
+        if (name.isEmpty()) return
+        lifecycleScope.launch(Dispatchers.Main) {
+            NamingReplayEngine.replay(
+                name,
+                setSpeed     = { Forward(60f) },
+                restoreSpeed = { Forward(setFPS) },
+            )
+        }
     }
 
     private fun applyControlsStyle() {
@@ -847,9 +867,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             .show()
     }
 
-    override fun onInputDeviceAdded(deviceId: Int) { updateOnscreenControls() }
-    override fun onInputDeviceRemoved(deviceId: Int) { updateOnscreenControls() }
-    override fun onInputDeviceChanged(deviceId: Int) { updateOnscreenControls() }
+    override fun onInputDeviceAdded(deviceId: Int) { updateOnscreenControls(); updateNameEntryButtons() }
+    override fun onInputDeviceRemoved(deviceId: Int) { updateOnscreenControls(); updateNameEntryButtons() }
+    override fun onInputDeviceChanged(deviceId: Int) { updateOnscreenControls(); updateNameEntryButtons() }
     // ── End gamepad detection ──────────────────────────────────────────────────
 
     override fun onDestroy() {
@@ -1045,6 +1065,12 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                 kc != -1 && kc == (actionBindings[BindableAction.OPEN_NAME_KEYBOARD] ?: -1) -> {
                     openNameEntryKeyboard(); handled = true
                 }
+                kc != -1 && kc == (actionBindings[BindableAction.ENTER_TRAINER_NAME] ?: -1) -> {
+                    triggerNameReplay(EmulatorPreferences.getTrainerName(this)); handled = true
+                }
+                kc != -1 && kc == (actionBindings[BindableAction.ENTER_RIVAL_NAME] ?: -1) -> {
+                    triggerNameReplay(EmulatorPreferences.getRivalName(this)); handled = true
+                }
             }
         }
         return handled || super.dispatchKeyEvent(event)
@@ -1086,6 +1112,26 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
             gbaButtonViews.add(v to getKey(name))
         }
         gbaButtonViews.forEach { (v, _) -> v.setDpadKeyListener() }
+
+        // tName / rName intro buttons
+        if (nameEntryEnabled) {
+            updateNameEntryButtons()
+            findViewById<View>(R.id.tNameBtn)?.setOnClickListener {
+                triggerNameReplay(EmulatorPreferences.getTrainerName(this))
+            }
+            findViewById<View>(R.id.rNameBtn)?.setOnClickListener {
+                triggerNameReplay(EmulatorPreferences.getRivalName(this))
+            }
+            lifecycleScope.launch {
+                TrackerPoller.state.collect { state ->
+                    val ended = state is TrackerState.Active && (state as TrackerState.Active).currentRoute != null
+                    if (ended != introEnded) {
+                        introEnded = ended
+                        withContext(Dispatchers.Main) { updateNameEntryButtons() }
+                    }
+                }
+            }
+        }
     }
 
     private fun findDpadKeyAt(absX: Float, absY: Float): Int? {

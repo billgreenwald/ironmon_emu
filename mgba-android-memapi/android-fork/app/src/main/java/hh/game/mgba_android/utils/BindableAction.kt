@@ -7,6 +7,8 @@ enum class BindableAction(val label: String, val prefKey: String) {
     TRACKER_TOGGLE("Tracker Open/Close",   "pref_bind_tracker_toggle"),
     NEXT_RUN      ("Next Run →",           "pref_bind_next_run"),
     MUTE          ("Mute Toggle",          "pref_bind_mute"),
-    TOOLS_MENU         ("Tools Menu",            "pref_bind_tools_menu"),
-    OPEN_NAME_KEYBOARD ("Name Entry Keyboard",   "pref_bind_open_name_keyboard"),
+    TOOLS_MENU           ("Tools Menu",              "pref_bind_tools_menu"),
+    OPEN_NAME_KEYBOARD   ("Name Entry Keyboard",     "pref_bind_open_name_keyboard"),
+    ENTER_TRAINER_NAME   ("Enter Trainer Name",      "pref_bind_enter_trainer_name"),
+    ENTER_RIVAL_NAME     ("Enter Rival Name",        "pref_bind_enter_rival_name"),
 }

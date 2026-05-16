@@ -23,6 +23,9 @@ object EmulatorPreferences {
     private const val KEY_SPEED_TOGGLE_MODE        = "pref_speed_toggle_mode"
     private const val KEY_GAME_OVER_CONDITION      = "pref_game_over_condition"
     private const val KEY_INVERT_CONTROLS_LAYOUT   = "pref_invert_controls_layout"
+    private const val KEY_NAME_ENTRY_ENABLED = "pref_name_entry_enabled"
+    private const val KEY_TRAINER_NAME       = "pref_trainer_name"
+    private const val KEY_RIVAL_NAME         = "pref_rival_name"
 
     val speedOptions = listOf(1 to 60f, 2 to 120f, 3 to 180f, 4 to 240f)
     // All mappable GBA inputs (matches getKey() string names)
@@ -111,6 +114,27 @@ object EmulatorPreferences {
 
     fun getInvertControlsLayout(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
         .getBoolean(KEY_INVERT_CONTROLS_LAYOUT, false)
+
+    fun getNameEntryEnabled(ctx: Context): Boolean = ctx.getSharedPreferences(PREFS, 0)
+        .getBoolean(KEY_NAME_ENTRY_ENABLED, false)
+
+    fun setNameEntryEnabled(ctx: Context, v: Boolean) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putBoolean(KEY_NAME_ENTRY_ENABLED, v).apply()
+    }
+
+    fun getTrainerName(ctx: Context): String = ctx.getSharedPreferences(PREFS, 0)
+        .getString(KEY_TRAINER_NAME, "") ?: ""
+
+    fun setTrainerName(ctx: Context, v: String) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putString(KEY_TRAINER_NAME, v).apply()
+    }
+
+    fun getRivalName(ctx: Context): String = ctx.getSharedPreferences(PREFS, 0)
+        .getString(KEY_RIVAL_NAME, "") ?: ""
+
+    fun setRivalName(ctx: Context, v: String) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putString(KEY_RIVAL_NAME, v).apply()
+    }
 
     fun getGbaKeyBinding(ctx: Context, btn: GbaButton): Int {
         val stored = ctx.getSharedPreferences(PREFS, 0).getInt(btn.prefKey, -1)
