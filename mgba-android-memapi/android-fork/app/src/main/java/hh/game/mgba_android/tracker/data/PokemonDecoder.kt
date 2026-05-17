@@ -47,6 +47,7 @@ object PokemonDecoder {
         baseStatsReader: ((speciesId: Int) -> ByteArray?)? = null,
         bstLookup: ((speciesId: Int) -> Int)? = null,
         isMaxFr: Boolean = false,
+        moveStatsReader: ((moveId: Int) -> DataHelper.RomMoveStats?)? = null,
     ): PokemonData? {
         require(raw.size >= 100) { "Raw bytes must be at least 100, got ${raw.size}" }
 
@@ -178,10 +179,10 @@ object PokemonDecoder {
         }
 
         val moves = listOfNotNull(
-            moveOrNull(move1Id, pp1, moveTable, isMaxFr),
-            moveOrNull(move2Id, pp2, moveTable, isMaxFr),
-            moveOrNull(move3Id, pp3, moveTable, isMaxFr),
-            moveOrNull(move4Id, pp4, moveTable, isMaxFr),
+            moveOrNull(move1Id, pp1, moveTable, isMaxFr, moveStatsReader),
+            moveOrNull(move2Id, pp2, moveTable, isMaxFr, moveStatsReader),
+            moveOrNull(move3Id, pp3, moveTable, isMaxFr, moveStatsReader),
+            moveOrNull(move4Id, pp4, moveTable, isMaxFr, moveStatsReader),
         )
 
         return PokemonData(
@@ -235,17 +236,18 @@ object PokemonDecoder {
         )
     }
 
-    private fun moveOrNull(moveId: Int, pp: Int, moveTable: (Int) -> String, isMaxFr: Boolean = false): MoveData? {
+    private fun moveOrNull(moveId: Int, pp: Int, moveTable: (Int) -> String, isMaxFr: Boolean = false, moveStatsReader: ((Int) -> DataHelper.RomMoveStats?)? = null): MoveData? {
         if (moveId == 0) return null
-        val stats = MoveStatsTable.get(moveId, isMaxFr)
+        val romStats   = moveStatsReader?.invoke(moveId)
+        val tableStats = MoveStatsTable.get(moveId, isMaxFr)
         return MoveData(
             moveId   = moveId,
             moveName = moveTable(moveId),
             pp       = pp,
             maxPp    = pp,
-            power    = stats.power,
-            accuracy = stats.accuracy,
-            moveType = stats.type,
+            power    = romStats?.power    ?: tableStats.power,
+            accuracy = romStats?.accuracy ?: tableStats.accuracy,
+            moveType = romStats?.type     ?: tableStats.type,
         )
     }
 

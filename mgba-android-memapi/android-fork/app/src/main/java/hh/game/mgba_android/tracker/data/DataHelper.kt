@@ -387,6 +387,24 @@ object DataHelper {
         GameVersion.UNKNOWN -> null
     }
 
+    /** Reads power/type/accuracy/PP/category for a move from the ROM gBattleMoves table.
+     *  Move struct is 12 bytes: byte0=effect, 1=power, 2=type, 3=accuracy, 4=PP, 8=flags.
+     *  Category at flags bits 6-7 (Gen IV phys/spec split patch; 0 if vanilla).
+     *  Returns null if address unavailable or read fails. */
+    data class RomMoveStats(val power: Int, val type: Int, val accuracy: Int, val pp: Int, val category: Int)
+
+    fun readMoveStatsFromRom(reader: (Long, Int) -> ByteArray?, gBattleMovesAddr: Long, moveId: Int): RomMoveStats? {
+        if (gBattleMovesAddr == 0L || moveId <= 0) return null
+        val addr = gBattleMovesAddr + moveId.toLong() * 12L
+        val bytes = reader(addr, 9) ?: return null
+        val power    = bytes[1].toInt() and 0xFF
+        val type     = bytes[2].toInt() and 0xFF
+        val accuracy = bytes[3].toInt() and 0xFF
+        val pp       = bytes[4].toInt() and 0xFF
+        val category = (bytes[8].toInt() and 0xFF) ushr 6 and 3
+        return RomMoveStats(power, type, accuracy, pp, category)
+    }
+
     /** Reads the Gen IV per-move category from the ROM gBattleMoves table.
      *  Move struct is 12 bytes; byte 8 = flags with category at bits 5-6.
      *  Returns 1=Physical, 2=Special, 3=Status, 0=unknown/unavailable. */

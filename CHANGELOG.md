@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.1.4] - 2026-05-17
+
+### Fixed
+- **Move stats now read from ROM on Max FR / Max EM** — power, type, accuracy, and PP for all moves (Gen III and Gen IV–V) are now read live from the ROM's `gBattleMoves` table instead of a hardcoded lookup table. This fixes incorrect stats for any move rebalanced by the ROM hack (e.g. Outrage showing 90 instead of 120 power on Max FR).
+
 ## [3.1.3] - 2026-05-16
 
 ### Fixed

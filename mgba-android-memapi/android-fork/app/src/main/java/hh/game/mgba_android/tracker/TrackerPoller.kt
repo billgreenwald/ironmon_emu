@@ -264,6 +264,13 @@ object TrackerPoller {
                     },
                     bstLookup = { id -> addresses.extPokemonMap[id]?.bst ?: BstTable.bst(id) },
                     isMaxFr = maxFrVariant != MaxFrVariant.NONE,
+                    moveStatsReader = if (addresses.gBattleMoves != 0L) { moveId ->
+                        DataHelper.readMoveStatsFromRom(
+                            { addr, len -> MemoryBridge.readBytes(addr, len) },
+                            addresses.gBattleMoves,
+                            moveId,
+                        )
+                    } else null,
                 )
                 if (pokemon != null) {
                     val spriteId = addresses.extPokemonMap[pokemon.speciesId]?.spriteId ?: pokemon.speciesId
