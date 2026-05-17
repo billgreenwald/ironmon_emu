@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.3] - 2026-05-16
+
+### Fixed
+- **MaxFR Gen4 species showing as #16669** — `pstats` and `estats` in `max-fr-gen4.json` pointed to Emerald's party RAM addresses instead of FireRed's, so the party struct was read from the wrong location. `gBaseStats` similarly pointed to Emerald's ROM table instead of the Gen4 MaxFR `gSpeciesInfo` at `0x08268F00`. All three corrected to values from the upstream git offsets.
+- **MaxFR (gen3/standard) completely broken** — `max-fr.json` had 24 wrong addresses: party base, enemy party, all battle-engine RAM (gBattleMons, gBattleTypeFlags, gBattlersCount, gBattleWeather, gSideStatuses/Timers, gBattleOutcome, gBattleResults, gBattlerPartyIndexes, gHitMarker, gMoveResultFlags, gBattleCommunication), SaveBlock pointers, bag pocket offsets, gameStatsOffset, gameFlagsOffset, and encryptionKeyOffset — all were Emerald values. Corrected to vanilla FireRed values matching the upstream git offsets.
+- **MaxFR (gen3) gBaseStats** pointed to Emerald's ROM table; corrected to gen3 MaxFR `gSpeciesInfo` at `0x082671AC`.
+
 ## [3.1.2] - 2026-05-16
 
 ### Fixed

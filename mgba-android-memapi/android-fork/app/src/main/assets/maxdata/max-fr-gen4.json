@@ -89,7 +89,7 @@
     "gameRegItemOffset": "496",
     "sStartMenuWindowId": "203CD8C",
     "BattleScript_MoveUsedWokeUp": "0X081E99F6",
-    "gBaseStats": "83203CC",
+    "gBaseStats": "08268F00",
     "BattleScript_MoveUsedIsFrozen2": "82DB270",
     "BattleScript_MoveUsedIsConfused": "0X081E9BB7",
     "EncryptionKeyOffset": "AC",
@@ -102,7 +102,7 @@
     "gBattlersCount": "202406C",
     "gSideStatuses_NatDex_113": "202428A",
     "bagPocket_Balls_Size": "10",
-    "estats": "2024744",
+    "estats": "0202402C",
     "gDisableStructs": "20242BC",
     "BattleScript_MoveUsedIsInLove2": "82DB333",
     "gLockedMoves": "2024268",
@@ -113,7 +113,7 @@
     "bagPocket_Balls_offset": "650",
     "gSaveBlock1ptr": "3005D8C",
     "gSpecialVar_ItemId": "0X0203AD34",
-    "pstats": "20244EC",
+    "pstats": "02024284",
     "sTMHMMoves": "0X084808E8"
   },
   "AbilityAddresses": {
