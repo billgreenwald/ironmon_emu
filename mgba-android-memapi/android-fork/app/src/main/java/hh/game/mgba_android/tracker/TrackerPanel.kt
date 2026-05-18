@@ -425,6 +425,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     var showAbilitySheet by remember { mutableStateOf(false) }
     var showDefenseSheet by remember { mutableStateOf(false) }
     var showLearnsetSheet by remember { mutableStateOf(false) }
+    var showEvoSheet by remember { mutableStateOf(false) }
     var showIvSheet by remember { mutableStateOf(false) }
     var showBagSheet by remember { mutableStateOf(false) }
     var showCoverageSheet by remember { mutableStateOf(false) }
@@ -558,7 +559,8 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         // Learnset row + BST + evo level (Lua: "Moves X/Y (nextLevel)")
         LearnsetRow(learnset, pokemon.level, pokemon.bst, EvolutionLevel.get(pokemon.speciesId, isMaxFr),
             evoMethod = EvolutionLevel.getMethod(pokemon.speciesId, isMaxFr),
-            onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null)
+            onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null,
+            onEvoTap = { showEvoSheet = true })
 
         Spacer(Modifier.height(4.dp))
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
@@ -619,6 +621,13 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     }
     if (showLearnsetSheet && learnset != null) {
         LearnsetSheet(learnset, pokemon.level, onDismiss = { showLearnsetSheet = false })
+    }
+    if (showEvoSheet) {
+        EvoDetailSheet(
+            evoLevel = EvolutionLevel.get(pokemon.speciesId, isMaxFr),
+            evoMethod = EvolutionLevel.getMethod(pokemon.speciesId, isMaxFr),
+            onDismiss = { showEvoSheet = false },
+        )
     }
     if (showIvSheet) {
         IVStatSheet(pokemon, onDismiss = { showIvSheet = false })
@@ -824,6 +833,7 @@ private fun EnemyView(
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showDefenseSheet by remember { mutableStateOf(false) }
     var showLearnsetSheet by remember { mutableStateOf(false) }
+    var showEvoSheet by remember { mutableStateOf(false) }
     var showCoverageSheet by remember { mutableStateOf(false) }
 
     // Stat keys matching Lua tracker (Constants.lua STAT_STATES)
@@ -888,7 +898,8 @@ private fun EnemyView(
         // Learnset row + BST + evo level below header row (Lua: "Moves X/Y (nextLevel)")
         LearnsetRow(learnset, enemy.level, enemy.bst, EvolutionLevel.get(enemy.speciesId, isMaxFr),
             evoMethod = EvolutionLevel.getMethod(enemy.speciesId, isMaxFr),
-            onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null)
+            onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null,
+            onEvoTap = { showEvoSheet = true })
 
         Spacer(Modifier.height(4.dp))
 
@@ -997,6 +1008,13 @@ private fun EnemyView(
     }
     if (showLearnsetSheet && learnset != null) {
         LearnsetSheet(learnset, enemy.level, onDismiss = { showLearnsetSheet = false })
+    }
+    if (showEvoSheet) {
+        EvoDetailSheet(
+            evoLevel = EvolutionLevel.get(enemy.speciesId, isMaxFr),
+            evoMethod = EvolutionLevel.getMethod(enemy.speciesId, isMaxFr),
+            onDismiss = { showEvoSheet = false },
+        )
     }
     if (showCoverageSheet) {
         CoverageCalcSheet(isNatDex = isNatDex || isMaxFr, onDismiss = { showCoverageSheet = false })
@@ -1371,7 +1389,7 @@ private fun MoveHistorySheet(enemy: EnemyData, isMaxFr: Boolean = false, onDismi
 // Shows learned/total counts + next move level (tappable), evo level, BST right-aligned.
 // Next move level turns yellow when 1 level away; evo level turns yellow when ≤2 away.
 @Composable
-private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, evoLevel: Int = 0, evoMethod: String? = null, onLearnsetTap: (() -> Unit)? = null) {
+private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, evoLevel: Int = 0, evoMethod: String? = null, onLearnsetTap: (() -> Unit)? = null, onEvoTap: (() -> Unit)? = null) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -1401,16 +1419,22 @@ private fun LearnsetRow(learnset: LearnsetInfo?, currentLevel: Int, bst: Int, ev
         } else {
             Spacer(Modifier.weight(1f))
         }
+        val hasEvo = evoLevel > 0 || evoMethod != null
+        val evoMod = if (onEvoTap != null && hasEvo) Modifier.clickable { onEvoTap() } else Modifier
         if (evoLevel > 0) {
             val evoSoon = currentLevel >= evoLevel - 2
             val evoColor = if (evoSoon) Color(0xFFFFEB3B) else TextSecondary
-            Text("Evo ", color = TextSecondary, fontSize = ssp(12))
-            Text("Lv.$evoLevel", color = evoColor, fontSize = ssp(12), fontWeight = FontWeight.Bold)
-            Text("  ", color = TextSecondary, fontSize = ssp(12))
+            Row(modifier = evoMod, verticalAlignment = Alignment.CenterVertically) {
+                Text("Evo ", color = TextSecondary, fontSize = ssp(12))
+                Text("Lv.$evoLevel", color = evoColor, fontSize = ssp(12), fontWeight = FontWeight.Bold)
+                Text("  ", color = TextSecondary, fontSize = ssp(12))
+            }
         } else if (evoMethod != null) {
-            Text("Evo ", color = TextSecondary, fontSize = ssp(12))
-            Text(evoMethod, color = TextSecondary, fontSize = ssp(12), fontWeight = FontWeight.Bold)
-            Text("  ", color = TextSecondary, fontSize = ssp(12))
+            Row(modifier = evoMod, verticalAlignment = Alignment.CenterVertically) {
+                Text("Evo ", color = TextSecondary, fontSize = ssp(12))
+                Text(evoMethod, color = TextSecondary, fontSize = ssp(12), fontWeight = FontWeight.Bold)
+                Text("  ", color = TextSecondary, fontSize = ssp(12))
+            }
         }
         Text("BST ", color = TextSecondary, fontSize = ssp(12))
         Text("$bst", color = TextPrimary, fontSize = ssp(12), fontWeight = FontWeight.Bold)
@@ -1541,6 +1565,36 @@ fun AbilityDetailSheet(abilityId: Int, isMaxFr: Boolean = false, onDismiss: () -
     }
 }
 
+// ── Evolution detail sheet ────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EvoDetailSheet(evoLevel: Int, evoMethod: String?, onDismiss: () -> Unit) {
+    val desc = when {
+        evoLevel > 0 && evoMethod == "FEMALE" -> "Evolves at level $evoLevel (female only)."
+        evoLevel > 0                          -> "Evolves at level $evoLevel."
+        evoMethod == "FRIEND"                 -> "Evolves when leveled up with high friendship."
+        evoMethod == "FIRE"                   -> "Evolves when a Fire Stone is used."
+        evoMethod == "WATER"                  -> "Evolves when a Water Stone is used."
+        evoMethod == "LEAF"                   -> "Evolves when a Leaf Stone is used."
+        evoMethod == "MOON"                   -> "Evolves when a Moon Stone is used."
+        evoMethod == "SUN"                    -> "Evolves when a Sun Stone is used."
+        evoMethod == "THUNDER"                -> "Evolves when a Thunder Stone is used."
+        evoMethod == "ICE"                    -> "Evolves when an Ice Stone is used."
+        evoMethod == "DUSK"                   -> "Evolves when a Dusk Stone is used."
+        evoMethod == "SHINY"                  -> "Evolves when a Shiny Stone is used."
+        evoMethod == "LINK"                   -> "Evolves when traded (or via Linking Cord)."
+        evoMethod == "FEMALE"                 -> "Evolves when leveled up (female only)."
+        else                                  -> "Evolution method unknown."
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+            Text("Evolution", color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Text(desc, color = TextSecondary, fontSize = ssp(13))
+        }
+    }
+}
+
 // ── Type defense sheet ────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1600,6 +1654,7 @@ private fun RouteMonSheet(
     var baseStatBytes by remember { mutableStateOf<ByteArray?>(null) }
     var showDefenseSheet by remember { mutableStateOf(false) }
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
+    var showEvoSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(speciesId) {
         val addr = TrackerPoller.currentAddresses ?: return@LaunchedEffect
@@ -1655,6 +1710,7 @@ private fun RouteMonSheet(
                 bst = bst,
                 evoLevel = EvolutionLevel.get(speciesId, isMaxFr),
                 evoMethod = EvolutionLevel.getMethod(speciesId, isMaxFr),
+                onEvoTap = { showEvoSheet = true },
             )
 
             // ── Encounter routes (journal entry) ───────────────────────────
@@ -1709,6 +1765,13 @@ private fun RouteMonSheet(
     }
     showMoveSheet?.let { move ->
         MoveDetailSheet(move, onDismiss = { showMoveSheet = null })
+    }
+    if (showEvoSheet) {
+        EvoDetailSheet(
+            evoLevel = EvolutionLevel.get(speciesId, isMaxFr),
+            evoMethod = EvolutionLevel.getMethod(speciesId, isMaxFr),
+            onDismiss = { showEvoSheet = false },
+        )
     }
 }
 

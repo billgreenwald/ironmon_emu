@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.2.1] - 2026-05-17
+
+### Added
+- **Evolution detail sheet** — tapping the "Evo Lv.N" or "Evo METHOD" text in the learnset row now opens a bottom sheet with a plain-English description of how that Pokémon evolves (e.g. "Evolves at level 18.", "Evolves when a Leaf Stone is used.", "Evolves when traded (or via Linking Cord)."). Works in the party panel, enemy panel, and route encounter sheet.
+
 ## [3.2.0] - 2026-05-17
 
 ### Added
