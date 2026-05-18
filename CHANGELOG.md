@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.2.0] - 2026-05-17
+
+### Added
+- **Evolution data for Gen IV/V (Max FR) and NatDex Pokémon** — the evo level and method (FRIEND, LEAF, FIRE, WATER, MOON, SUN, THUNDER, ICE, DUSK, SHINY, LINK, FEMALE) now display correctly for all supported ROM hacks. Covers 93 Gen IV + 150 Gen V entries for Max FR variants, and 824 entries (IDs 412–1235, Gen IV through Gen IX) for NatDex ROMs.
+
 ## [3.1.4] - 2026-05-17
 
 ### Fixed

@@ -556,8 +556,8 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         Text(text = "Item: $itemName", color = TextSecondary, fontSize = ssp(12))
 
         // Learnset row + BST + evo level (Lua: "Moves X/Y (nextLevel)")
-        LearnsetRow(learnset, pokemon.level, pokemon.bst, EvolutionLevel.get(pokemon.speciesId),
-            evoMethod = EvolutionLevel.getMethod(pokemon.speciesId),
+        LearnsetRow(learnset, pokemon.level, pokemon.bst, EvolutionLevel.get(pokemon.speciesId, isMaxFr),
+            evoMethod = EvolutionLevel.getMethod(pokemon.speciesId, isMaxFr),
             onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null)
 
         Spacer(Modifier.height(4.dp))
@@ -886,8 +886,8 @@ private fun EnemyView(
         }
         Spacer(Modifier.height(2.dp))
         // Learnset row + BST + evo level below header row (Lua: "Moves X/Y (nextLevel)")
-        LearnsetRow(learnset, enemy.level, enemy.bst, EvolutionLevel.get(enemy.speciesId),
-            evoMethod = EvolutionLevel.getMethod(enemy.speciesId),
+        LearnsetRow(learnset, enemy.level, enemy.bst, EvolutionLevel.get(enemy.speciesId, isMaxFr),
+            evoMethod = EvolutionLevel.getMethod(enemy.speciesId, isMaxFr),
             onLearnsetTap = if (learnset != null) {{ showLearnsetSheet = true }} else null)
 
         Spacer(Modifier.height(4.dp))
@@ -1653,8 +1653,8 @@ private fun RouteMonSheet(
                 learnset = null,
                 currentLevel = 0,
                 bst = bst,
-                evoLevel = EvolutionLevel.get(speciesId),
-                evoMethod = EvolutionLevel.getMethod(speciesId),
+                evoLevel = EvolutionLevel.get(speciesId, isMaxFr),
+                evoMethod = EvolutionLevel.getMethod(speciesId, isMaxFr),
             )
 
             // ── Encounter routes (journal entry) ───────────────────────────
