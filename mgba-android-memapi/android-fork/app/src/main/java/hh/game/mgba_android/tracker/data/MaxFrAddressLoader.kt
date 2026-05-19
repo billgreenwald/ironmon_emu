@@ -72,10 +72,24 @@ object MaxFrAddressLoader {
         }
     }
 
+    private fun loadLuaLegendaries(context: Context, root: JsonObject): Map<Int, MaxExtPokemon> {
+        val startId     = root.get("gen4LegendaryStartId")?.asInt ?: return emptyMap()
+        val spriteStart = root.get("gen4LegendarySpriteStart")?.asInt ?: startId
+        val file        = root.get("gen4File")?.asString ?: return emptyMap()
+        return try {
+            val lua = context.assets.open(file).bufferedReader().use { it.readText() }
+            MaxExtPokemonParser.parseSecondBlock(lua, startId, spriteStart)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load gen4 legendaries from $file", e)
+            emptyMap()
+        }
+    }
+
     private fun build(context: Context, root: JsonObject, a: JsonObject): GameAddresses {
         val extMap = buildMap<Int, MaxExtPokemon> {
             putAll(loadLua(context, root, "gen4File", "gen4StartId", "gen4SpriteStart"))
             putAll(loadLua(context, root, "gen5File", "gen5StartId", "gen5SpriteStart"))
+            putAll(loadLuaLegendaries(context, root))
         }
         // Load abilities and moves into the global store
         MaxExtDataStore.abilityMap = loadAbilities(context, root)

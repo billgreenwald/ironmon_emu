@@ -23,6 +23,22 @@ object MaxExtPokemonParser {
             }
         }
     }
+
+    /**
+     * Parses the second top-level block of a gen4.lua style file (legendary Pokemon).
+     */
+    fun parseSecondBlock(lua: String, startId: Int, spriteStart: Int): Map<Int, MaxExtPokemon> {
+        val idx = lua.indexOf("\n},{")
+        if (idx < 0) return emptyMap()
+        val secondBlock = lua.substring(idx + 4)
+        val names = NAME_RE.findAll(secondBlock).map { it.groupValues[1] }.toList()
+        val bsts  = BST_RE.findAll(secondBlock).map { it.groupValues[1].toInt() }.toList()
+        return buildMap {
+            for (i in 0 until minOf(names.size, bsts.size)) {
+                put(startId + i, MaxExtPokemon(names[i], bsts[i], spriteStart + i))
+            }
+        }
+    }
 }
 
 object MaxExtAbilityParser {
