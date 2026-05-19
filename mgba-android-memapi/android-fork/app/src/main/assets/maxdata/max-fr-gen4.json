@@ -438,6 +438,7 @@
   "gen4SpriteStart": 412,
   "gen4LegendaryStartId": 505,
   "gen4LegendarySpriteStart": 505,
+  "gen4LegendarySpriteIds": [508, 509, 510, 512, 513, 515, 516],
   "abilitiesFile": "maxdata/abilities.lua",
   "movesFile": "maxdata/moves.lua"
 }
