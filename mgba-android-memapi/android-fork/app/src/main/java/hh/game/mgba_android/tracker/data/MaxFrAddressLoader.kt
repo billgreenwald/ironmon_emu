@@ -75,10 +75,12 @@ object MaxFrAddressLoader {
     private fun loadLuaLegendaries(context: Context, root: JsonObject): Map<Int, MaxExtPokemon> {
         val startId     = root.get("gen4LegendaryStartId")?.asInt ?: return emptyMap()
         val spriteStart = root.get("gen4LegendarySpriteStart")?.asInt ?: startId
+        val spriteIds   = root.getAsJsonArray("gen4LegendarySpriteIds")
+            ?.mapNotNull { runCatching { it.asInt }.getOrNull() } ?: emptyList()
         val file        = root.get("gen4File")?.asString ?: return emptyMap()
         return try {
             val lua = context.assets.open(file).bufferedReader().use { it.readText() }
-            MaxExtPokemonParser.parseSecondBlock(lua, startId, spriteStart)
+            MaxExtPokemonParser.parseSecondBlock(lua, startId, spriteStart, spriteIds)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load gen4 legendaries from $file", e)
             emptyMap()
