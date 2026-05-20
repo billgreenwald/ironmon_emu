@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.2.4] - 2026-05-19
+
+### Fixed
+- **Fusion Bolt now recognized in Max5 FR** — the Max5 FR ROM places Fusion Bolt at move slot 446, but the tracker had no entry for that ID (causing it to display the raw number). Move 446 is now correctly mapped to Fusion Bolt (Electric, Physical, 100 power, 100 accuracy, 5 PP).
+
 ## [3.2.1] - 2026-05-17
 
 ### Added
