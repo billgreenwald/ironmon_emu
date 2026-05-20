@@ -471,6 +471,7 @@ object MoveNames {
         443 to "Magnet Bomb",
         444 to "Stone Edge",
         445 to "Captivate",
+        446 to "Fusion Bolt",
         447 to "Grass Knot",
         448 to "Chatter",
         449 to "Judgment",

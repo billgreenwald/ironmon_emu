@@ -820,6 +820,7 @@ object MoveStatsTable {
         443 to MoveStats(60,  0,   8,  20, category = 1),  // Magnet Bomb
         444 to MoveStats(100, 80,  5,  5,  category = 1),  // Stone Edge
         445 to MoveStats(0,   100, 0,  20, category = 3),  // Captivate
+        446 to MoveStats(100, 100, 13, 5,  category = 1),  // Fusion Bolt
         447 to MoveStats(1,   100, 12, 20, "WT",  2),      // Grass Knot
         448 to MoveStats(65,  100, 2,  20, category = 2),  // Chatter
         449 to MoveStats(100, 100, 0,  10, category = 2),  // Judgment
