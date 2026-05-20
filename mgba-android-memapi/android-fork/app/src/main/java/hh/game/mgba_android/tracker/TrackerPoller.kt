@@ -39,6 +39,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -91,6 +92,8 @@ object TrackerPoller {
     private var lastGameCode: String = ""
     private var romFamilyKey: String = ""  // derived from ROM filename prefix; key for RunRepository
     @Volatile private var runAttempts: Int = 0
+    // Per-species notes for current run (keyed by species ID, cleared on new run)
+    private val pokemonNotesCache = mutableMapOf<Int, String>()
 
     fun resetGameOver() {
         isGameOver.set(false)
@@ -103,12 +106,14 @@ object TrackerPoller {
         routeVisitOrder.clear()
         visitedRoutes.clear()
         currentWildBattleRecorded = false
-        // Clear persisted route encounters for new run
+        pokemonNotesCache.clear()
+        // Clear persisted route encounters + notes for new run
         appContext?.let { ctx ->
             if (romFamilyKey.isNotEmpty()) {
                 val data = RunRepository.load(ctx, romFamilyKey)
                 data.routeEncounters.clear()
                 data.visitedRoutes.clear()
+                data.pokemonNotes.clear()
                 RunRepository.save(ctx, romFamilyKey, data)
             }
         }
@@ -144,6 +149,22 @@ object TrackerPoller {
         resetGameOver()
     }
 
+    /** Save a per-species note for the current run. Empty string removes the note. */
+    fun saveNote(speciesId: Int, note: String) {
+        val trimmed = note.trim()
+        if (trimmed.isEmpty()) pokemonNotesCache.remove(speciesId)
+        else pokemonNotesCache[speciesId] = trimmed
+        appContext?.let { ctx ->
+            if (romFamilyKey.isNotEmpty()) {
+                val data = RunRepository.load(ctx, romFamilyKey)
+                data.pokemonNotes.clear()
+                data.pokemonNotes.putAll(pokemonNotesCache)
+                RunRepository.save(ctx, romFamilyKey, data)
+            }
+        }
+        _state.update { s -> if (s is TrackerState.Active) s.copy(pokemonNotes = pokemonNotesCache.toMap()) else s }
+    }
+
     private var pollJob: Job? = null
 
     fun start(context: Context, scope: CoroutineScope, romPath: String? = null) {
@@ -174,6 +195,7 @@ object TrackerPoller {
         routeVisitOrder.clear()
         visitedRoutes.clear()
         currentWildBattleRecorded = false
+        pokemonNotesCache.clear()
         lastGameCode = ""  // force restore from disk on next game load
         isNatDex = false
         maxFrVariant = MaxFrVariant.NONE
@@ -227,6 +249,9 @@ object TrackerPoller {
             appContext?.let { ctx ->
                 val runData = RunRepository.load(ctx, romFamilyKey)
                 runAttempts = runData.stats.attempts
+                // Restore notes from saved data
+                pokemonNotesCache.clear()
+                pokemonNotesCache.putAll(runData.pokemonNotes)
                 // Restore encounter map from saved data
                 encountersByRoute.clear()
                 routeVisitOrder.clear()
@@ -468,6 +493,7 @@ object TrackerPoller {
             moveCategories = moveCategories,
             speciesName = { id -> addresses.extPokemonMap[id]?.name ?: SpeciesNames.get(id) },
             natDexId = { id -> addresses.extPokemonMap[id]?.spriteId ?: id },
+            pokemonNotes = pokemonNotesCache.toMap(),
         )
     }
 

@@ -293,7 +293,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
                     .verticalScroll(rememberScrollState()),
             ) {
                 state.leadPokemon?.let { lead ->
-                    MainView(lead, state.battle, state.stats, state.bagDetail, state.playerLearnset, isNatDex = state.isNatDex, isMaxFr = state.isMaxFr, moveCategories = state.moveCategories)
+                    MainView(lead, state.battle, state.stats, state.bagDetail, state.playerLearnset, isNatDex = state.isNatDex, isMaxFr = state.isMaxFr, moveCategories = state.moveCategories, pokemonNotes = state.pokemonNotes)
                 } ?: StatusText("Party empty")
             }
             1 -> Column(
@@ -302,7 +302,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
                     .verticalScroll(rememberScrollState()),
             ) {
                 if (state.battle.isActive) {
-                    EnemyView(state.battle, statMarkings, state.enemyLearnset, playerLead = state.leadPokemon, isNatDex = state.isNatDex, isMaxFr = state.isMaxFr, moveCategories = state.moveCategories)
+                    EnemyView(state.battle, statMarkings, state.enemyLearnset, playerLead = state.leadPokemon, isNatDex = state.isNatDex, isMaxFr = state.isMaxFr, moveCategories = state.moveCategories, pokemonNotes = state.pokemonNotes)
                 } else {
                     StatusText("Not in battle")
                 }
@@ -420,7 +420,7 @@ private fun BallPickerPanel(chosenBall: Int, onReroll: () -> Unit) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 @Composable
-private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, bagDetail: BagDetailInfo? = null, learnset: LearnsetInfo? = null, isNatDex: Boolean = false, isMaxFr: Boolean = false, moveCategories: Map<Int, Int> = emptyMap()) {
+private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats? = null, bagDetail: BagDetailInfo? = null, learnset: LearnsetInfo? = null, isNatDex: Boolean = false, isMaxFr: Boolean = false, moveCategories: Map<Int, Int> = emptyMap(), pokemonNotes: Map<Int, String> = emptyMap()) {
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showAbilitySheet by remember { mutableStateOf(false) }
     var showDefenseSheet by remember { mutableStateOf(false) }
@@ -429,6 +429,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
     var showIvSheet by remember { mutableStateOf(false) }
     var showBagSheet by remember { mutableStateOf(false) }
     var showCoverageSheet by remember { mutableStateOf(false) }
+    var showNoteSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -599,6 +600,29 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         Spacer(Modifier.height(4.dp))
 
         MoveTable(pokemon.moves, battle, player = pokemon, stabTypes = setOf(pokemon.type1, pokemon.type2), moveCategories = moveCategories, isMaxFr = isMaxFr, onClick = { showMoveSheet = it })
+
+        // Note row
+        Spacer(Modifier.height(4.dp))
+        Divider(color = Color(0xFF303050), thickness = 0.5.dp)
+        Spacer(Modifier.height(4.dp))
+        val currentNote = pokemonNotes[pokemon.speciesId]
+        if (currentNote != null) {
+            Text(
+                text = "📝 $currentNote",
+                color = Color(0xFFFFD54F),
+                fontSize = ssp(12),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clickable { showNoteSheet = true },
+            )
+        } else {
+            Text(
+                text = "📝 Add note…",
+                color = TextSecondary,
+                fontSize = ssp(12),
+                modifier = Modifier.clickable { showNoteSheet = true },
+            )
+        }
     }
 
     Spacer(Modifier.height(4.dp))
@@ -608,6 +632,14 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
             move.moveId, pokemon, battle.enemy, battle.weather, inBattle = battle.isActive,
         )
         MoveDetailSheet(move, battlePower = battlePower, onDismiss = { showMoveSheet = null })
+    }
+    if (showNoteSheet) {
+        NoteEditSheet(
+            speciesId = pokemon.speciesId,
+            speciesName = pokemon.displayName,
+            initialNote = pokemonNotes[pokemon.speciesId] ?: "",
+            onDismiss = { showNoteSheet = false },
+        )
     }
     if (showAbilitySheet) {
         AbilityDetailSheet(
@@ -823,6 +855,7 @@ private fun EnemyView(
     isNatDex: Boolean = false,
     isMaxFr: Boolean = false,
     moveCategories: Map<Int, Int> = emptyMap(),
+    pokemonNotes: Map<Int, String> = emptyMap(),
 ) {
     val enemy = battle.enemy
     if (enemy == null) {
@@ -835,6 +868,7 @@ private fun EnemyView(
     var showLearnsetSheet by remember { mutableStateOf(false) }
     var showEvoSheet by remember { mutableStateOf(false) }
     var showCoverageSheet by remember { mutableStateOf(false) }
+    var showNoteSheet by remember { mutableStateOf(false) }
 
     // Stat keys matching Lua tracker (Constants.lua STAT_STATES)
     val statKeys = listOf("atk", "def", "spa", "spd", "spe", "acc", "eva")
@@ -996,6 +1030,29 @@ private fun EnemyView(
                 )
             }
         }
+
+        // Note row
+        Spacer(Modifier.height(4.dp))
+        Divider(color = Color(0xFF303050), thickness = 0.5.dp)
+        Spacer(Modifier.height(4.dp))
+        val currentNote = pokemonNotes[enemy.speciesId]
+        if (currentNote != null) {
+            Text(
+                text = "📝 $currentNote",
+                color = Color(0xFFFFD54F),
+                fontSize = ssp(12),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clickable { showNoteSheet = true },
+            )
+        } else {
+            Text(
+                text = "📝 Add note…",
+                color = TextSecondary,
+                fontSize = ssp(12),
+                modifier = Modifier.clickable { showNoteSheet = true },
+            )
+        }
     }
 
     Spacer(Modifier.height(4.dp))
@@ -1018,6 +1075,14 @@ private fun EnemyView(
     }
     if (showCoverageSheet) {
         CoverageCalcSheet(isNatDex = isNatDex || isMaxFr, onDismiss = { showCoverageSheet = false })
+    }
+    if (showNoteSheet) {
+        NoteEditSheet(
+            speciesId = enemy.speciesId,
+            speciesName = enemy.name,
+            initialNote = pokemonNotes[enemy.speciesId] ?: "",
+            onDismiss = { showNoteSheet = false },
+        )
     }
 }
 
@@ -1988,6 +2053,50 @@ fun CoverageCalcSheet(isNatDex: Boolean = false, onDismiss: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+// ── Note editor sheet ─────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NoteEditSheet(speciesId: Int, speciesName: String, initialNote: String, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(initialNote) }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Text("Notes: $speciesName", color = TextPrimary, fontSize = ssp(15), fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 80.dp),
+                placeholder = { Text("Leave a note…", color = TextSecondary) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentBlue,
+                    unfocusedBorderColor = Color(0xFF303050),
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                ),
+                maxLines = 5,
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { TrackerPoller.saveNote(speciesId, text); onDismiss() },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Save")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            }
         }
     }
 }

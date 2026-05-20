@@ -46,6 +46,8 @@ sealed class TrackerState {
         val speciesName: (Int) -> String = { id -> hh.game.mgba_android.tracker.tables.SpeciesNames.get(id) },
         // Sprite ID resolver: maps ROM speciesId → natDexId/spriteId via extPokemonMap
         val natDexId: (Int) -> Int = { id -> id },
+        // Per-species notes for current run (cleared on new run)
+        val pokemonNotes: Map<Int, String> = emptyMap(),
     ) : TrackerState() {
         val leadPokemon: PokemonData? get() = party.firstOrNull()
     }
