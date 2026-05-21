@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.3.1] - 2026-05-21
+
+### Fixed
+- **Emerald route names corrected** — all 16 city/town entries (IDs 1–16) were mapped to wrong names (e.g. Oldale Town showing as "Fortree City", Petalburg City showing as "Littleroot Town"). The full Emerald name table has been rewritten from the Lua tracker's `setupRouteInfoAsRSE()` source. Gyms, Elite Four rooms, houses, dungeons, and other key locations (IDs 54–431) have also been corrected and expanded.
+
+## [3.3.0] - 2026-05-19
+
+### Added
+- **Per-species notes** — long-press any Pokémon name in the tracker to open a notes sheet. Notes are saved per-species (by National Dex ID) and persist across runs and sessions. Fully synced with the Lua tracker's notes feature.
+
 ## [3.2.4] - 2026-05-19
 
 ### Fixed
