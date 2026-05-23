@@ -533,7 +533,6 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                             .setMessage("Return to game list?")
                             .setPositiveButton("Close") { _, _ ->
                                 finish()
-                                android.os.Process.killProcess(android.os.Process.myPid())
                             }
                             .setNegativeButton("Cancel", null)
                             .show()

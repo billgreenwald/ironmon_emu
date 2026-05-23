@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.3.5] - 2026-05-23
+
+### Fixed
+- **"Close ROM" now returns to game list instead of exiting the app** — the Close ROM confirmation dialog was calling `Process.killProcess()` after `finish()`, which terminated the entire process (including the ROM list activity). Now correctly calls `finish()` only, so the user is returned to the game list.
+
 ## [3.3.4] - 2026-05-23
 
 ### Fixed
