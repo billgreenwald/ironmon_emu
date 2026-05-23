@@ -297,7 +297,7 @@ object DataHelper {
         baseStatsTable      = 0x083203CCL,
         levelUpLearnsets    = 0x0832937CL,  // Pokemon Emerald.json
         experienceTables    = 0x082E82C4L,
-        enemyParty          = 0x020244ECL,
+        enemyParty          = 0x02024744L,  // estats from Pokemon Emerald.json (was incorrectly set to pstats/player party)
         battleTypeFlags     = 0x02022FECL,
         battleMons          = 0x02024084L,
         battlersCount       = 0x0202406CL,  // gBattlersCount — was 0x02024074 (off by 8), fixed from Emerald.json
