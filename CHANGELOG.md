@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.3.2] - 2026-05-23
+
+### Fixed
+- **Trainer defeat counts now accurate on MaxFR** — the previous flag-based approach read trainer defeat bits from SaveBlock1 using vanilla FRLG trainer IDs, which differ in MaxFR ROM hacks (causing counts to show 0/N almost always). For MaxFR variants, trainer defeats are now tracked via battle-end events per route instead, giving accurate counts regardless of ROM hack trainer ID assignments. Counts persist across app restarts and reset on new run.
+
 ## [3.3.1] - 2026-05-21
 
 ### Fixed
