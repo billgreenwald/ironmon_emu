@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.3.4] - 2026-05-23
+
+### Fixed
+- **Auto-randomize timeout increased to 30s** — NatDex ROMs take longer to randomize and were hitting the previous 10s limit, causing the quickload randomize flow to fail on slower devices.
+
 ## [3.3.3] - 2026-05-23
 
 ### Fixed
