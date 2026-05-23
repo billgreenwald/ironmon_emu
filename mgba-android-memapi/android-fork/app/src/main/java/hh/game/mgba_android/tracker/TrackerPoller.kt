@@ -76,6 +76,9 @@ object TrackerPoller {
     // Trainer defeat tracking (MaxFR variants): mapLayoutId → defeats this run
     // Used instead of flag-based TrainerFlagReader for ROM hacks where trainer IDs may differ.
     private val trainerDefeatsByRoute = mutableMapOf<Int, Int>()
+    // Track wild/trainer type of the ACTIVE battle so we can check it at battle-end.
+    // battleRaw.isWild is unreliable at end (pollBattle returns NONE when inactive).
+    private var lastBattleWasWild = false
 
     // Ball picker: random starter position (1=Left, 2=Middle, 3=Right; 0=unset)
     private val chosenBall = AtomicInteger(0)
@@ -383,6 +386,8 @@ object TrackerPoller {
 
         // Reset tutorial flag at the start of each new battle (mirrors Lua Battle init reset)
         if (!wasBattleActive && battleRaw.isActive) recentBattleWasTutorial = false
+        // Snapshot wild/trainer type while the battle is active (isWild is invalid in BattleState.NONE)
+        if (battleRaw.isActive) lastBattleWasWild = battleRaw.isWild
 
         // ── Wild encounter recording (Lua tracker: Tracker.TrackRouteEncounter) ───
         // Reset flag when battle ends so it's ready for the next encounter.
@@ -462,7 +467,7 @@ object TrackerPoller {
         // Fires when a trainer battle ends cleanly (not tutorial, not wild).
         if (maxFrVariant != MaxFrVariant.NONE
                 && wasBattleActive && !battleRaw.isActive
-                && !battleRaw.isWild && !recentBattleWasTutorial) {
+                && !lastBattleWasWild && !recentBattleWasTutorial) {
             route?.mapLayoutId?.let { mapId ->
                 trainerDefeatsByRoute[mapId] = (trainerDefeatsByRoute[mapId] ?: 0) + 1
                 appContext?.let { ctx ->
@@ -480,10 +485,16 @@ object TrackerPoller {
         // MaxFR: use session-tracked event counts (ROM-agnostic, works for any trainer IDs).
         // Vanilla FRLG/Emerald: read live from SaveBlock1 flag bits.
         val trainerTable = TrainerRouteTable.get(game)
+        val singleFightMaps = TrainerRouteTable.getSingleFightMaps(game)
         val trainerCounts: Map<Int, Pair<Int, Int>> = if (maxFrVariant != MaxFrVariant.NONE) {
             buildMap {
                 for ((mapId, trainerIds) in trainerTable) {
-                    put(mapId, (trainerDefeatsByRoute[mapId] ?: 0) to trainerIds.size)
+                    val defeats = trainerDefeatsByRoute[mapId] ?: 0
+                    if (mapId in singleFightMaps) {
+                        put(mapId, minOf(defeats, 1) to 1)
+                    } else {
+                        put(mapId, defeats to trainerIds.size)
+                    }
                 }
                 // Include any routes with session defeats not in the table
                 for ((mapId, defeats) in trainerDefeatsByRoute) {

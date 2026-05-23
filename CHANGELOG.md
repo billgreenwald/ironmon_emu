@@ -4,6 +4,8 @@
 
 ### Fixed
 - **Trainer defeat counts now accurate on MaxFR** — the previous flag-based approach read trainer defeat bits from SaveBlock1 using vanilla FRLG trainer IDs, which differ in MaxFR ROM hacks (causing counts to show 0/N almost always). For MaxFR variants, trainer defeats are now tracked via battle-end events per route instead, giving accurate counts regardless of ROM hack trainer ID assignments. Counts persist across app restarts and reset on new run.
+- **Wild battles no longer counted as trainer defeats on MaxFR** — when a battle ended, the wild/trainer flag was read from `BattleState.NONE` (always false), causing wild battle endings to increment the trainer defeat counter. Now tracked via `lastBattleWasWild` set during the active battle.
+- **Oak's Lab correctly shows 1 trainer on MaxFR** — Oak's Lab has 3 trainer IDs (one per starter choice) but is a single-fight map. The single-fight cap applied for vanilla was not applied for MaxFR event tracking, showing 3/3 instead of 1/1.
 
 ## [3.3.1] - 2026-05-21
 
