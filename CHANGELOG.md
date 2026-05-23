@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.3.3] - 2026-05-23
+
+### Fixed
+- **Emerald enemy level now shows the enemy's level** — `enemyParty` was set to the player party address (`0x020244EC`) instead of the correct enemy party address (`0x02024744`), causing the tracker to display the player lead's level instead of the opponent's level.
+
 ## [3.3.2] - 2026-05-23
 
 ### Fixed
