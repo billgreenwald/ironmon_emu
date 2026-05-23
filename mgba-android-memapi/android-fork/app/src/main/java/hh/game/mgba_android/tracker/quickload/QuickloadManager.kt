@@ -242,7 +242,7 @@ object QuickloadManager {
         return try {
             serviceMessenger!!.send(message)
             Log.d("Quickload", "Sent URI to UPR, waiting for reply…")
-            withTimeout(10_000L) {
+            withTimeout(30_000L) {
                 val data = replyChannel.receive()
                 Log.d("Quickload", "Received ${data.size} bytes from UPR")
                 currentFile.openOutputStream(context, append = false)?.use { it.write(data) }
@@ -255,7 +255,7 @@ object QuickloadManager {
             Log.e("Quickload", "Failed to send message to UPR service", e)
             null
         } catch (e: CancellationException) {
-            Log.e("Quickload", "UPR randomize timed out after 10s", e)
+            Log.e("Quickload", "UPR randomize timed out after 30s", e)
             null
         } catch (e: Exception) {
             Log.e("Quickload", "Unexpected error in overwriteWithRandomizer", e)
