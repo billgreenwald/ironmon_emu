@@ -3,15 +3,16 @@ package hh.game.mgba_android.tracker.persistence
 import com.google.gson.annotations.SerializedName
 
 data class RunData(
-    @SerializedName("romCode")         val romCode: String = "",
-    @SerializedName("startTimestamp")  val startTimestamp: Long = System.currentTimeMillis(),
-    @SerializedName("encounterLog")    val encounterLog: MutableList<EncounterEntry> = mutableListOf(),
-    @SerializedName("trainerLog")      val trainerLog: MutableList<TrainerEntry> = mutableListOf(),
-    @SerializedName("pokemonNotes")    val pokemonNotes: MutableMap<Int, String> = mutableMapOf(),
-    @SerializedName("routeLog")        val routeLog: MutableList<String> = mutableListOf(),
-    @SerializedName("stats")           val stats: RunStats = RunStats(),
-    @SerializedName("routeEncounters") val routeEncounters: MutableMap<String, MutableList<Int>> = mutableMapOf(),
-    @SerializedName("visitedRoutes")   val visitedRoutes: MutableList<Int> = mutableListOf(),
+    @SerializedName("romCode")              val romCode: String = "",
+    @SerializedName("startTimestamp")       val startTimestamp: Long = System.currentTimeMillis(),
+    @SerializedName("encounterLog")         val encounterLog: MutableList<EncounterEntry> = mutableListOf(),
+    @SerializedName("trainerLog")           val trainerLog: MutableList<TrainerEntry> = mutableListOf(),
+    @SerializedName("pokemonNotes")         val pokemonNotes: MutableMap<Int, String> = mutableMapOf(),
+    @SerializedName("routeLog")             val routeLog: MutableList<String> = mutableListOf(),
+    @SerializedName("stats")                val stats: RunStats = RunStats(),
+    @SerializedName("routeEncounters")      val routeEncounters: MutableMap<String, MutableList<Int>> = mutableMapOf(),
+    @SerializedName("visitedRoutes")        val visitedRoutes: MutableList<Int> = mutableListOf(),
+    @SerializedName("trainerDefeatsByRoute") val trainerDefeatsByRoute: MutableMap<String, Int> = mutableMapOf(),
 )
 
 data class RunStats(

@@ -73,6 +73,10 @@ object TrackerPoller {
     // Whether the current wild battle has already been recorded (reset when battle ends)
     private var currentWildBattleRecorded = false
 
+    // Trainer defeat tracking (MaxFR variants): mapLayoutId → defeats this run
+    // Used instead of flag-based TrainerFlagReader for ROM hacks where trainer IDs may differ.
+    private val trainerDefeatsByRoute = mutableMapOf<Int, Int>()
+
     // Ball picker: random starter position (1=Left, 2=Middle, 3=Right; 0=unset)
     private val chosenBall = AtomicInteger(0)
 
@@ -107,13 +111,15 @@ object TrackerPoller {
         visitedRoutes.clear()
         currentWildBattleRecorded = false
         pokemonNotesCache.clear()
-        // Clear persisted route encounters + notes for new run
+        trainerDefeatsByRoute.clear()
+        // Clear persisted route encounters + notes + trainer defeats for new run
         appContext?.let { ctx ->
             if (romFamilyKey.isNotEmpty()) {
                 val data = RunRepository.load(ctx, romFamilyKey)
                 data.routeEncounters.clear()
                 data.visitedRoutes.clear()
                 data.pokemonNotes.clear()
+                data.trainerDefeatsByRoute.clear()
                 RunRepository.save(ctx, romFamilyKey, data)
             }
         }
@@ -263,7 +269,12 @@ object TrackerPoller {
                 }
                 encountersByRoute.keys.sorted().forEach { routeVisitOrder.add(it) }
                 visitedRoutes.addAll(runData.visitedRoutes)
-                Log.d(TAG, "restore done: encountersByRoute=$encountersByRoute visitedRoutes=$visitedRoutes")
+                // Restore trainer defeats for MaxFR session tracking
+                trainerDefeatsByRoute.clear()
+                runData.trainerDefeatsByRoute.forEach { (mapIdStr, count) ->
+                    mapIdStr.toIntOrNull()?.let { trainerDefeatsByRoute[it] = count }
+                }
+                Log.d(TAG, "restore done: encountersByRoute=$encountersByRoute visitedRoutes=$visitedRoutes trainerDefeatsByRoute=$trainerDefeatsByRoute")
             } ?: run { runAttempts = 0 }
         }
 
@@ -445,12 +456,43 @@ object TrackerPoller {
             currentWildBattleRecorded = false
         }
 
+        // ── Trainer defeat event tracking (MaxFR variants) ───────────────────
+        // For ROM hacks, trainer IDs in our table may differ from the ROM's actual IDs,
+        // making flag-based reads unreliable. Instead, count defeats as they happen.
+        // Fires when a trainer battle ends cleanly (not tutorial, not wild).
+        if (maxFrVariant != MaxFrVariant.NONE
+                && wasBattleActive && !battleRaw.isActive
+                && !battleRaw.isWild && !recentBattleWasTutorial) {
+            route?.mapLayoutId?.let { mapId ->
+                trainerDefeatsByRoute[mapId] = (trainerDefeatsByRoute[mapId] ?: 0) + 1
+                appContext?.let { ctx ->
+                    val data = RunRepository.load(ctx, romFamilyKey)
+                    data.trainerDefeatsByRoute[mapId.toString()] = trainerDefeatsByRoute[mapId]!!
+                    RunRepository.save(ctx, romFamilyKey, data)
+                }
+            }
+        }
+
         // ── Game stats (steps / battles / center visits) ─────────────────────
         val stats = StatsReader.read(addresses)
 
-        // ── Trainer defeat counts (live from SaveBlock1 trainer flags) ────────
+        // ── Trainer defeat counts ─────────────────────────────────────────────
+        // MaxFR: use session-tracked event counts (ROM-agnostic, works for any trainer IDs).
+        // Vanilla FRLG/Emerald: read live from SaveBlock1 flag bits.
         val trainerTable = TrainerRouteTable.get(game)
-        val trainerCounts = TrainerFlagReader.readCounts(addresses, trainerTable, TrainerRouteTable.getSingleFightMaps(game))
+        val trainerCounts: Map<Int, Pair<Int, Int>> = if (maxFrVariant != MaxFrVariant.NONE) {
+            buildMap {
+                for ((mapId, trainerIds) in trainerTable) {
+                    put(mapId, (trainerDefeatsByRoute[mapId] ?: 0) to trainerIds.size)
+                }
+                // Include any routes with session defeats not in the table
+                for ((mapId, defeats) in trainerDefeatsByRoute) {
+                    if (mapId !in this) put(mapId, defeats to defeats)
+                }
+            }
+        } else {
+            TrainerFlagReader.readCounts(addresses, trainerTable, TrainerRouteTable.getSingleFightMaps(game))
+        }
 
         // ── Healing items (matches Lua Program.updateBagItems + recalcLeadPokemonHealingInfo) ──
         val bagDetail = party.firstOrNull()?.let { lead ->
