@@ -91,6 +91,10 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     // Sets g_pendingRomPath in C++ and signals the emulation thread to stop; SDL thread reloads.
     private external fun loadRomJNI(path: String)
 
+    // Signal the emulation thread to stop (mCoreThreadEnd). Called before finish() when closing
+    // the ROM so onDestroy()'s SDL thread join completes in < 1 frame instead of hanging.
+    private external fun stopGameJNI()
+
     // Game arguments stored before SDL thread starts so getArguments() is ready
     private var gameArgPath: String? = null
     private var gameCheatPath: String? = null
@@ -532,6 +536,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                             .setTitle("Close ROM")
                             .setMessage("Return to game list?")
                             .setPositiveButton("Close") { _, _ ->
+                                stopGameJNI()
                                 startActivity(
                                     Intent(this, GameListMaterialActivity::class.java)
                                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)

@@ -3,7 +3,7 @@
 ## [3.4.2] - 2026-05-24
 
 ### Fixed
-- **ROM list taps unresponsive after closing a ROM** — returning from the game activity left SDL's input and task state in a way that blocked touch events on the ROM list. The "Close ROM" button now explicitly navigates back to the ROM list activity with `CLEAR_TOP | SINGLE_TOP`, ensuring a clean window focus handoff. Also removed an unnecessary `FLAG_ACTIVITY_NEW_TASK` from the ROM launch path that could put the game activity in a separate task and cause the same issue.
+- **ROM list taps unresponsive + ANR after closing a ROM** — `SDLActivity.onDestroy()` joins the mGBA native thread on the main thread with no timeout. After `PauseGame()` pauses the core, the SDL display thread blocked in `mCoreSyncWaitFrameStart` waiting for a frame that never arrives, hanging the join indefinitely (> 5 s → ANR, all touches queued but never processed). Fixed by calling `stopGameJNI()` (`mCoreThreadEnd`) from the Close ROM handler before `finish()`, the same mechanism `loadRomJNI` already uses for ROM reloads. The SDL thread now exits in < 1 frame (~16 ms) so `onDestroy()` completes instantly with no ANR.
 
 ## [3.3.5] - 2026-05-23
 

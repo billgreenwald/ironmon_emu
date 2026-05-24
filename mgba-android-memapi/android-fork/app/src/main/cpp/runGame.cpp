@@ -339,6 +339,14 @@ Java_hh_game_mgba_1android_activity_GameActivity_loadRomJNI(JNIEnv* env, jobject
     mCoreThreadEnd(&thread);  // signals SDL runloop to exit; SDL thread handles the actual reload
 }
 
+// Called from Kotlin when the user closes the ROM via the tools menu.
+// Signals the emulation thread to stop so onDestroy()'s SDL thread join completes quickly.
+extern "C"
+JNIEXPORT void JNICALL
+Java_hh_game_mgba_1android_activity_GameActivity_stopGameJNI(JNIEnv* env, jobject thiz) {
+    mCoreThreadEnd(&thread);
+}
+
 int mSDLRun(struct mSDLRenderer* renderer, struct mArguments* args) {
     static char reloadPath[512];
     const char* romToLoad = args->fname;
