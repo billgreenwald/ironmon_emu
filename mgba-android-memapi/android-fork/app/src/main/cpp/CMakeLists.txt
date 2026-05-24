@@ -29,6 +29,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
 		mgba/src/platform/sdl/sw-sdl2.c
 		android/sdl/gl-common.c
     oboe-audio.cpp
+    sonic.c
 		android/sdl/gles2-sdl.c
 		android/sdl/android_sdl_events.cpp
 		${PLATFORM_SRC}
