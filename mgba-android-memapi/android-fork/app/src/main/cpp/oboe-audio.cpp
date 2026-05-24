@@ -46,30 +46,10 @@ public:
             memset(audioData, 0, numFrames * oboeStream->getChannelCount() * sizeof(int16_t));
             return DataCallbackResult::Stop;
         }
-        double fauxClock = 1;
-        
-        if (sync && sync->fpsTarget > 0) {
-            // Re-implementing GBAAudioCalculateRatio logic or calling it if available.
-            // Assuming 59.7275Hz is standard GBA framerate.
-            // Ratio is target / native.
-            // Simplify: GBAAudioCalculateRatio(1, fpsTarget, 1) usually roughly 1.0
-            
-            // To imply logic:
-            // static double GBAAudioCalculateRatio(double sampleRate, double fps, double nativeFps)
-            // return sampleRate * nativeFps / fps;
-            
-            // SDL code: fauxClock = GBAAudioCalculateRatio(1, audioContext->sync->fpsTarget, 1);
-            // This suggests it adjusts the clock rate effectively changing pitch/speed.
-            // We can skip this for now or try to implement if we have the header.
-             fauxClock = 59.7275f / sync->fpsTarget; // Approx inverse of what SDL likely does?
-             // Actually, let's stick to standard rate if sync is disabled or 1.0.
-             if (fauxClock < 0.1 || fauxClock > 10.0) fauxClock = 1.0;
-        }
-
         mCoreSyncLockAudio(sync);
 
-        blip_set_rates(left, clockRate, sampleRate * fauxClock);
-        blip_set_rates(right, clockRate, sampleRate * fauxClock);
+        blip_set_rates(left, clockRate, sampleRate);
+        blip_set_rates(right, clockRate, sampleRate);
 
         int available = blip_samples_avail(left);
         if (available > numFrames) {
