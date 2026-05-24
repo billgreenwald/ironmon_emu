@@ -20,11 +20,13 @@ extern "C" {
 using namespace oboe;
 
 static sonicStream gSonicStream = nullptr;
+static bool gPrevUsedSonic = false;
 
-// Temp buffers for draining blip — sized for up to 8x speed (6400 frames)
+// Temp buffers — sized for up to 8x speed (6400 frames)
 static int16_t gTempLeft[6400];
 static int16_t gTempRight[6400];
 static int16_t gTempInterleaved[6400 * 2];
+static int16_t gDiscardBuf[4096];
 
 // Forward declarations
 extern "C" bool mOboeInit(struct mCoreThread* thread);
@@ -54,47 +56,74 @@ public:
             return DataCallbackResult::Stop;
         }
 
-        // Speed multiplier: 1.0 = normal, 2.0 = 2x, etc.
         float speed = 1.0f;
         if (sync && sync->fpsTarget > 0) {
             speed = sync->fpsTarget / 59.7275f;
             if (speed < 0.1f || speed > 16.0f) speed = 1.0f;
         }
 
-        mCoreSyncLockAudio(sync);
+        // Only use Sonic when actually fast-forwarding — avoids its ~40ms buffer
+        // latency during normal 1x gameplay.
+        bool useSonic = (speed > 1.05f);
 
-        // Always sample at native rate — Sonic handles tempo correction
+        mCoreSyncLockAudio(sync);
         blip_set_rates(left,  clockRate, sampleRate);
         blip_set_rates(right, clockRate, sampleRate);
 
-        // Drain ALL available samples to prevent blip overflow at high speeds,
-        // which would otherwise block the emulator thread via mCoreSyncLockAudio.
-        int available = blip_samples_avail(left);
-        int toDrain = std::min(available, 6400);
+        if (useSonic) {
+            // Drain ALL available blip samples to prevent overflow blocking the
+            // emulator thread, then let Sonic time-compress to numFrames at native pitch.
+            int available = blip_samples_avail(left);
+            int toDrain = std::min(available, 6400);
 
-        if (toDrain > 0) {
-            blip_read_samples(left,  gTempLeft,  toDrain, 0);
-            blip_read_samples(right, gTempRight, toDrain, 0);
-            for (int i = 0; i < toDrain; i++) {
-                gTempInterleaved[i * 2]     = gTempLeft[i];
-                gTempInterleaved[i * 2 + 1] = gTempRight[i];
+            if (toDrain > 0) {
+                blip_read_samples(left,  gTempLeft,  toDrain, 0);
+                blip_read_samples(right, gTempRight, toDrain, 0);
+                for (int i = 0; i < toDrain; i++) {
+                    gTempInterleaved[i * 2]     = gTempLeft[i];
+                    gTempInterleaved[i * 2 + 1] = gTempRight[i];
+                }
+                if (gSonicStream) {
+                    sonicSetSpeed(gSonicStream, speed);
+                    sonicWriteShortToStream(gSonicStream, gTempInterleaved, toDrain);
+                }
             }
+
+            mCoreSyncConsumeAudio(sync);
+
+            int got = 0;
             if (gSonicStream) {
-                sonicSetSpeed(gSonicStream, speed);
-                sonicWriteShortToStream(gSonicStream, gTempInterleaved, toDrain);
+                got = sonicReadShortFromStream(gSonicStream, outputData, numFrames);
+            }
+            if (got < numFrames) {
+                memset(outputData + got * 2, 0, (numFrames - got) * 2 * sizeof(int16_t));
+            }
+
+        } else {
+            // Direct path: no Sonic, no latency. Original blip → output.
+            int available = blip_samples_avail(left);
+            if (available > numFrames) available = numFrames;
+            blip_read_samples(left,  outputData,     available, 1);
+            blip_read_samples(right, outputData + 1, available, 1);
+            mCoreSyncConsumeAudio(sync);
+
+            if (available < numFrames) {
+                memset(outputData + available * 2, 0,
+                       (numFrames - available) * 2 * sizeof(int16_t));
+            }
+
+            // Flush Sonic's internal buffer on the first callback after leaving
+            // fast-forward, so its tail doesn't desync audio when speed returns.
+            if (gPrevUsedSonic && gSonicStream) {
+                sonicFlushStream(gSonicStream);
+                while (sonicSamplesAvailable(gSonicStream) > 0) {
+                    sonicReadShortFromStream(gSonicStream, gDiscardBuf,
+                                            std::min(sonicSamplesAvailable(gSonicStream), 4096));
+                }
             }
         }
 
-        mCoreSyncConsumeAudio(sync);
-
-        int got = 0;
-        if (gSonicStream) {
-            got = sonicReadShortFromStream(gSonicStream, outputData, numFrames);
-        }
-        if (got < numFrames) {
-            memset(outputData + got * 2, 0, (numFrames - got) * 2 * sizeof(int16_t));
-        }
-
+        gPrevUsedSonic = useSonic;
         return DataCallbackResult::Continue;
     }
 
@@ -147,6 +176,7 @@ bool mOboeInit(struct mCoreThread* thread) {
     gSonicStream = sonicCreateStream(48000, 2);
     sonicSetSpeed(gSonicStream, 1.0f);
     sonicSetPitch(gSonicStream, 1.0f);
+    gPrevUsedSonic = false;
 
     LOGD("Oboe Audio Started");
     return true;
