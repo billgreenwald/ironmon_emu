@@ -3,7 +3,8 @@
 ## [3.4.2] - 2026-05-24
 
 ### Fixed
-- **ROM list taps unresponsive + ANR after closing a ROM** — `SDLActivity.onDestroy()` joins the mGBA native thread on the main thread with no timeout. After `PauseGame()` pauses the core, the SDL display thread blocked in `mCoreSyncWaitFrameStart` waiting for a frame that never arrives, hanging the join indefinitely (> 5 s → ANR, all touches queued but never processed). Fixed by calling `stopGameJNI()` (`mCoreThreadEnd`) from the Close ROM handler before `finish()`, the same mechanism `loadRomJNI` already uses for ROM reloads. The SDL thread now exits in < 1 frame (~16 ms) so `onDestroy()` completes instantly with no ANR.
+- **ROM list taps unresponsive + ANR after closing a ROM** — `SDLActivity.onDestroy()` joins the mGBA native thread on the main thread with no timeout. After `PauseGame()` pauses the core, the SDL display thread blocked in `mCoreSyncWaitFrameStart` waiting for a frame that never arrives, hanging the join indefinitely (> 5 s → ANR, all touches queued but never processed). Fixed by calling `stopGameJNI()` (`mCoreThreadEnd`) before navigating away — the same mechanism `loadRomJNI` already uses. The SDL thread now exits in < 1 frame (~16 ms) so `onDestroy()` completes instantly.
+- **App crash (SIGSEGV) immediately after closing ROM** — `runGame.cpp` called `androidrenderer.core->deinit()` twice in sequence (copy-paste artifact). Previously unreachable since the SDL thread never exited cleanly; with `stopGameJNI` enabling clean exit, both lines executed → double-free → process crash. Removed the duplicate call.
 
 ## [3.3.5] - 2026-05-23
 

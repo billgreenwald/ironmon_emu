@@ -536,11 +536,11 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                             .setTitle("Close ROM")
                             .setMessage("Return to game list?")
                             .setPositiveButton("Close") { _, _ ->
-                                stopGameJNI()
                                 startActivity(
                                     Intent(this, GameListMaterialActivity::class.java)
                                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                                 )
+                                stopGameJNI()
                                 finish()
                             }
                             .setNegativeButton("Cancel", null)

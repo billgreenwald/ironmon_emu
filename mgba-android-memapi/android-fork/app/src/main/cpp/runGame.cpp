@@ -250,8 +250,6 @@ int runGame(char** argv){
     mCoreConfigDeinit(&androidrenderer.core->config);
     androidrenderer.core->deinit(androidrenderer.core);
 
-    androidrenderer.core->deinit(androidrenderer.core);
-
     return ret;
 }
 
