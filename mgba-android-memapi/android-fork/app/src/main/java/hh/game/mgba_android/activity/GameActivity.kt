@@ -538,10 +538,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                             .setPositiveButton("Close") { _, _ ->
                                 startActivity(
                                     Intent(this, GameListMaterialActivity::class.java)
-                                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                                 )
-                                stopGameJNI()
-                                finish()
+                                android.os.Process.killProcess(android.os.Process.myPid())
                             }
                             .setNegativeButton("Cancel", null)
                             .show()

@@ -3,8 +3,7 @@
 ## [3.4.2] - 2026-05-24
 
 ### Fixed
-- **ROM list taps unresponsive + ANR after closing a ROM** — `SDLActivity.onDestroy()` joins the mGBA native thread on the main thread with no timeout. After `PauseGame()` pauses the core, the SDL display thread blocked in `mCoreSyncWaitFrameStart` waiting for a frame that never arrives, hanging the join indefinitely (> 5 s → ANR, all touches queued but never processed). Fixed by calling `stopGameJNI()` (`mCoreThreadEnd`) before navigating away — the same mechanism `loadRomJNI` already uses. The SDL thread now exits in < 1 frame (~16 ms) so `onDestroy()` completes instantly.
-- **App crash (SIGSEGV) immediately after closing ROM** — `runGame.cpp` called `androidrenderer.core->deinit()` twice in sequence (copy-paste artifact). Previously unreachable since the SDL thread never exited cleanly; with `stopGameJNI` enabling clean exit, both lines executed → double-free → process crash. Removed the duplicate call.
+- **Close ROM now reliably returns to ROM list** — the v3.3.5 (`finish()`-only) and earlier v3.4.2 (`startActivity(CLEAR_TOP|SINGLE_TOP) + stopGameJNI() + finish()`) attempts both still exited to the Android launcher in practice. Lifecycle-based teardown depends on SDL's native cleanup (audio thread, GL context, Oboe, singleton mutexes/semaphores) all unwinding cleanly through `onDestroy()` — which is fragile, and any hiccup in that chain collapses the task and falls through to the launcher. Replaced with the proven Quickload "Next Run →" pattern: `startActivity(GameListMaterialActivity, NEW_TASK | CLEAR_TASK) + Process.killProcess()`. ActivityManager receives the launch intent before the process dies, so Android spawns a fresh process rooted at the ROM list — sidestepping the entire SDL teardown path. `stopGameJNI()` and the `runGame.cpp` double-`deinit()` removal stay in place (the double-free was a real latent bug for any future code path that does drive a clean SDL exit).
 
 ## [3.3.5] - 2026-05-23
 
