@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.4.2] - 2026-05-24
+
+### Fixed
+- **ROM list taps unresponsive after closing a ROM** — returning from the game activity left SDL's input and task state in a way that blocked touch events on the ROM list. The "Close ROM" button now explicitly navigates back to the ROM list activity with `CLEAR_TOP | SINGLE_TOP`, ensuring a clean window focus handoff. Also removed an unnecessary `FLAG_ACTIVITY_NEW_TASK` from the ROM launch path that could put the game activity in a separate task and cause the same issue.
+
 ## [3.3.5] - 2026-05-23
 
 ### Fixed

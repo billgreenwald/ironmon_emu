@@ -366,7 +366,6 @@ fun launchFamily(group: RomFamilyGroup, context: Context) {
     context.startActivity(
         Intent(context, GameActivity::class.java).apply {
             putExtra("gamepath", targetPath)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     )
 }
