@@ -138,6 +138,7 @@ object EvolutionLevel {
     )
 
     private val GEN3_METHODS: Map<Int, String> = mapOf(
+        // Friendship evos
         42  to "FRIEND",  // Golbat → Crobat
         113 to "FRIEND",  // Chansey → Blissey
         172 to "FRIEND",  // Pichu → Pikachu
@@ -145,6 +146,29 @@ object EvolutionLevel {
         174 to "FRIEND",  // Igglybuff → Jigglypuff
         175 to "FRIEND",  // Togepi → Togetic
         350 to "FRIEND",  // Azurill → Marill
+        // Stone evos — mirrors Lua PokemonData.lua (Evolutions.{FIRE,WATER,...})
+        // Gen I (internal ID == National Dex for 1–251)
+        25  to "THUNDER", // Pikachu → Raichu
+        30  to "MOON",    // Nidorina → Nidoqueen
+        33  to "MOON",    // Nidorino → Nidoking
+        35  to "MOON",    // Clefairy → Clefable
+        37  to "FIRE",    // Vulpix → Ninetales
+        39  to "MOON",    // Jigglypuff → Wigglytuff
+        44  to "LF/SN",   // Gloom → Vileplume (Leaf) / Bellossom (Sun)
+        58  to "FIRE",    // Growlithe → Arcanine
+        61  to "WTR/37",  // Poliwhirl → Poliwrath (Water) / Politoed (Lv.37 randomizer)
+        70  to "LEAF",    // Weepinbell → Victreebel
+        90  to "WATER",   // Shellder → Cloyster
+        102 to "LEAF",    // Exeggcute → Exeggutor
+        120 to "WATER",   // Staryu → Starmie
+        133 to "STONE",   // Eevee → Vap/Jolt/Flare/Espeon/Umbreon (5 stones)
+        // Gen II
+        191 to "SUN",     // Sunkern → Sunflora
+        // Gen III (internal ROM IDs, NOT National Dex)
+        296 to "WATER",   // Lombre → Ludicolo
+        299 to "LEAF",    // Nuzleaf → Shiftry
+        315 to "MOON",    // Skitty → Delcatty
+        373 to "30/WTR",  // Clamperl → Huntail/Gorebyss (Lv.30 or Water replaces trade)
     )
 
     // ── MaxFR Gen IV/V (IDs 412–654) ─────────────────────────────────────────

@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.4.3] - 2026-05-25
+
+### Fixed
+- **Stone-evolution methods now show for Gen I–III Pokémon** — Growlithe, Vulpix, Pikachu, Eevee, Gloom, Weepinbell, Shellder, Staryu, Exeggcute, Sunkern, Lombre, Nuzleaf, Skitty, Clamperl, and others previously displayed no evolution info because only friendship evos were registered in `EvolutionLevel.GEN3_METHODS`. Stone methods (FIRE, WATER, THUNDER, MOON, LEAF, SUN) plus the compound abbreviations from the Lua tracker (LF/SN, STONE, WTR/37, 30/WTR) are now populated and match Lua `PokemonData.lua`. The Evolution detail sheet also renders descriptions for the new compound methods.
+
 ## [3.4.2] - 2026-05-24
 
 ### Fixed

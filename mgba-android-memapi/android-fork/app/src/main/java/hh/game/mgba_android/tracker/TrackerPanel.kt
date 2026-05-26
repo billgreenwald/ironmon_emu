@@ -1649,6 +1649,11 @@ private fun EvoDetailSheet(evoLevel: Int, evoMethod: String?, onDismiss: () -> U
         evoMethod == "SHINY"                  -> "Evolves when a Shiny Stone is used."
         evoMethod == "LINK"                   -> "Evolves when traded (or via Linking Cord)."
         evoMethod == "FEMALE"                 -> "Evolves when leveled up (female only)."
+        evoMethod == "LF/SN"                  -> "Evolves with a Leaf Stone or Sun Stone."
+        evoMethod == "STONE"                  -> "Evolves with one of 5 stones: Thunder, Water, Fire, Sun, or Moon."
+        evoMethod == "WTR/37"                 -> "Evolves with a Water Stone (or at Level 37 if trade evolutions are randomized)."
+        evoMethod == "37/WTR"                 -> "Evolves at Level 37 (or with a Water Stone if trade evolutions are randomized)."
+        evoMethod == "30/WTR"                 -> "Evolves at Level 30 or with a Water Stone (replaces trade evolution)."
         else                                  -> "Evolution method unknown."
     }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
