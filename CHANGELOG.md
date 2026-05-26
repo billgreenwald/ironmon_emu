@@ -4,6 +4,7 @@
 
 ### Fixed
 - **Stone-evolution methods now show for Gen I–III Pokémon** — Growlithe, Vulpix, Pikachu, Eevee, Gloom, Weepinbell, Shellder, Staryu, Exeggcute, Sunkern, Lombre, Nuzleaf, Skitty, Clamperl, and others previously displayed no evolution info because only friendship evos were registered in `EvolutionLevel.GEN3_METHODS`. Stone methods (FIRE, WATER, THUNDER, MOON, LEAF, SUN) plus the compound abbreviations from the Lua tracker (LF/SN, STONE, WTR/37, 30/WTR) are now populated and match Lua `PokemonData.lua`. The Evolution detail sheet also renders descriptions for the new compound methods.
+- **NatDex Fairy moves now display correct type, power, accuracy, and category** — the six NatDex-added moves (Disarming Voice, Draining Kiss, Play Rough, Fairy Wind, Moonblast, Dazzling Gleam — IDs 355–360) previously fell through to a Normal-type default with power/accuracy zeroed and no Physical/Special icon. Added a `NATDEX_STATS` table in `MoveStatsTable` populated from `NatDexExtension.lua self.Data.natDexMoves`, plus a `NATDEX_RETYPES` map that re-types Sweet Kiss (186), Charm (204), and Moonlight (236) to Fairy when running on NatDex ROMs. `isNatDex` is now threaded from `TrackerPoller` through `PokemonDecoder` and the move-display composables in `TrackerPanel` so party, enemy, revealed-moves, and history views all pick up the correct type.
 
 ## [3.4.2] - 2026-05-24
 

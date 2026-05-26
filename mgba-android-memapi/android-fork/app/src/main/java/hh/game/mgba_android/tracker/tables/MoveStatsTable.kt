@@ -724,6 +724,19 @@ object MoveStatsTable {
         moves[354] = MoveStats(140, 90,  14, 5)
     }
 
+    // NatDex extension adds 6 Fairy-type Special moves at IDs 355–360.
+    // Fairy type ID = 18 (matches TrackerPanel typeColor mapping for "Fairy (0x12)").
+    // category: 2 = Special (per NatDexExtension.lua natDexMoves entries).
+    // Stats sourced from NatDexExtension.lua self.Data.natDexMoves.
+    private val NATDEX_STATS: Map<Int, MoveStats> = mapOf(
+        355 to MoveStats(40,  0,   18, 15, category = 2),  // Disarming Voice (always hits)
+        356 to MoveStats(50,  100, 18, 10, category = 2),  // Draining Kiss
+        357 to MoveStats(90,  90,  18, 10, category = 2),  // Play Rough
+        358 to MoveStats(40,  100, 18, 30, category = 2),  // Fairy Wind
+        359 to MoveStats(95,  100, 18, 15, category = 2),  // Moonblast
+        360 to MoveStats(80,  100, 18, 10, category = 2),  // Dazzling Gleam
+    )
+
     // MaxFR/MaxEM moves 355–500 plus 559 (Fusion Bolt).
     // Type IDs match Gen III ROM IDs (0=Normal,1=Fighting,2=Flying,3=Poison,4=Ground,5=Rock,
     //   6=Bug,7=Ghost,8=Steel,10=Fire,11=Water,12=Grass,13=Electric,14=Psychic,15=Ice,16=Dragon,17=Dark).
@@ -878,9 +891,23 @@ object MoveStatsTable {
         559 to MoveStats(100, 100, 13, 5,  category = 1),  // Fusion Bolt
     )
 
-    fun get(moveId: Int, isMaxFr: Boolean = false): MoveStats {
+    // NatDex retypes 3 vanilla moves to Fairy (per NatDexExtension.lua:7398-7401).
+    // Curse (174) is already Ghost in our base table, so it's omitted here.
+    private val NATDEX_RETYPES = mapOf(
+        186 to 18,  // Sweet Kiss: Normal → Fairy
+        204 to 18,  // Charm:      Normal → Fairy
+        236 to 18,  // Moonlight:  Normal → Fairy
+    )
+
+    fun get(moveId: Int, isMaxFr: Boolean = false, isNatDex: Boolean = false): MoveStats {
         if (isMaxFr) MAX_FR_STATS[moveId]?.let { return it }
-        if (moveId < 1 || moveId > 354) return DEFAULT
-        return moves[moveId] ?: DEFAULT
+        if (moveId in 1..354) {
+            val base = moves[moveId] ?: return DEFAULT
+            return if (isNatDex) NATDEX_RETYPES[moveId]?.let { base.copy(type = it) } ?: base
+                   else base
+        }
+        // NatDex Fairy moves (355–360) fall through here for non-MaxFR ROMs.
+        if (!isMaxFr) NATDEX_STATS[moveId]?.let { return it }
+        return DEFAULT
     }
 }

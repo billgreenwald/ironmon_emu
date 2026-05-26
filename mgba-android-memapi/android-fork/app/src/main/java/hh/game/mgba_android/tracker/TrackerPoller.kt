@@ -303,6 +303,7 @@ object TrackerPoller {
                     },
                     bstLookup = { id -> addresses.extPokemonMap[id]?.bst ?: BstTable.bst(id) },
                     isMaxFr = maxFrVariant != MaxFrVariant.NONE,
+                    isNatDex = isNatDex,
                     moveStatsReader = if (addresses.gBattleMoves != 0L) { moveId ->
                         DataHelper.readMoveStatsFromRom(
                             { addr, len -> MemoryBridge.readBytes(addr, len) },

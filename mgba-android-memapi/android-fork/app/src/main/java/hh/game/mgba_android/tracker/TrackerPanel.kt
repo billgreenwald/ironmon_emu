@@ -599,7 +599,7 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         Divider(color = Color(0xFF303050), thickness = 0.5.dp)
         Spacer(Modifier.height(4.dp))
 
-        MoveTable(pokemon.moves, battle, player = pokemon, stabTypes = setOf(pokemon.type1, pokemon.type2), moveCategories = moveCategories, isMaxFr = isMaxFr, onClick = { showMoveSheet = it })
+        MoveTable(pokemon.moves, battle, player = pokemon, stabTypes = setOf(pokemon.type1, pokemon.type2), moveCategories = moveCategories, isMaxFr = isMaxFr, isNatDex = isNatDex, onClick = { showMoveSheet = it })
 
         // Note row
         Spacer(Modifier.height(4.dp))
@@ -981,10 +981,10 @@ private fun EnemyView(
                     Modifier.clickable { showMoveHistorySheet = true } else Modifier,
             )
             Spacer(Modifier.height(2.dp))
-            EnemyMoveTable(enemy, playerLead, isMaxFr = isMaxFr, moveCategories = moveCategories, onClick = { showMoveSheet = it })
+            EnemyMoveTable(enemy, playerLead, isMaxFr = isMaxFr, isNatDex = isNatDex, moveCategories = moveCategories, onClick = { showMoveSheet = it })
         }
         if (showMoveHistorySheet) {
-            MoveHistorySheet(enemy, isMaxFr = isMaxFr, onDismiss = { showMoveHistorySheet = false })
+            MoveHistorySheet(enemy, isMaxFr = isMaxFr, isNatDex = isNatDex, onDismiss = { showMoveHistorySheet = false })
         }
 
         // ── Stat markings ─────────────────────────────────────────────────────
@@ -1198,7 +1198,7 @@ private fun MoveCategoryIcon(typeId: Int, power: Int, romCategory: Int = 0, modi
 
 // ── Move table ────────────────────────────────────────────────────────────────
 @Composable
-private fun MoveTable(moves: List<MoveData>, battle: BattleState, player: PokemonData? = null, stabTypes: Set<Int> = emptySet(), moveCategories: Map<Int, Int> = emptyMap(), isMaxFr: Boolean = false, onClick: (MoveData) -> Unit) {
+private fun MoveTable(moves: List<MoveData>, battle: BattleState, player: PokemonData? = null, stabTypes: Set<Int> = emptySet(), moveCategories: Map<Int, Int> = emptyMap(), isMaxFr: Boolean = false, isNatDex: Boolean = false, onClick: (MoveData) -> Unit) {
     // Column header
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(18.dp))  // category icon column
@@ -1211,14 +1211,14 @@ private fun MoveTable(moves: List<MoveData>, battle: BattleState, player: Pokemo
     Spacer(Modifier.height(2.dp))
     moves.forEach { move ->
         MoveTableRow(move, battle, player = player, isStab = move.moveType in stabTypes,
-            romCategory = moveCategories[move.moveId] ?: MoveStatsTable.get(move.moveId, isMaxFr).category,
-            isMaxFr = isMaxFr,
+            romCategory = moveCategories[move.moveId] ?: MoveStatsTable.get(move.moveId, isMaxFr, isNatDex).category,
+            isMaxFr = isMaxFr, isNatDex = isNatDex,
             onClick = { onClick(move) })
     }
 }
 
 @Composable
-private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonData? = null, isStab: Boolean = false, romCategory: Int = 0, isMaxFr: Boolean = false, onClick: () -> Unit) {
+private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonData? = null, isStab: Boolean = false, romCategory: Int = 0, isMaxFr: Boolean = false, isNatDex: Boolean = false, onClick: () -> Unit) {
     val effectiveness = battle.enemy?.let { enemy ->
         TypeChart.effectiveness(move.moveType, enemy.type1, enemy.type2)
     }
@@ -1258,7 +1258,7 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonDat
         }
         // Power — use live-calculated value in battle when available, else static display
         Text(
-            text = calcPower ?: MoveStatsTable.get(move.moveId, isMaxFr).displayPower ?: if (move.power > 0) "${move.power}" else "—",
+            text = calcPower ?: MoveStatsTable.get(move.moveId, isMaxFr, isNatDex).displayPower ?: if (move.power > 0) "${move.power}" else "—",
             color = if (calcPower != null) Color(0xFFFFD700) else TextSecondary,
             fontSize = ssp(13), textAlign = TextAlign.Center,
             modifier = Modifier.width(28.dp),
@@ -1296,7 +1296,7 @@ private fun MoveTableRow(move: MoveData, battle: BattleState, player: PokemonDat
 // Prefers fourConfirmedThisBattle (usage-ordered) over persistent revealedMoveIds list,
 // matching Lua Tracker.getMoves(pokemonID, level) → BattleNotes.FourMovesIfAllKnown check.
 @Composable
-private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, isMaxFr: Boolean = false, moveCategories: Map<Int, Int> = emptyMap(), onClick: (MoveData) -> Unit) {
+private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, isMaxFr: Boolean = false, isNatDex: Boolean = false, moveCategories: Map<Int, Int> = emptyMap(), onClick: (MoveData) -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(18.dp))
         Text("Move", color = TextSecondary, fontSize = ssp(12), modifier = Modifier.weight(1f))
@@ -1309,7 +1309,7 @@ private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, isMaxFr: 
     // Use confirmed battle set (usage order) if all 4 known this battle; else persistent display list
     val displayIds = enemy.fourConfirmedThisBattle ?: enemy.revealedMoveIds
     displayIds.forEachIndexed { idx, moveId ->
-        val stats = MoveStatsTable.get(moveId, isMaxFr)
+        val stats = MoveStatsTable.get(moveId, isMaxFr, isNatDex)
         val isStale = enemy.fourConfirmedThisBattle == null
             && idx < enemy.moveStaleFlags.size && enemy.moveStaleFlags[idx]
         val displayName = if (isStale) MoveNames.get(moveId, isMaxFr) + "*" else MoveNames.get(moveId, isMaxFr)
@@ -1324,13 +1324,13 @@ private fun EnemyMoveTable(enemy: EnemyData, playerLead: PokemonData?, isMaxFr: 
         )
         EnemyMoveTableRow(moveData, enemy, playerLead,
             romCategory = moveCategories[moveId] ?: stats.category,
-            isMaxFr = isMaxFr,
+            isMaxFr = isMaxFr, isNatDex = isNatDex,
             onClick = { onClick(moveData) })
     }
 }
 
 @Composable
-private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: PokemonData?, romCategory: Int = 0, isMaxFr: Boolean = false, onClick: () -> Unit) {
+private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: PokemonData?, romCategory: Int = 0, isMaxFr: Boolean = false, isNatDex: Boolean = false, onClick: () -> Unit) {
     val isStab = move.moveType == enemy.type1 || move.moveType == enemy.type2
     val effectiveness = playerLead?.let {
         TypeChart.effectiveness(move.moveType, it.type1, it.type2)
@@ -1355,7 +1355,7 @@ private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: Poke
             )
         }
         Text(
-            text = MoveStatsTable.get(move.moveId, isMaxFr).displayPower ?: if (move.power > 0) "${move.power}" else "—",
+            text = MoveStatsTable.get(move.moveId, isMaxFr, isNatDex).displayPower ?: if (move.power > 0) "${move.power}" else "—",
             color = TextSecondary, fontSize = ssp(13), textAlign = TextAlign.Center,
             modifier = Modifier.width(28.dp),
         )
@@ -1390,7 +1390,7 @@ private fun EnemyMoveTableRow(move: MoveData, enemy: EnemyData, playerLead: Poke
 // Tappable header "Revealed Moves* (N)" opens this when totalTrackedMoveCount > 4.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MoveHistorySheet(enemy: EnemyData, isMaxFr: Boolean = false, onDismiss: () -> Unit) {
+private fun MoveHistorySheet(enemy: EnemyData, isMaxFr: Boolean = false, isNatDex: Boolean = false, onDismiss: () -> Unit) {
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     val sorted = remember(enemy.allTrackedMoves) {
         enemy.allTrackedMoves.sortedByDescending { it.minLv }
@@ -1416,7 +1416,7 @@ private fun MoveHistorySheet(enemy: EnemyData, isMaxFr: Boolean = false, onDismi
             }
             Divider(color = Color(0xFF303050), thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
             sorted.forEach { tracked ->
-                val stats = MoveStatsTable.get(tracked.id, isMaxFr)
+                val stats = MoveStatsTable.get(tracked.id, isMaxFr, isNatDex)
                 val moveData = MoveData(
                     moveId   = tracked.id,
                     moveName = MoveNames.get(tracked.id, isMaxFr),
@@ -1800,7 +1800,7 @@ private fun RouteMonSheet(
                 Text("Revealed Moves:", color = TextSecondary, fontSize = ssp(13))
                 Spacer(Modifier.height(2.dp))
                 revealedMoveIds.forEach { moveId ->
-                    val stats = MoveStatsTable.get(moveId, isMaxFr)
+                    val stats = MoveStatsTable.get(moveId, isMaxFr, isNatDex)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

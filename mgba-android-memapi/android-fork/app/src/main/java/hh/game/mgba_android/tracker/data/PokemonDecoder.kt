@@ -47,6 +47,7 @@ object PokemonDecoder {
         baseStatsReader: ((speciesId: Int) -> ByteArray?)? = null,
         bstLookup: ((speciesId: Int) -> Int)? = null,
         isMaxFr: Boolean = false,
+        isNatDex: Boolean = false,
         moveStatsReader: ((moveId: Int) -> DataHelper.RomMoveStats?)? = null,
     ): PokemonData? {
         require(raw.size >= 100) { "Raw bytes must be at least 100, got ${raw.size}" }
@@ -179,10 +180,10 @@ object PokemonDecoder {
         }
 
         val moves = listOfNotNull(
-            moveOrNull(move1Id, pp1, moveTable, isMaxFr, moveStatsReader),
-            moveOrNull(move2Id, pp2, moveTable, isMaxFr, moveStatsReader),
-            moveOrNull(move3Id, pp3, moveTable, isMaxFr, moveStatsReader),
-            moveOrNull(move4Id, pp4, moveTable, isMaxFr, moveStatsReader),
+            moveOrNull(move1Id, pp1, moveTable, isMaxFr, isNatDex, moveStatsReader),
+            moveOrNull(move2Id, pp2, moveTable, isMaxFr, isNatDex, moveStatsReader),
+            moveOrNull(move3Id, pp3, moveTable, isMaxFr, isNatDex, moveStatsReader),
+            moveOrNull(move4Id, pp4, moveTable, isMaxFr, isNatDex, moveStatsReader),
         )
 
         return PokemonData(
@@ -236,10 +237,10 @@ object PokemonDecoder {
         )
     }
 
-    private fun moveOrNull(moveId: Int, pp: Int, moveTable: (Int) -> String, isMaxFr: Boolean = false, moveStatsReader: ((Int) -> DataHelper.RomMoveStats?)? = null): MoveData? {
+    private fun moveOrNull(moveId: Int, pp: Int, moveTable: (Int) -> String, isMaxFr: Boolean = false, isNatDex: Boolean = false, moveStatsReader: ((Int) -> DataHelper.RomMoveStats?)? = null): MoveData? {
         if (moveId == 0) return null
         val romStats   = moveStatsReader?.invoke(moveId)
-        val tableStats = MoveStatsTable.get(moveId, isMaxFr)
+        val tableStats = MoveStatsTable.get(moveId, isMaxFr, isNatDex)
         return MoveData(
             moveId   = moveId,
             moveName = moveTable(moveId),
