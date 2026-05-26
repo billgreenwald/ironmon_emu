@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.4] - 2026-05-26
+
+### Fixed
+- **Trainer defeat counts now shown on NatDex** — NatDex ROMs were not displaying any trainer count ("Trainers: X/N") per route. NatDex now uses the same battle-event tracking as MaxFR instead of SaveBlock1 flag reads, which were unreliable on ROM hacks.
+- **Wild battles no longer counted as trainer defeats on MaxFR/NatDex** — when a battle ended, the wild/trainer type was read from `BattleState.NONE` (always `isWild = false`), so wild battle endings incorrectly incremented the trainer defeat counter. Fixed by tracking `lastBattleWasWild` during the active battle.
+- **Oak's Lab correctly shows 1/1 on MaxFR** — Oak's Lab defines 3 trainer IDs (one per starter choice) but is a single-fight map. The single-fight cap used in vanilla was not applied for MaxFR event tracking, showing 3/3 instead of 1/1.
+
 ## [3.4.3] - 2026-05-25
 
 ### Fixed

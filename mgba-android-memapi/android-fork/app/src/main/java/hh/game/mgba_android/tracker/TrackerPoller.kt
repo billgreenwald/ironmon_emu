@@ -462,11 +462,11 @@ object TrackerPoller {
             currentWildBattleRecorded = false
         }
 
-        // ── Trainer defeat event tracking (MaxFR variants) ───────────────────
+        // ── Trainer defeat event tracking (MaxFR / NatDex ROM hacks) ────────────
         // For ROM hacks, trainer IDs in our table may differ from the ROM's actual IDs,
         // making flag-based reads unreliable. Instead, count defeats as they happen.
         // Fires when a trainer battle ends cleanly (not tutorial, not wild).
-        if (maxFrVariant != MaxFrVariant.NONE
+        if ((maxFrVariant != MaxFrVariant.NONE || isNatDex)
                 && wasBattleActive && !battleRaw.isActive
                 && !lastBattleWasWild && !recentBattleWasTutorial) {
             route?.mapLayoutId?.let { mapId ->
@@ -483,11 +483,11 @@ object TrackerPoller {
         val stats = StatsReader.read(addresses)
 
         // ── Trainer defeat counts ─────────────────────────────────────────────
-        // MaxFR: use session-tracked event counts (ROM-agnostic, works for any trainer IDs).
+        // ROM hacks (MaxFR / NatDex): use session-tracked event counts (ROM-agnostic).
         // Vanilla FRLG/Emerald: read live from SaveBlock1 flag bits.
         val trainerTable = TrainerRouteTable.get(game)
         val singleFightMaps = TrainerRouteTable.getSingleFightMaps(game)
-        val trainerCounts: Map<Int, Pair<Int, Int>> = if (maxFrVariant != MaxFrVariant.NONE) {
+        val trainerCounts: Map<Int, Pair<Int, Int>> = if (maxFrVariant != MaxFrVariant.NONE || isNatDex) {
             buildMap {
                 for ((mapId, trainerIds) in trainerTable) {
                     val defeats = trainerDefeatsByRoute[mapId] ?: 0
