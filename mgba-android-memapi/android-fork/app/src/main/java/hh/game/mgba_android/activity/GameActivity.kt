@@ -461,14 +461,26 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         
         // Initialize Tools Button
         findViewById<View>(R.id.tools_btn).setOnClickListener {
-            val options = arrayOf("Shaders", "Memory Tools", "Save State", "Load State", "Cheats", "Sound", "Next Run →", "Tracker Size", "Settings", "Name Entry Keyboard", "Close ROM")
+            val options = arrayOf("Shaders", "Memory Tools", "Close ROM", "Save State", "Load State", "Cheats", "Sound", "Next Run →", "Tracker Size", "Settings", "Name Entry Keyboard")
             AlertDialog.Builder(this)
                 .setTitle("Tools")
                 .setItems(options) { _, which ->
                     when (which) {
                         0 -> showShaderMenu()
                         1 -> openHexEditor()
-                        2 -> {
+                        2 -> AlertDialog.Builder(this)
+                            .setTitle("Close ROM")
+                            .setMessage("Return to game list?")
+                            .setPositiveButton("Close") { _, _ ->
+                                startActivity(
+                                    Intent(this, GameListMaterialActivity::class.java)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                )
+                                android.os.Process.killProcess(android.os.Process.myPid())
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                        3 -> {
                             PauseGame()
                             var resumed = false
                             PopDialogFragment(getString(R.string.savestatetitle))
@@ -487,7 +499,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                                 }
                                 .show(supportFragmentManager, "savestate")
                         }
-                        3 -> {
+                        4 -> {
                             PauseGame()
                             var resumed = false
                             PopDialogFragment(getString(R.string.loadstatetitle))
@@ -506,7 +518,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                                 }
                                 .show(supportFragmentManager, "loadstate")
                         }
-                        4 -> {
+                        5 -> {
                             startForResult.launch(Intent(this, CheatsActivity::class.java).also {
                                 it.putExtra("gamepath", gamepath)
                                 when (intent.getStringExtra("gametype")) {
@@ -522,28 +534,16 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                                 }
                             })
                         }
-                        5 -> {
+                        6 -> {
                             Mute(!isMute)
                             isMute = !isMute
                             EmulatorPreferences.setMuted(this, isMute)
                             Toast.makeText(this, if (isMute) "Sound Off" else "Sound On", Toast.LENGTH_SHORT).show()
                         }
-                        6 -> doNextRun()
-                        7 -> showTrackerSizeDialog()
-                        8 -> showSettingsDialog()
-                        9 -> openNameEntryKeyboard()
-                        10 -> AlertDialog.Builder(this)
-                            .setTitle("Close ROM")
-                            .setMessage("Return to game list?")
-                            .setPositiveButton("Close") { _, _ ->
-                                startActivity(
-                                    Intent(this, GameListMaterialActivity::class.java)
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                                )
-                                android.os.Process.killProcess(android.os.Process.myPid())
-                            }
-                            .setNegativeButton("Cancel", null)
-                            .show()
+                        7 -> doNextRun()
+                        8 -> showTrackerSizeDialog()
+                        9 -> showSettingsDialog()
+                        10 -> openNameEntryKeyboard()
                     }
                 }
                 .show()

@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.4.6] - 2026-05-26
+
+### Improved
+- **Close ROM moved to third position in tools menu** — "Close ROM" now appears directly after "Memory Tools" (above "Save State") for faster access.
+
 ## [3.4.5] - 2026-05-26
 
 ### Fixed
