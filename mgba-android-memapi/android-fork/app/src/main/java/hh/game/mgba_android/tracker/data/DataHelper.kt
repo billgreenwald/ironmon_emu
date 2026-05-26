@@ -206,6 +206,9 @@ object DataHelper {
         encryptionKeyOffset   = 0x400,         // GS.EncryptionKeyOffset (SaveBlock2 layout changed)
         trainerBattleOpponent = 0x02037C6EL,   // GS.gTrainerBattleOpponent_A
         sSpecialFlags         = 0x020366A0L,   // GS.sSpecialFlags
+        // NatDex expands Items pocket from 42 to 120 slots, shifting all downstream pockets
+        bagPocket_Items_size     = 0x78,       // 120 slots (vanilla: 0x2A = 42)
+        bagPocket_Berries_offset = 0x684,      // 0x310 + 120×4 + 30×4 + 13×4 + 58×4
         // battle addresses (gBattleMons, sideStatuses, etc.) unchanged from vanilla FR
     )
 
@@ -345,6 +348,9 @@ object DataHelper {
         battleResults         = 0x03004C40L,   // GS.gBattleResults
         saveBlock1Ptr         = 0x03004CBCL,   // GS.gSaveBlock1ptr
         saveBlock2Ptr         = 0x03004CC0L,   // GS.gSaveBlock2ptr
+        // NatDex expands Items pocket from 30 to 120 slots, shifting all downstream pockets
+        bagPocket_Items_size     = 0x78,       // 120 slots (vanilla: 0x1E = 30)
+        bagPocket_Berries_offset = 0x8F8,      // 0x560 + 120×4 + 30×4 + 16×4 + 64×4
         // partyCount/partyBase/enemyParty/sideStatuses/sideTimers — not overridden, keep vanilla
     )
 

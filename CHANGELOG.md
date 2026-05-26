@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.4.5] - 2026-05-26
+
+### Fixed
+- **Healing items now shown on NatDex** — the NatDex ROM hack expands the Items pocket from 42 to 120 slots, shifting all downstream bag pockets (KeyItems, Balls, TM/HM, Berries) to new offsets within SaveBlock1. `DataHelper` was not overriding the bag pocket fields for `FIRE_RED_NATDEX` or `EMERALD_NATDEX`, so `BagReader` was reading from the wrong SaveBlock1 region and finding no recognizable items. Corrected `bagPocket_Items_size` (120) and `bagPocket_Berries_offset` (0x684 for NatDex FR, 0x8F8 for NatDex Emerald) in both NatDex address blocks.
+
 ## [3.4.4] - 2026-05-26
 
 ### Fixed
