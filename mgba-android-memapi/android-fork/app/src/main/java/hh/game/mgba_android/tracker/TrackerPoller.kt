@@ -63,6 +63,7 @@ object TrackerPoller {
     // Starting enemy moveset snapshot at battle open — guards Sketch/Mimic (Lua BattleParties)
     private var enemyStartingMoveset: Set<Int> = emptySet()
     private var lastEnemyMoveId: Int = 0     // last value of gBattleResults+0x24
+    private var lastKnownEnemySpeciesId: Int = 0  // detects mid-battle trainer switches
     private var battleJustStarted: Boolean = false
     private var lastBattleActive = false
 
@@ -109,6 +110,7 @@ object TrackerPoller {
         battleFourConfirmedKey = null
         enemyStartingMoveset = emptySet()
         lastEnemyMoveId = 0
+        lastKnownEnemySpeciesId = 0
         encountersByRoute.clear()
         routeVisitOrder.clear()
         visitedRoutes.clear()
@@ -186,7 +188,7 @@ object TrackerPoller {
         pollJob = scope.launch(Dispatchers.Default) {
             while (isActive) {
                 _state.value = poll()
-                delay(POLL_INTERVAL_MS)
+                delay(if (lastBattleActive) BATTLE_POLL_INTERVAL_MS else POLL_INTERVAL_MS)
             }
         }
     }
@@ -200,6 +202,7 @@ object TrackerPoller {
         battleFourConfirmedKey = null
         enemyStartingMoveset = emptySet()
         lastEnemyMoveId = 0
+        lastKnownEnemySpeciesId = 0
         encountersByRoute.clear()
         routeVisitOrder.clear()
         visitedRoutes.clear()
@@ -457,6 +460,7 @@ object TrackerPoller {
             battleFourConfirmedKey = null
             enemyStartingMoveset = emptySet()
             lastEnemyMoveId = 0
+            lastKnownEnemySpeciesId = 0
             // Do NOT clear encountersByRoute or visitedRoutes here — party is transiently empty at
             // ROM load, which would wipe restored data. resetGameOver() handles clearing on new run.
             currentWildBattleRecorded = false
@@ -608,12 +612,29 @@ object TrackerPoller {
                         if (m != 0) startMoves.add(m)
                     }
                     enemyStartingMoveset = startMoves
+                    lastKnownEnemySpeciesId = speciesId
                     // Reset ephemeral battle notes (Lua: Tracker.resetBattleNotes on battle start)
                     battleRevealedByKey.clear()
                     battleFourConfirmedKey = null
-                    // Snapshot current value without recording — may be leftover from previous battle
-                    lastEnemyMoveId = currentEnemyMoveId
+                    // Reset to 0 so the first real move is always caught. At 50ms poll intervals
+                    // the enemy is very unlikely to have acted before this snapshot fires.
+                    // Stale residuals from the previous battle are filtered by enemyStartingMoveset.
+                    lastEnemyMoveId = 0
                     battleJustStarted = false
+                } else if (speciesId != lastKnownEnemySpeciesId) {
+                    // Trainer sent out a new Pokémon — re-snapshot its moves.
+                    // Lua does this dynamically via Battle.BattleParties[slot].moves[1-4] per active attacker.
+                    val switchMoves = mutableSetOf<Int>()
+                    for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
+                                              DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
+                        val m = enemyMon.u16(offset)
+                        if (m != 0) switchMoves.add(m)
+                    }
+                    enemyStartingMoveset = switchMoves
+                    lastKnownEnemySpeciesId = speciesId
+                    // Consume residual from the fainted Pokémon's last move so it's not
+                    // re-attributed to the new one.
+                    lastEnemyMoveId = currentEnemyMoveId
                 } else if (currentEnemyMoveId != 0 && currentEnemyMoveId != lastEnemyMoveId) {
                     // Validate: move must be in starting moveset to guard Sketch/Mimic
                     // (Lua: check lastMoveByAttacker == attacker.moves[1..4])
@@ -845,5 +866,6 @@ object TrackerPoller {
         ((this[offset + 3].toLong() and 0xFF) shl 24)
 
     private const val POLL_INTERVAL_MS = 250L
+    private const val BATTLE_POLL_INTERVAL_MS = 50L  // faster polling during battle for high-speed emulation
     private const val TAG = "TrackerPoller"
 }
