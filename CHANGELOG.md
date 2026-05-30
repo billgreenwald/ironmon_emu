@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.4.7] - 2026-05-30
+
+### Fixed
+- **Enemy moves now tracked reliably at high emulation speeds** — at 3× or faster, the game can complete a full turn before the 250ms poll fires. The tracker's first poll after battle start would snapshot the already-executed move as "seen," so every subsequent poll detected no change and silently dropped it. Fixed by switching to a 50ms poll interval during active battles. Also reset `lastEnemyMoveId` to 0 at battle start (instead of pre-consuming whatever was in `gBattleResults+0x24`) and re-snapshot the enemy moveset when a trainer sends out a second Pokémon mid-battle.
+
 ## [3.4.6] - 2026-05-26
 
 ### Improved
