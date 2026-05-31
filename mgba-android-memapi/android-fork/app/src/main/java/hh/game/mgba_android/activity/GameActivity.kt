@@ -141,6 +141,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private var nameEntryEnabled = false
     private var introEnded = false
     private var screenWidthPx = 0
+    private var screenHeightPx = 0
+    private var isWideScreen = false
     private var trackerViewRef: ComposeView? = null
     private var templateResult = ArrayList<Pair<Int, Int>>()
     val startForResult =
@@ -286,22 +288,35 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         trackerCollapsible = EmulatorPreferences.getTrackerCollapsible(this)
         hideCollapseButton = EmulatorPreferences.getHideCollapseButton(this)
         screenWidthPx = resources.displayMetrics.widthPixels
-        val isOverlay = splitFraction == 0.0f || splitFraction == 1.0f
+        screenHeightPx = resources.displayMetrics.heightPixels
+        isWideScreen = screenWidthPx.toFloat() / screenHeightPx < 1.5f
+        val effectiveSplitForInit = if (isWideScreen) 0.85f else splitFraction
+        val isOverlay = effectiveSplitForInit == 0.0f || effectiveSplitForInit == 1.0f
         effectiveCollapsible = trackerCollapsible || isOverlay
         trackerFontScale = computeFontScale(splitFraction)
         trackerExpanded = splitFraction != 1.0f  // game-overlay mode starts collapsed
         val arrowPx = if (hideCollapseButton) 0 else (24 * resources.displayMetrics.density).toInt()
-        val gameWidth = if (isOverlay) screenWidthPx else (screenWidthPx * splitFraction).toInt()
+        val gameZoneWidth = if (isOverlay) screenWidthPx else (screenWidthPx * effectiveSplitForInit).toInt()
+        val sdlWidth: Int
+        val sdlLeftMargin: Int
+        if (isWideScreen && !isOverlay) {
+            val leftStrip = (screenWidthPx * 0.13f).toInt()
+            sdlLeftMargin = leftStrip
+            sdlWidth = (gameZoneWidth - leftStrip - (screenWidthPx * 0.12f).toInt()).coerceAtLeast(100)
+        } else {
+            sdlLeftMargin = 0
+            sdlWidth = gameZoneWidth
+        }
         val trackerLeft = when {
             isOverlay && !trackerExpanded -> screenWidthPx - arrowPx
             isOverlay -> 0
-            else -> gameWidth
+            else -> gameZoneWidth
         }
 
         mSurface?.layoutParams = RelativeLayout.LayoutParams(
-            gameWidth,
+            sdlWidth,
             RelativeLayout.LayoutParams.MATCH_PARENT,
-        )
+        ).apply { leftMargin = sdlLeftMargin }
 
         // Tell SurfaceFlinger the content rate is fixed 59.7275fps (GBA) so it locks the
         // display to a 60Hz multiple and only swaps buffers at those boundaries — eliminates
@@ -385,7 +400,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         if (overlay is ConstraintLayout) {
             val constraintSet = ConstraintSet()
             constraintSet.clone(overlay)
-            constraintSet.setGuidelinePercent(R.id.gameZoneBoundary, splitFraction)
+            constraintSet.setGuidelinePercent(R.id.gameZoneBoundary, if (isOverlay) 1.0f else effectiveSplitForInit)
             constraintSet.applyTo(overlay)
         }
 
@@ -683,25 +698,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
     private fun applyTrackerExpansion(expanded: Boolean) {
         trackerExpanded = expanded
-        val arrowPx = if (hideCollapseButton) 0 else (24 * resources.displayMetrics.density).toInt()
-        val isOverlay = splitFraction == 0.0f || splitFraction == 1.0f
-        val newGameWidth = when {
-            isOverlay -> screenWidthPx
-            expanded -> (screenWidthPx * splitFraction).toInt()
-            else -> screenWidthPx - arrowPx
-        }
-        val newTrackerLeft = when {
-            isOverlay && expanded -> 0
-            isOverlay -> screenWidthPx - arrowPx
-            else -> newGameWidth
-        }
-        mSurface?.layoutParams?.width = newGameWidth
-        mSurface?.requestLayout()
-        val tv = trackerViewRef ?: return
-        tv.layoutParams = (tv.layoutParams as RelativeLayout.LayoutParams).apply {
-            leftMargin = newTrackerLeft
-        }
-        tv.requestLayout()
+        applyLayout()
     }
 
     private fun computeFontScale(fraction: Float): Float {
@@ -716,26 +713,67 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         effectiveCollapsible = trackerCollapsible || isOverlay
         trackerFontScale = computeFontScale(newFraction)
         trackerExpanded = newFraction != 1.0f  // game-overlay mode starts collapsed
+        applyLayout()
+    }
 
+    private fun applyLayout() {
+        val effectiveSplit = if (isWideScreen) 0.85f else splitFraction
+        val isOverlay = effectiveSplit == 0.0f || effectiveSplit == 1.0f
         val arrowPx = if (hideCollapseButton) 0 else (24 * resources.displayMetrics.density).toInt()
-        val gameWidth = if (isOverlay) screenWidthPx else (screenWidthPx * newFraction).toInt()
+        val gameZoneWidth = if (isOverlay) screenWidthPx else (screenWidthPx * effectiveSplit).toInt()
+
+        val sdlWidth: Int
+        val sdlLeftMargin: Int
+        if (isWideScreen && !isOverlay && trackerExpanded) {
+            val leftStrip = (screenWidthPx * 0.13f).toInt()
+            sdlLeftMargin = leftStrip
+            sdlWidth = (gameZoneWidth - leftStrip - (screenWidthPx * 0.12f).toInt()).coerceAtLeast(100)
+        } else {
+            sdlLeftMargin = 0
+            sdlWidth = when {
+                isOverlay -> screenWidthPx
+                !trackerExpanded -> screenWidthPx - arrowPx
+                else -> gameZoneWidth
+            }
+        }
+
+        mSurface?.layoutParams = (mSurface?.layoutParams as? RelativeLayout.LayoutParams
+            ?: RelativeLayout.LayoutParams(0, RelativeLayout.LayoutParams.MATCH_PARENT))
+            .apply { width = sdlWidth; leftMargin = sdlLeftMargin }
+        mSurface?.requestLayout()
+
         val trackerLeft = when {
             isOverlay && !trackerExpanded -> screenWidthPx - arrowPx
             isOverlay -> 0
-            else -> gameWidth
+            !trackerExpanded -> screenWidthPx - arrowPx
+            else -> gameZoneWidth
         }
-        mSurface?.layoutParams?.width = gameWidth
-        mSurface?.requestLayout()
-        val tv = trackerViewRef ?: return
-        tv.layoutParams = (tv.layoutParams as RelativeLayout.LayoutParams).apply { leftMargin = trackerLeft }
-        tv.requestLayout()
-        // Update gameZoneBoundary guideline so dpad/tools_btn stay in game zone
+        val tv = trackerViewRef
+        if (tv != null) {
+            tv.layoutParams = (tv.layoutParams as RelativeLayout.LayoutParams).apply {
+                leftMargin = trackerLeft
+            }
+            tv.requestLayout()
+        }
+
         val overlayView = mLayout?.let { it.getChildAt(it.childCount - 1) }
         if (overlayView is ConstraintLayout) {
             val cs = ConstraintSet()
             cs.clone(overlayView)
-            cs.setGuidelinePercent(R.id.gameZoneBoundary, if (isOverlay) 1.0f else newFraction)
+            cs.setGuidelinePercent(R.id.gameZoneBoundary, if (isOverlay) 1.0f else effectiveSplit)
             cs.applyTo(overlayView)
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val newW = resources.displayMetrics.widthPixels
+        val newH = resources.displayMetrics.heightPixels
+        if (newW != screenWidthPx || newH != screenHeightPx) {
+            screenWidthPx = newW
+            screenHeightPx = newH
+            isWideScreen = newW.toFloat() / newH < 1.5f
+            applyLayout()
         }
     }
 
