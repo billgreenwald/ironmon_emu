@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wide-mode (Pixel Fold) horizontal controls strip.
+     Inflated instead of activity_game.xml when isWideScreen=true.
+     View IDs are intentionally kept identical so addGameControler() works unchanged. -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/padboardInclude"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000">
+
+    <TextView
+        android:id="@+id/fps_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="FPS: 0"
+        android:textColor="#00FF00"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:background="#80000000"
+        android:padding="4dp"
+        android:elevation="10dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true" />
+
+    <!-- Invisible anchor required by existing code -->
+    <View
+        android:id="@+id/centerAnchor"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:layout_centerInParent="true" />
+
+    <!-- L button: far left, centered vertically -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/lBtn"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:layout_marginLeft="16dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:text="L"
+        android:textColor="#303030"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <!-- Select: right of L, centered vertically -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/selectBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_toRightOf="@+id/lBtn"
+        android:layout_centerVertical="true"
+        android:layout_marginLeft="8dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:text="select"
+        android:textColor="#303030"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <!-- D-pad: right of Select, centered vertically, 120×120dp -->
+    <include
+        android:id="@+id/dpad"
+        layout="@layout/dpad"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_toRightOf="@+id/selectBtn"
+        android:layout_centerVertical="true"
+        android:layout_marginLeft="8dp" />
+
+    <!-- R button: far right, centered vertically -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/rBtn"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="16dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:text="R"
+        android:textColor="#303030"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <!-- Start: left of R, centered vertically -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/startBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_toLeftOf="@+id/rBtn"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="8dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:text="start"
+        android:textColor="#303030"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <!-- Tools button: above Start, aligned to its right edge -->
+    <TextView
+        android:id="@+id/tools_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:layout_above="@+id/startBtn"
+        android:layout_alignRight="@+id/startBtn"
+        android:layout_marginBottom="4dp"
+        android:text="tools"
+        android:gravity="center"
+        android:textColor="#303030"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:background="@drawable/btnbackgroud"
+        android:elevation="10dp" />
+
+    <!-- A button: left of Start, centered vertically -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/aBtn"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_toLeftOf="@+id/startBtn"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="10dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:text="A"
+        android:textColor="#303030"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <!-- B button: left of A, centered vertically -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/bBtn"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_toLeftOf="@+id/aBtn"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="10dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:text="B"
+        android:textColor="#303030"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <!-- Name entry buttons: always hidden in wide mode -->
+    <LinearLayout
+        android:id="@+id/nameEntryContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone" />
+
+</RelativeLayout>
