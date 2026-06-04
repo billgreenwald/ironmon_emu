@@ -303,10 +303,11 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         if (isWideScreen) {
             val controlsWidthPx = (screenWidthPx * 0.20f).toInt()
             val centerWidthPx = screenWidthPx - 2 * controlsWidthPx
-            val halfHeightPx = screenHeightPx / 2
-            sdlLp = RelativeLayout.LayoutParams(centerWidthPx, halfHeightPx).apply { leftMargin = controlsWidthPx }
-            trackerLp = RelativeLayout.LayoutParams(centerWidthPx, halfHeightPx)
-                .apply { leftMargin = controlsWidthPx; topMargin = halfHeightPx }
+            val gameHeightPx = (centerWidthPx / 1.5f).toInt()
+            val trackerHeightPx = screenHeightPx - gameHeightPx
+            sdlLp = RelativeLayout.LayoutParams(centerWidthPx, gameHeightPx).apply { leftMargin = controlsWidthPx }
+            trackerLp = RelativeLayout.LayoutParams(centerWidthPx, trackerHeightPx)
+                .apply { leftMargin = controlsWidthPx; topMargin = gameHeightPx }
         } else {
             val isOverlay = splitFraction == 0.0f || splitFraction == 1.0f
             val arrowPx = if (hideCollapseButton) 0 else (24 * resources.displayMetrics.density).toInt()
@@ -758,16 +759,17 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         if (isWideScreen) {
             val controlsWidthPx = (screenWidthPx * 0.20f).toInt()
             val centerWidthPx = screenWidthPx - 2 * controlsWidthPx
-            val halfHeightPx = screenHeightPx / 2
+            val gameHeightPx = (centerWidthPx / 1.5f).toInt()
+            val trackerHeightPx = screenHeightPx - gameHeightPx
 
-            mSurface?.layoutParams = RelativeLayout.LayoutParams(centerWidthPx, halfHeightPx)
+            mSurface?.layoutParams = RelativeLayout.LayoutParams(centerWidthPx, gameHeightPx)
                 .apply { leftMargin = controlsWidthPx; topMargin = 0 }
             mSurface?.requestLayout()
 
             val tv = trackerViewRef
             if (tv != null) {
-                tv.layoutParams = RelativeLayout.LayoutParams(centerWidthPx, halfHeightPx)
-                    .apply { leftMargin = controlsWidthPx; topMargin = halfHeightPx }
+                tv.layoutParams = RelativeLayout.LayoutParams(centerWidthPx, trackerHeightPx)
+                    .apply { leftMargin = controlsWidthPx; topMargin = gameHeightPx }
                 tv.requestLayout()
             }
 
