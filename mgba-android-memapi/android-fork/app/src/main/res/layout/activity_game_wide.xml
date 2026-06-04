@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Wide-mode (Pixel Fold) horizontal controls strip.
-     Inflated instead of activity_game.xml when isWideScreen=true.
-     View IDs are intentionally kept identical so addGameControler() works unchanged. -->
+<!-- Wide-mode (Pixel Fold) full-screen controls overlay.
+     Controls anchor to left/right edges; transparent center lets game+tracker show through.
+     View IDs match the normal padboard IDs so addGameControler() works unchanged.
+     Button sizes are overridden programmatically via scaleWideControls(). -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/padboardInclude"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#FF000000">
+    android:layout_height="match_parent">
 
     <TextView
         android:id="@+id/fps_text"
@@ -29,14 +29,17 @@
         android:layout_height="1dp"
         android:layout_centerInParent="true" />
 
-    <!-- L button: far left, centered vertically -->
+    <!-- ── LEFT COLUMN ─────────────────────────────────────────── -->
+
+    <!-- L button: top-left -->
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/lBtn"
         android:layout_width="56dp"
         android:layout_height="56dp"
+        android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
-        android:layout_centerVertical="true"
-        android:layout_marginLeft="16dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginLeft="8dp"
         android:background="@drawable/btnbackgroud"
         android:gravity="center"
         android:text="L"
@@ -44,41 +47,43 @@
         android:textSize="22sp"
         android:textStyle="bold" />
 
-    <!-- Select: right of L, centered vertically -->
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/selectBtn"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:layout_toRightOf="@+id/lBtn"
-        android:layout_centerVertical="true"
-        android:layout_marginLeft="8dp"
-        android:background="@drawable/btnbackgroud"
-        android:gravity="center"
-        android:paddingLeft="16dp"
-        android:paddingRight="16dp"
-        android:text="select"
-        android:textColor="#303030"
-        android:textSize="14sp"
-        android:textStyle="bold" />
-
-    <!-- D-pad: right of Select, centered vertically, 120×120dp -->
+    <!-- D-pad: center-left -->
     <include
         android:id="@+id/dpad"
         layout="@layout/dpad"
         android:layout_width="120dp"
         android:layout_height="120dp"
-        android:layout_toRightOf="@+id/selectBtn"
+        android:layout_alignParentLeft="true"
         android:layout_centerVertical="true"
         android:layout_marginLeft="8dp" />
 
-    <!-- R button: far right, centered vertically -->
+    <!-- Select: bottom-left -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/selectBtn"
+        android:layout_width="56dp"
+        android:layout_height="32dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_marginBottom="24dp"
+        android:layout_marginLeft="8dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:text="select"
+        android:textColor="#303030"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <!-- ── RIGHT COLUMN ────────────────────────────────────────── -->
+
+    <!-- R button: top-right -->
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/rBtn"
         android:layout_width="56dp"
         android:layout_height="56dp"
+        android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
-        android:layout_centerVertical="true"
-        android:layout_marginRight="16dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginRight="8dp"
         android:background="@drawable/btnbackgroud"
         android:gravity="center"
         android:text="R"
@@ -86,49 +91,15 @@
         android:textSize="22sp"
         android:textStyle="bold" />
 
-    <!-- Start: left of R, centered vertically -->
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/startBtn"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:layout_toLeftOf="@+id/rBtn"
-        android:layout_centerVertical="true"
-        android:layout_marginRight="8dp"
-        android:background="@drawable/btnbackgroud"
-        android:gravity="center"
-        android:paddingLeft="16dp"
-        android:paddingRight="16dp"
-        android:text="start"
-        android:textColor="#303030"
-        android:textSize="14sp"
-        android:textStyle="bold" />
-
-    <!-- Tools button: above Start, aligned to its right edge -->
-    <TextView
-        android:id="@+id/tools_btn"
-        android:layout_width="wrap_content"
-        android:layout_height="32dp"
-        android:layout_above="@+id/startBtn"
-        android:layout_alignRight="@+id/startBtn"
-        android:layout_marginBottom="4dp"
-        android:text="tools"
-        android:gravity="center"
-        android:textColor="#303030"
-        android:textSize="11sp"
-        android:textStyle="bold"
-        android:paddingLeft="12dp"
-        android:paddingRight="12dp"
-        android:background="@drawable/btnbackgroud"
-        android:elevation="10dp" />
-
-    <!-- A button: left of Start, centered vertically -->
+    <!-- A button: upper-center-right (below R) -->
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/aBtn"
         android:layout_width="56dp"
         android:layout_height="56dp"
-        android:layout_toLeftOf="@+id/startBtn"
+        android:layout_alignParentRight="true"
         android:layout_centerVertical="true"
-        android:layout_marginRight="10dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="8dp"
         android:background="@drawable/btnbackgroud"
         android:gravity="center"
         android:text="A"
@@ -136,14 +107,15 @@
         android:textSize="22sp"
         android:textStyle="bold" />
 
-    <!-- B button: left of A, centered vertically -->
+    <!-- B button: below A -->
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/bBtn"
         android:layout_width="56dp"
         android:layout_height="56dp"
-        android:layout_toLeftOf="@+id/aBtn"
-        android:layout_centerVertical="true"
-        android:layout_marginRight="10dp"
+        android:layout_below="@+id/aBtn"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="8dp"
+        android:layout_marginTop="8dp"
         android:background="@drawable/btnbackgroud"
         android:gravity="center"
         android:text="B"
@@ -151,7 +123,40 @@
         android:textSize="22sp"
         android:textStyle="bold" />
 
-    <!-- Name entry buttons: always hidden in wide mode -->
+    <!-- Start: bottom-right -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/startBtn"
+        android:layout_width="56dp"
+        android:layout_height="32dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="24dp"
+        android:layout_marginRight="8dp"
+        android:background="@drawable/btnbackgroud"
+        android:gravity="center"
+        android:text="start"
+        android:textColor="#303030"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <!-- Tools button: above Start -->
+    <TextView
+        android:id="@+id/tools_btn"
+        android:layout_width="56dp"
+        android:layout_height="32dp"
+        android:layout_above="@+id/startBtn"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="6dp"
+        android:text="tools"
+        android:gravity="center"
+        android:textColor="#303030"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:background="@drawable/btnbackgroud"
+        android:elevation="10dp" />
+
+    <!-- Name entry: always hidden in wide mode -->
     <LinearLayout
         android:id="@+id/nameEntryContainer"
         android:layout_width="wrap_content"

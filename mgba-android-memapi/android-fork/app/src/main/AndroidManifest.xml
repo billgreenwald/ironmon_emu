@@ -45,7 +45,7 @@
             android:name=".activity.GameActivity"
             android:exported="false"
             android:resizeableActivity="true"
-            android:screenOrientation="userLandscape"
+            android:screenOrientation="fullSensor"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|uiMode" />
         <activity
             android:name=".activity.MainActivity"

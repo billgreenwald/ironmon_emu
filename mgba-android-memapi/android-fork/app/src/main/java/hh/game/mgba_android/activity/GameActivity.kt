@@ -297,16 +297,16 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         trackerFontScale = computeFontScale(splitFraction)
         trackerExpanded = splitFraction != 1.0f
 
-        // Compute initial SDL surface position (wide mode: top/bottom stack; normal: left/right split)
+        // Compute initial SDL surface position (wide mode: flanking columns; normal: left/right split)
         val sdlLp: RelativeLayout.LayoutParams
         val trackerLp: RelativeLayout.LayoutParams
         if (isWideScreen) {
-            val gameHeight = (screenWidthPx * 2f / 3f).toInt().coerceAtMost((screenHeightPx * 0.55f).toInt())
-            val controlsPx = (150 * resources.displayMetrics.density).toInt()
-            val trackerTop = gameHeight + controlsPx
-            sdlLp = RelativeLayout.LayoutParams(screenWidthPx, gameHeight)
-            trackerLp = RelativeLayout.LayoutParams(screenWidthPx, (screenHeightPx - trackerTop).coerceAtLeast(1))
-                .apply { topMargin = trackerTop }
+            val controlsWidthPx = (screenWidthPx * 0.20f).toInt()
+            val centerWidthPx = screenWidthPx - 2 * controlsWidthPx
+            val halfHeightPx = screenHeightPx / 2
+            sdlLp = RelativeLayout.LayoutParams(centerWidthPx, halfHeightPx).apply { leftMargin = controlsWidthPx }
+            trackerLp = RelativeLayout.LayoutParams(centerWidthPx, halfHeightPx)
+                .apply { leftMargin = controlsWidthPx; topMargin = halfHeightPx }
         } else {
             val isOverlay = splitFraction == 0.0f || splitFraction == 1.0f
             val arrowPx = if (hideCollapseButton) 0 else (24 * resources.displayMetrics.density).toInt()
@@ -393,9 +393,11 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         val overlay = layoutInflater.inflate(overlayLayoutId, null)
         overlayViewRef = overlay
         if (isWideScreen) {
-            val gameHeight = (screenWidthPx * 2f / 3f).toInt().coerceAtMost((screenHeightPx * 0.55f).toInt())
-            val controlsPx = (150 * resources.displayMetrics.density).toInt()
-            mLayout?.addView(overlay, RelativeLayout.LayoutParams(screenWidthPx, controlsPx).apply { topMargin = gameHeight })
+            mLayout?.addView(overlay, RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                RelativeLayout.LayoutParams.MATCH_PARENT
+            ))
+            scaleWideControls((screenWidthPx * 0.20f).toInt())
         } else {
             mLayout?.addView(overlay, RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT))
             // Update the gameZoneBoundary guideline to match the selected split fraction
@@ -722,32 +724,63 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         applyLayout()
     }
 
+    private fun scaleWideControls(controlsWidthPx: Int) {
+        val ov = overlayViewRef ?: return
+        val btnSize = (controlsWidthPx * 0.70f).toInt()
+        val smBtnH = (controlsWidthPx * 0.28f).toInt()
+        val dpadArrow = (controlsWidthPx / 3.5f).toInt()
+        val pad = (controlsWidthPx * 0.08f).toInt()
+
+        fun setSquare(id: Int) = ov.findViewById<View>(id)?.let {
+            it.layoutParams = it.layoutParams.apply { width = btnSize; height = btnSize }
+            it.requestLayout()
+        }
+        fun setSmall(id: Int) = ov.findViewById<View>(id)?.let {
+            it.layoutParams = it.layoutParams.apply { width = controlsWidthPx - 2 * pad; height = smBtnH }
+            it.requestLayout()
+        }
+
+        setSquare(R.id.lBtn); setSquare(R.id.rBtn)
+        setSquare(R.id.aBtn); setSquare(R.id.bBtn)
+        setSmall(R.id.selectBtn); setSmall(R.id.startBtn); setSmall(R.id.tools_btn)
+
+        val dpad = ov.findViewById<View>(R.id.dpad)
+        dpad?.let {
+            it.layoutParams = it.layoutParams.apply { width = dpadArrow * 3; height = dpadArrow * 3 }
+            it.requestLayout()
+        }
+        listOf(R.id.upBtn, R.id.downBtn, R.id.leftBtn, R.id.rightBtn).forEach { id ->
+            ov.findViewById<View>(id)?.layoutParams?.let { lp -> lp.width = dpadArrow; lp.height = dpadArrow }
+        }
+    }
+
     private fun applyLayout() {
         if (isWideScreen) {
-            val gameHeight = (screenWidthPx * 2f / 3f).toInt()
-                .coerceAtMost((screenHeightPx * 0.55f).toInt())
-            val controlsStripPx = (150 * resources.displayMetrics.density).toInt()
-            val trackerTop = gameHeight + controlsStripPx
-            val trackerHeight = (screenHeightPx - trackerTop).coerceAtLeast(1)
+            val controlsWidthPx = (screenWidthPx * 0.20f).toInt()
+            val centerWidthPx = screenWidthPx - 2 * controlsWidthPx
+            val halfHeightPx = screenHeightPx / 2
 
-            mSurface?.layoutParams = RelativeLayout.LayoutParams(screenWidthPx, gameHeight)
-                .apply { topMargin = 0; leftMargin = 0 }
+            mSurface?.layoutParams = RelativeLayout.LayoutParams(centerWidthPx, halfHeightPx)
+                .apply { leftMargin = controlsWidthPx; topMargin = 0 }
             mSurface?.requestLayout()
 
             val tv = trackerViewRef
             if (tv != null) {
-                tv.layoutParams = RelativeLayout.LayoutParams(screenWidthPx, trackerHeight)
-                    .apply { topMargin = trackerTop; leftMargin = 0 }
+                tv.layoutParams = RelativeLayout.LayoutParams(centerWidthPx, halfHeightPx)
+                    .apply { leftMargin = controlsWidthPx; topMargin = halfHeightPx }
                 tv.requestLayout()
             }
 
             val ov = overlayViewRef
-            if (ov != null) {
-                ov.layoutParams = RelativeLayout.LayoutParams(screenWidthPx, controlsStripPx)
-                    .apply { topMargin = gameHeight }
+            if (ov != null && ov.layoutParams?.width != RelativeLayout.LayoutParams.MATCH_PARENT) {
+                ov.layoutParams = RelativeLayout.LayoutParams(
+                    RelativeLayout.LayoutParams.MATCH_PARENT,
+                    RelativeLayout.LayoutParams.MATCH_PARENT
+                )
                 ov.requestLayout()
             }
 
+            scaleWideControls(controlsWidthPx)
             effectiveCollapsible = false
             return
         }
