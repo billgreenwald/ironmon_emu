@@ -302,10 +302,9 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         val trackerLp: RelativeLayout.LayoutParams
         if (isWideScreen) {
             val gameHeightPx = (screenWidthPx / 1.5f).toInt()
-            val trackerHeightPx = screenHeightPx - gameHeightPx
             sdlLp = RelativeLayout.LayoutParams(screenWidthPx, gameHeightPx)
-            trackerLp = RelativeLayout.LayoutParams(screenWidthPx, trackerHeightPx)
-                .apply { topMargin = gameHeightPx }
+            trackerLp = RelativeLayout.LayoutParams(screenWidthPx, gameHeightPx)
+                .apply { topMargin = screenHeightPx - gameHeightPx }
         } else {
             val isOverlay = splitFraction == 0.0f || splitFraction == 1.0f
             val arrowPx = if (hideCollapseButton) 0 else (24 * resources.displayMetrics.density).toInt()
@@ -756,15 +755,14 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     private fun applyLayout() {
         if (isWideScreen) {
             val gameHeightPx = (screenWidthPx / 1.5f).toInt()
-            val trackerHeightPx = screenHeightPx - gameHeightPx
 
             mSurface?.layoutParams = RelativeLayout.LayoutParams(screenWidthPx, gameHeightPx)
             mSurface?.requestLayout()
 
             val tv = trackerViewRef
             if (tv != null) {
-                tv.layoutParams = RelativeLayout.LayoutParams(screenWidthPx, trackerHeightPx)
-                    .apply { topMargin = gameHeightPx }
+                tv.layoutParams = RelativeLayout.LayoutParams(screenWidthPx, gameHeightPx)
+                    .apply { topMargin = screenHeightPx - gameHeightPx }
                 tv.requestLayout()
             }
 
