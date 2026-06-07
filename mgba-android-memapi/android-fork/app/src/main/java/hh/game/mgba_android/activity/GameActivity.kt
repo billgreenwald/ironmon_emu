@@ -301,9 +301,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         val sdlLp: RelativeLayout.LayoutParams
         val trackerLp: RelativeLayout.LayoutParams
         if (isWideScreen) {
-            val simHeightPx = screenWidthPx // TEST: simulate 1:1 square screen
             val gameHeightPx = (screenWidthPx / 1.5f).toInt()
-            val trackerHeightPx = simHeightPx - gameHeightPx
+            val trackerHeightPx = screenHeightPx - gameHeightPx
             sdlLp = RelativeLayout.LayoutParams(screenWidthPx, gameHeightPx)
             trackerLp = RelativeLayout.LayoutParams(screenWidthPx, trackerHeightPx)
                 .apply { topMargin = gameHeightPx }
@@ -756,9 +755,8 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
     private fun applyLayout() {
         if (isWideScreen) {
-            val simHeightPx = screenWidthPx // TEST: simulate 1:1 square screen
             val gameHeightPx = (screenWidthPx / 1.5f).toInt()
-            val trackerHeightPx = simHeightPx - gameHeightPx
+            val trackerHeightPx = screenHeightPx - gameHeightPx
 
             mSurface?.layoutParams = RelativeLayout.LayoutParams(screenWidthPx, gameHeightPx)
             mSurface?.requestLayout()
