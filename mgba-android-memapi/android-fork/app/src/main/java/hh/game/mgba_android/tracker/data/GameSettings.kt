@@ -16,7 +16,7 @@ object GameSettings {
     val LEAF_GREEN_CODES = setOf("BPGE", "BPGS", "BPGI", "BPGF", "BPGD")
     val RUBY_CODES       = setOf("AXVE", "AXVS", "AXVI", "AXVF", "AXVD")
     val SAPPHIRE_CODES   = setOf("AXPE", "AXPS", "AXPI", "AXPF", "AXPD")
-    val EMERALD_CODES    = setOf("BPEE", "BPES")
+    val EMERALD_CODES    = setOf("BPEE", "BPES", "BPEF", "BPEI", "BPED")
 
     fun detectGame(codeBytes: ByteArray): GameVersion {
         if (codeBytes.size < 4) return GameVersion.UNKNOWN
