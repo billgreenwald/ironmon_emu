@@ -343,10 +343,21 @@ object EvolutionLevel {
         1198 to "LINK",
     )
 
+    // ── Gen III overrides for MaxFR/NatDex (trade evos use items, not level proxies) ──
+
+    private val GEN3_MAXFR_METHODS: Map<Int, String> = mapOf(
+        93  to "L.CORD",   // Haunter → Gengar (Linking Cord)
+        95  to "MTL.CT",   // Onix → Steelix (Metal Coat)
+        117 to "D.SCLE",   // Seadra → Kingdra (Dragon Scale)
+        123 to "MCT/KRK",  // Scyther → Scizor (Metal Coat or King's Rock)
+        137 to "UPGRD",    // Porygon → Porygon2 (Up-Grade)
+    )
+
     // ─────────────────────────────────────────────────────────────────────────
 
     /** Level at which [speciesId] evolves, or 0 if no level-based evolution. */
     fun get(speciesId: Int, isMaxFr: Boolean = false): Int = when {
+        isMaxFr && speciesId <= 411 && GEN3_MAXFR_METHODS.containsKey(speciesId) -> 0
         speciesId <= 411 -> TABLE[speciesId] ?: 0
         isMaxFr          -> MAXFR_LEVELS[speciesId] ?: 0
         else             -> NATDEX_LEVELS[speciesId] ?: 0
@@ -354,6 +365,7 @@ object EvolutionLevel {
 
     /** Evolution method label (e.g. "FRIEND", "FIRE", "LINK") or null if level-based / none. */
     fun getMethod(speciesId: Int, isMaxFr: Boolean = false): String? = when {
+        isMaxFr && speciesId <= 411 -> GEN3_MAXFR_METHODS[speciesId] ?: GEN3_METHODS[speciesId]
         speciesId <= 411 -> GEN3_METHODS[speciesId]
         isMaxFr          -> MAXFR_METHODS[speciesId]
         else             -> NATDEX_METHODS[speciesId]
