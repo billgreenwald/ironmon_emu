@@ -4,6 +4,7 @@
 
 ### Fixed
 - **S.S. Anne now shows as a named location** — mapLayoutIds 118–123 (S.S. Anne Ext., 1F, 2F, 3F, B1F, Deck) were missing from the FRLG route table, causing the ship to display as "Unknown Location" and suppressing the image gallery and trainer count display.
+- **Bug-type moves now correctly show ½× against Poison-type** — Bug attacking Poison was missing from the type chart, defaulting to 1× (neutral). Megahorn vs. Muk and similar matchups now display the correct "not very effective" multiplier in the defense tab.
 
 ### Improved
 - **Gallery images are now pinch-to-zoom** — pinch to zoom up to 5× and pan around the image; horizontal swipe-to-next-page is disabled while zoomed in so gestures don't conflict.

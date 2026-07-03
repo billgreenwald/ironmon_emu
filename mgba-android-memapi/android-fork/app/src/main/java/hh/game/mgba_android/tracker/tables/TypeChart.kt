@@ -81,10 +81,10 @@ object TypeChart {
             2 to 2.0f, 6 to 2.0f, 10 to 2.0f, 15 to 2.0f,
             1 to 0.5f, 4 to 0.5f, 8 to 0.5f,
         ),
-        // Bug — 2x vs Grass, Psychic(14), Dark; 0.5x vs Fairy(18)
+        // Bug — 2x vs Grass, Psychic(14), Dark; 0.5x vs Fighting, Poison, Flying, Ghost, Steel, Fire, Fairy(18)
         6 to mapOf(
             12 to 2.0f, 14 to 2.0f, 17 to 2.0f,
-            1 to 0.5f, 2 to 0.5f, 7 to 0.5f, 8 to 0.5f, 10 to 0.5f, 18 to 0.5f,
+            1 to 0.5f, 2 to 0.5f, 3 to 0.5f, 7 to 0.5f, 8 to 0.5f, 10 to 0.5f, 18 to 0.5f,
         ),
         // Ghost — 2x vs Ghost, Psychic(14)
         7 to mapOf(
