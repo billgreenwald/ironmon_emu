@@ -1,5 +1,6 @@
 package hh.game.mgba_android.tracker.data
 
+import android.util.Log
 import hh.game.mgba_android.tracker.MemoryBridge
 import hh.game.mgba_android.tracker.tables.ItemTable
 
@@ -25,6 +26,7 @@ data class BagDetailInfo(
  * Item lists mirror MiscData.lua: HealingItems, PPItems, StatusItems, BattleItems.
  */
 object BagReader {
+    private const val TAG = "BagReader"
 
     // Healing item types (matches Lua MiscData.HealingType)
     private const val CONSTANT   = true   // heals a fixed HP amount
@@ -85,6 +87,8 @@ object BagReader {
         } else {
             addresses.saveBlock1Ptr
         }
+
+        Log.d(TAG, "sb1Ptr=0x${addresses.saveBlock1Ptr.toString(16)} sb1Addr=0x${saveBlock1Addr.toString(16)} sb2Ptr=0x${addresses.saveBlock2Ptr.toString(16)} encKeyOff=0x${addresses.encryptionKeyOffset.toString(16)} itemsOff=0x${addresses.bagPocket_Items_offset.toString(16)} itemsSize=${addresses.bagPocket_Items_size}")
 
         // 16-bit XOR encryption key for item quantities.
         // Ruby/Sapphire (saveBlock2Ptr == 0L) have no encryption — matches Lua getEncryptionKey check.

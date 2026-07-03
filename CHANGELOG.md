@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.4.10] - 2026-07-02
+
+### Fixed
+- **S.S. Anne now shows as a named location** — mapLayoutIds 118–123 (S.S. Anne Ext., 1F, 2F, 3F, B1F, Deck) were missing from the FRLG route table, causing the ship to display as "Unknown Location" and suppressing the image gallery and trainer count display.
+
+### Improved
+- **Gallery images are now pinch-to-zoom** — pinch to zoom up to 5× and pan around the image; horizontal swipe-to-next-page is disabled while zoomed in so gestures don't conflict.
+
 ## [3.4.7] - 2026-05-30
 
 ### Fixed

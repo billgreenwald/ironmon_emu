@@ -137,6 +137,60 @@ object ImageAssetMap {
         ),
 
         // ── Dungeons / Buildings ─────────────────────────────────────────────
+        "S.S. Anne Ext." to RouteImages(
+            routeMaps   = listOf("maps/route_maps/ss_anne.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/ss_anne_1.png",
+                "maps/hidden_items/ss_anne_2.png",
+                "maps/hidden_items/ss_anne_3.png",
+                "maps/hidden_items/s_ss_anne.png",
+            ),
+        ),
+        "S.S. Anne 1F" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/ss_anne.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/ss_anne_1.png",
+                "maps/hidden_items/ss_anne_2.png",
+                "maps/hidden_items/ss_anne_3.png",
+                "maps/hidden_items/s_ss_anne.png",
+            ),
+        ),
+        "S.S. Anne 2F" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/ss_anne.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/ss_anne_1.png",
+                "maps/hidden_items/ss_anne_2.png",
+                "maps/hidden_items/ss_anne_3.png",
+                "maps/hidden_items/s_ss_anne.png",
+            ),
+        ),
+        "S.S. Anne 3F" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/ss_anne.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/ss_anne_1.png",
+                "maps/hidden_items/ss_anne_2.png",
+                "maps/hidden_items/ss_anne_3.png",
+                "maps/hidden_items/s_ss_anne.png",
+            ),
+        ),
+        "S.S. Anne B1F" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/ss_anne.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/ss_anne_1.png",
+                "maps/hidden_items/ss_anne_2.png",
+                "maps/hidden_items/ss_anne_3.png",
+                "maps/hidden_items/s_ss_anne.png",
+            ),
+        ),
+        "S.S. Anne Deck" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/ss_anne.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/ss_anne_1.png",
+                "maps/hidden_items/ss_anne_2.png",
+                "maps/hidden_items/ss_anne_3.png",
+                "maps/hidden_items/s_ss_anne.png",
+            ),
+        ),
         "Mt. Moon 1F" to RouteImages(
             routeMaps   = listOf("maps/route_maps/mt_moon.png"),
             hiddenItems = (1..8).map { "maps/hidden_items/mt_moon_$it.png" },

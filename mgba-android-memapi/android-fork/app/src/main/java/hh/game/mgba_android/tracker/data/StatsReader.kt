@@ -51,16 +51,23 @@ object StatsReader {
 
         val statsBase = saveBlock1Addr + addresses.gameStatsOffset
 
+        Log.d(TAG, "sb1Ptr=0x${addresses.saveBlock1Ptr.toString(16)} sb1Addr=0x${saveBlock1Addr.toString(16)} statsOff=0x${addresses.gameStatsOffset.toString(16)} sb2Ptr=0x${addresses.saveBlock2Ptr.toString(16)} encKeyOff=0x${addresses.encryptionKeyOffset.toString(16)} xorKey=0x${xorKey.toString(16)}")
+
         fun readStat(idx: Int): Long {
             val bytes = MemoryBridge.readBytes(statsBase + idx * SIZEOF_GAME_STAT, 4) ?: return 0L
             val raw = bytes.toLittleEndianLong()
             return if (xorKey == 0L) raw else (raw xor xorKey) and 0xFFFFFFFFL
         }
 
+        val steps = readStat(IDX_STEPS)
+        val battles = readStat(IDX_TOTAL_BATTLES)
+        val centers = readStat(IDX_USED_POKECENTER)
+        Log.d(TAG, "steps=$steps battles=$battles centers=$centers")
+
         return GameStats(
-            steps               = readStat(IDX_STEPS),
-            totalBattles        = readStat(IDX_TOTAL_BATTLES),
-            pokemonCenterVisits = readStat(IDX_USED_POKECENTER),
+            steps               = steps,
+            totalBattles        = battles,
+            pokemonCenterVisits = centers,
         )
     }
 

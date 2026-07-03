@@ -9,7 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -88,14 +92,36 @@ fun GalleryOverlay(
                 } else {
                     val pagerState = rememberPagerState(pageCount = { images.size })
                     val scope = rememberCoroutineScope()
+                    var currentPageScale by remember { mutableFloatStateOf(1f) }
 
                     HorizontalPager(
                         state = pagerState,
                         modifier = Modifier.weight(1f).fillMaxWidth(),
+                        userScrollEnabled = currentPageScale <= 1.01f,
                     ) { page ->
+                        var scale by remember(page) { mutableFloatStateOf(1f) }
+                        var offset by remember(page) { mutableStateOf(Offset.Zero) }
+
+                        LaunchedEffect(scale, pagerState.currentPage) {
+                            if (page == pagerState.currentPage) currentPageScale = scale
+                        }
+
+                        val transformableState = rememberTransformableState { zoomChange, panChange, _ ->
+                            scale = (scale * zoomChange).coerceIn(1f, 5f)
+                            if (scale > 1f) offset += panChange else offset = Offset.Zero
+                        }
+
                         GlideImage(
                             imageModel = { "file:///android_asset/${images[page]}" },
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    scaleX = scale
+                                    scaleY = scale
+                                    translationX = offset.x
+                                    translationY = offset.y
+                                }
+                                .transformable(state = transformableState),
                             imageOptions = ImageOptions(contentScale = ContentScale.Fit),
                         )
                     }
