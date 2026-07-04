@@ -38,6 +38,15 @@ The tracker panel has three tabs, which you can select by tapping the tab name o
 - **OPPONENT** — When a battle starts, the opponent tab automatically populates with the enemy Pokémon's species, level, type, BST, stat markings, and moves as they are revealed in the same column layout as the player's move table (category icon, type dot, move name, Pwr, Eff, Acc, PP). Wild vs. trainer battles are detected automatically.
 - **ROUTES** — Shows the current route and all Pokémon that have been encountered in it, with trainer defeat counts.
 
+### Doubles Battle Support
+
+When a doubles battle is detected (2v2), the tabs automatically switch to doubles mode:
+
+- **MY MONS / OPPONENTS** — Each tab gains two sub-tabs: **Mon 1** and **Mon 2**. Swipe left/right within the tab to switch between the two active Pokémon on each side. Tapping the tab headers still switches between MY MONS, OPPONENTS, and ROUTES as usual.
+- A **Mon 1 · Mon 2** indicator appears below the tab bar when in a doubles battle.
+- Both enemy Pokémon are fully tracked: species, level, types, BST, HP, abilities, and revealed moves are shown for each independently.
+- When the battle ends, the tracker returns to standard single-mon layout automatically.
+
 <p align="center">
   <img src="screenshots/opponent%20view.png" alt="Opponent View" width="600"/>
   <br/><em>Opponent tab showing enemy stats and revealed moves mid-battle</em>

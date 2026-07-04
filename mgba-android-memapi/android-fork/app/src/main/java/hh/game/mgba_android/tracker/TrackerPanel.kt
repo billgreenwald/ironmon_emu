@@ -238,9 +238,18 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
         return
     }
 
-    // Three-tab pager: MY MON | ROUTE | OPPONENT
+    val isDoubles = state.battle.isDoubles
+
+    // Sub-tab pager shared between MY MONS and OPPONENTS tabs in doubles.
+    // In singles this pager still exists but is never rendered.
+    val subPagerState = rememberPagerState(pageCount = { 2 })
     val pagerState = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
+
+    // Reset sub-page to 0 when a new battle starts so we never land on Mon 2 by default.
+    LaunchedEffect(state.battle.isActive) {
+        if (!state.battle.isActive) subPagerState.scrollToPage(0)
+    }
 
     TabRow(
         selectedTabIndex = pagerState.currentPage,
@@ -252,7 +261,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
             onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
         ) {
             Text(
-                "MY MON",
+                if (isDoubles) "MY MONS" else "MY MON",
                 fontSize = ssp(11),
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -263,7 +272,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
             onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
         ) {
             Text(
-                "OPPONENT",
+                if (isDoubles) "OPPONENTS" else "OPPONENT",
                 fontSize = ssp(11),
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -282,29 +291,99 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
         }
     }
 
+    // Sub-tab indicator: only shown in doubles, only when not on ROUTES tab
+    if (isDoubles && pagerState.currentPage != 2) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CardBg)
+                .padding(vertical = 3.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            listOf("Mon 1", "Mon 2").forEachIndexed { idx, label ->
+                val isSelected = subPagerState.currentPage == idx
+                Text(
+                    text = label,
+                    color = if (isSelected) AccentRed else TextSecondary,
+                    fontSize = ssp(10),
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 1.dp),
+                )
+            }
+        }
+    }
+
+    // In doubles: outer pager is tap-only (tapping tabs); swipe navigates sub-tabs.
+    // In singles: outer pager is swipeable as before.
     HorizontalPager(
         state = pagerState,
         modifier = Modifier.fillMaxSize(),
+        userScrollEnabled = !isDoubles,
     ) { page ->
         when (page) {
-            0 -> Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                state.leadPokemon?.let { lead ->
-                    MainView(lead, state.battle, state.stats, state.bagDetail, state.playerLearnset, isNatDex = state.isNatDex, isMaxFr = state.isMaxFr, moveCategories = state.moveCategories, pokemonNotes = state.pokemonNotes)
-                } ?: StatusText("Party empty")
-            }
-            1 -> Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                if (state.battle.isActive) {
-                    EnemyView(state.battle, statMarkings, state.enemyLearnset, playerLead = state.leadPokemon, isNatDex = state.isNatDex, isMaxFr = state.isMaxFr, moveCategories = state.moveCategories, pokemonNotes = state.pokemonNotes)
+            0 -> {
+                if (isDoubles) {
+                    HorizontalPager(state = subPagerState, modifier = Modifier.fillMaxSize()) { subPage ->
+                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                            val partyIdx = if (subPage == 0) state.battle.playerMon1PartyIdx else state.battle.playerMon2PartyIdx
+                            val mon = state.party.getOrNull(partyIdx)
+                            if (mon != null) {
+                                // Pass full battle context for Mon 1 (stat stages, live types);
+                                // BattleState.NONE for Mon 2 since those come from slot 2 (not yet decoded).
+                                MainView(
+                                    mon,
+                                    if (subPage == 0) state.battle else BattleState.NONE,
+                                    state.stats,
+                                    state.bagDetail,
+                                    state.playerLearnset,
+                                    isNatDex = state.isNatDex,
+                                    isMaxFr = state.isMaxFr,
+                                    moveCategories = state.moveCategories,
+                                    pokemonNotes = state.pokemonNotes,
+                                )
+                            } else {
+                                StatusText(if (partyIdx < 0) "Not in battle" else "Party slot empty")
+                            }
+                        }
+                    }
                 } else {
-                    StatusText("Not in battle")
+                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        state.leadPokemon?.let { lead ->
+                            MainView(lead, state.battle, state.stats, state.bagDetail, state.playerLearnset, isNatDex = state.isNatDex, isMaxFr = state.isMaxFr, moveCategories = state.moveCategories, pokemonNotes = state.pokemonNotes)
+                        } ?: StatusText("Party empty")
+                    }
+                }
+            }
+            1 -> {
+                if (isDoubles) {
+                    HorizontalPager(state = subPagerState, modifier = Modifier.fillMaxSize()) { subPage ->
+                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                            if (state.battle.isActive) {
+                                EnemyView(
+                                    battle = state.battle,
+                                    statMarkings = statMarkings,
+                                    learnset = if (subPage == 0) state.enemyLearnset else null,
+                                    playerLead = state.leadPokemon,
+                                    isNatDex = state.isNatDex,
+                                    isMaxFr = state.isMaxFr,
+                                    moveCategories = state.moveCategories,
+                                    pokemonNotes = state.pokemonNotes,
+                                    enemyOverride = if (subPage == 1) state.battle.enemy2 else null,
+                                )
+                            } else {
+                                StatusText("Not in battle")
+                            }
+                        }
+                    }
+                } else {
+                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        if (state.battle.isActive) {
+                            EnemyView(state.battle, statMarkings, state.enemyLearnset, playerLead = state.leadPokemon, isNatDex = state.isNatDex, isMaxFr = state.isMaxFr, moveCategories = state.moveCategories, pokemonNotes = state.pokemonNotes)
+                        } else {
+                            StatusText("Not in battle")
+                        }
+                    }
                 }
             }
             else -> RouteView(state, onOpenGallery = { galleryRoute = it })
@@ -856,8 +935,9 @@ private fun EnemyView(
     isMaxFr: Boolean = false,
     moveCategories: Map<Int, Int> = emptyMap(),
     pokemonNotes: Map<Int, String> = emptyMap(),
+    enemyOverride: EnemyData? = null,
 ) {
-    val enemy = battle.enemy
+    val enemy = enemyOverride ?: battle.enemy
     if (enemy == null) {
         StatusText("No enemy data")
         return
