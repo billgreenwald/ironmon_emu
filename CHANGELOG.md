@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.4.11] - 2026-07-05
+
+### Fixed
+- **Underground passage now shows as a named location** — mapLayoutIds 172–174 (Underground Path Entrance, E-W tunnel between Routes 7/8, N-S tunnel between Routes 5/6) and adjacent IDs 169 (Sea Cottage), 170–171 (S.S. Anne Kitchen / Captain's Office), and 176 (Route 12 North Entrance) were missing from the FRLG route table, causing these maps to display as "Unknown Location". The N-S and E-W tunnels also now surface their hidden-item galleries (7 images each, assets were already bundled but never wired up).
+
 ## [3.4.10] - 2026-07-02
 
 ### Fixed

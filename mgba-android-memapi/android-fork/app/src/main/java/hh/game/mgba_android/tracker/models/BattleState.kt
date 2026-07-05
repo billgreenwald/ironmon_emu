@@ -50,6 +50,11 @@ data class BattleState(
     val playerStatStages: IntArray? = null, // [Atk,Def,SpA,SpD,Spe,Acc,Eva] 0-12; 6=neutral
     val playerType1: Int = -1,         // live from gBattleMons slot 0; -1 = not in battle
     val playerType2: Int = -1,         // updated by Conversion, Camouflage, etc.
+    // ── Doubles support ────────────────────────────────────────────────────────
+    val isDoubles: Boolean = false,
+    val enemy2: EnemyData? = null,     // gBattleMons slot 3 (RightOther); null in singles
+    val playerMon1PartyIdx: Int = 0,   // gBattlerPartyIndexes[0] (LeftOwn); 0 in singles
+    val playerMon2PartyIdx: Int = -1,  // gBattlerPartyIndexes[4] (RightOwn); -1 in singles
 ) {
     companion object {
         val NONE = BattleState(

@@ -206,6 +206,12 @@ object ImageAssetMap {
         "Rock Tunnel 1F" to RouteImages(
             routeMaps = listOf("maps/route_maps/rock_tunnel.png"),
         ),
+        "Underground Path (N-S)" to RouteImages(
+            hiddenItems = (1..7).map { "maps/hidden_items/north_south_underground_path_$it.png" },
+        ),
+        "Underground Path (E-W)" to RouteImages(
+            hiddenItems = (1..7).map { "maps/hidden_items/east_west_underground_path_$it.png" },
+        ),
         "Power Plant" to RouteImages(
             routeMaps   = listOf("maps/route_maps/power_plant.png"),
             hiddenItems = listOf(

@@ -62,10 +62,15 @@ object TrackerPoller {
     private var battleFourConfirmedKey: Long? = null  // set when all 4 confirmed this battle
     // Starting enemy moveset snapshot at battle open — guards Sketch/Mimic (Lua BattleParties)
     private var enemyStartingMoveset: Set<Int> = emptySet()
-    private var lastEnemyMoveId: Int = 0     // last value of gBattleResults+0x24
+    private var lastEnemyMoveId: Int = 0     // last value of gBattleResults+0x24 (shared between both enemies)
     private var lastKnownEnemySpeciesId: Int = 0  // detects mid-battle trainer switches
     private var battleJustStarted: Boolean = false
     private var lastBattleActive = false
+    // ── Doubles: enemy2 (gBattleMons slot 3) tracking ─────────────────────────
+    private val battleRevealedByKey2 = mutableMapOf<Long, MutableList<Int>>()
+    private var battleFourConfirmedKey2: Long? = null
+    private var enemy2StartingMoveset: Set<Int> = emptySet()
+    private var lastKnownEnemy2SpeciesId: Int = 0
 
     // Route encounter tracking: mapLayoutId → species IDs seen (wild battles only)
     private val encountersByRoute = mutableMapOf<Int, MutableList<Int>>()
@@ -111,6 +116,10 @@ object TrackerPoller {
         enemyStartingMoveset = emptySet()
         lastEnemyMoveId = 0
         lastKnownEnemySpeciesId = 0
+        battleRevealedByKey2.clear()
+        battleFourConfirmedKey2 = null
+        enemy2StartingMoveset = emptySet()
+        lastKnownEnemy2SpeciesId = 0
         encountersByRoute.clear()
         routeVisitOrder.clear()
         visitedRoutes.clear()
@@ -203,6 +212,10 @@ object TrackerPoller {
         enemyStartingMoveset = emptySet()
         lastEnemyMoveId = 0
         lastKnownEnemySpeciesId = 0
+        battleRevealedByKey2.clear()
+        battleFourConfirmedKey2 = null
+        enemy2StartingMoveset = emptySet()
+        lastKnownEnemy2SpeciesId = 0
         encountersByRoute.clear()
         routeVisitOrder.clear()
         visitedRoutes.clear()
@@ -461,6 +474,10 @@ object TrackerPoller {
             enemyStartingMoveset = emptySet()
             lastEnemyMoveId = 0
             lastKnownEnemySpeciesId = 0
+            battleRevealedByKey2.clear()
+            battleFourConfirmedKey2 = null
+            enemy2StartingMoveset = emptySet()
+            lastKnownEnemy2SpeciesId = 0
             // Do NOT clear encountersByRoute or visitedRoutes here — party is transiently empty at
             // ROM load, which would wipe restored data. resetGameOver() handles clearing on new run.
             currentWildBattleRecorded = false
@@ -560,37 +577,56 @@ object TrackerPoller {
         // gBattleOutcome: 0 = battle ongoing, non-zero = battle ended
         val battleOutcome = MemoryBridge.readU8(addresses.battleOutcome) ?: return BattleState.NONE
         val isActive = battlersCount > 0 && battleOutcome == 0
+        // gBattlersCount == 4 means 2v2 doubles (Lua: Battle.numBattlers == 4)
+        val isDoubles = isActive && battlersCount >= 4
 
         // Detect battle transitions
         if (!isActive && lastBattleActive) {
             lastEnemyMoveId = 0
-            // Reset ephemeral battle notes on battle end (Lua: Tracker.resetBattleNotes)
             battleRevealedByKey.clear()
             battleFourConfirmedKey = null
+            battleRevealedByKey2.clear()
+            battleFourConfirmedKey2 = null
         }
-        if (isActive && !lastBattleActive) battleJustStarted = true  // new battle — snapshot without recording
+        if (isActive && !lastBattleActive) battleJustStarted = true
         lastBattleActive = isActive
 
         if (!isActive) return BattleState.NONE
 
         // Battle type flags: BATTLE_TYPE_TRAINER = (1 << 3) = 0x08
-        // Wild if bit 3 is NOT set — matches Lua tracker: isWildEncounter = getbits(flags, 3, 1) == 0
         val typeFlags = MemoryBridge.readBytes(addresses.battleTypeFlags, 4)
         val isWild = typeFlags != null && (typeFlags[0].toInt() and 0x08) == 0
 
-        // ── Enemy gBattleMons slot (slot index 1) ─────────────────────────────
-        val enemyMonAddr = addresses.battleMons + DataHelper.BATTLE_MON_SIZE // slot 1
+        // ── Pre-read enemy2 slot data (doubles only) ────────────────────────────
+        // Slot layout: 0=PlayerLeft, 1=EnemyLeft, 2=PlayerRight, 3=EnemyRight
+        // offsetBattlePokemonDoublesPartner = 0xB0 = 2×BATTLE_MON_SIZE (Lua Program.lua)
+        val enemy2Mon: ByteArray? = if (isDoubles)
+            MemoryBridge.readBytes(addresses.battleMons + 3L * DataHelper.BATTLE_MON_SIZE, DataHelper.BATTLE_MON_SIZE)
+            else null
+        val speciesId2: Int = enemy2Mon?.u16(DataHelper.BMON_SPECIES)?.let { if (it in 1..1235) it else 0 } ?: 0
+        // gBattlerPartyIndexes: +6 = RightOther (Lua: gBattlerPartyIndexes + 6)
+        val activeEnemy2Slot: Int = if (isDoubles && speciesId2 > 0 && addresses.gBattlerPartyIndexes != 0L) {
+            (MemoryBridge.readU8(addresses.gBattlerPartyIndexes + 6L) ?: 0).coerceIn(0, 5)
+        } else 0
+        val enemy2Raw: ByteArray? = if (speciesId2 > 0)
+            MemoryBridge.readBytes(
+                addresses.enemyParty + activeEnemy2Slot * DataHelper.POKEMON_STRUCT_SIZE,
+                DataHelper.POKEMON_STRUCT_SIZE
+            ) else null
+        val level2: Int = if (enemy2Raw != null) enemy2Raw[DataHelper.OFF_LEVEL].toInt() and 0xFF else 0
+
+        // ── Enemy gBattleMons slot 1 (LeftOther) ────────────────────────────────
+        val enemyMonAddr = addresses.battleMons + DataHelper.BATTLE_MON_SIZE
         val enemyMon = MemoryBridge.readBytes(enemyMonAddr, DataHelper.BATTLE_MON_SIZE)
 
         val enemy: EnemyData? = if (enemyMon != null) {
             val speciesId = enemyMon.u16(DataHelper.BMON_SPECIES)
             if (speciesId in 1..1235) {
-                // Use gBattlerPartyIndexes[2] to find the active enemy party slot (Lua: Battle.Combatants.LeftOther)
+                // gBattlerPartyIndexes[2] = LeftOther party slot (Lua: Battle.Combatants.LeftOther)
                 val activeEnemySlot: Int = if (addresses.gBattlerPartyIndexes != 0L) {
                     val idx = MemoryBridge.readU8(addresses.gBattlerPartyIndexes + 2L) ?: 0
                     idx.coerceIn(0, 5)
                 } else 0
-                // Enemy party struct — for level and HP (party offsets are reliable)
                 val enemyRaw = MemoryBridge.readBytes(
                     addresses.enemyParty + activeEnemySlot * DataHelper.POKEMON_STRUCT_SIZE,
                     DataHelper.POKEMON_STRUCT_SIZE
@@ -598,13 +634,15 @@ object TrackerPoller {
 
                 val level = if (enemyRaw != null) enemyRaw[DataHelper.OFF_LEVEL].toInt() and 0xFF else 0
 
-                // ── Move revelation via gBattleResults (Lua tracker logic) ─────────────
+                // ── Move revelation via gBattleResults ─────────────────────────────
+                // In doubles, gBattleResults.enemyUsedMove reflects the last move from EITHER enemy.
+                // We validate against each enemy's starting moveset to attribute moves correctly.
                 val currentEnemyMoveId = MemoryBridge.readU16(
                     addresses.battleResults + DataHelper.BATTLE_RESULTS_ENEMY_MOVE_OFFSET
                 ) ?: 0
 
                 if (battleJustStarted) {
-                    // Snapshot starting moveset — guards Sketch/Mimic (Lua BattleParties snapshot)
+                    // Snapshot enemy1 starting moveset (Lua BattleParties snapshot)
                     val startMoves = mutableSetOf<Int>()
                     for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
                                               DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
@@ -613,66 +651,99 @@ object TrackerPoller {
                     }
                     enemyStartingMoveset = startMoves
                     lastKnownEnemySpeciesId = speciesId
-                    // Reset ephemeral battle notes (Lua: Tracker.resetBattleNotes on battle start)
+                    lastEnemyMoveId = 0
+                    // Snapshot enemy2 starting moveset (doubles)
+                    if (isDoubles && enemy2Mon != null && speciesId2 > 0) {
+                        val startMoves2 = mutableSetOf<Int>()
+                        for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
+                                                  DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
+                            val m = enemy2Mon.u16(offset)
+                            if (m != 0) startMoves2.add(m)
+                        }
+                        enemy2StartingMoveset = startMoves2
+                        lastKnownEnemy2SpeciesId = speciesId2
+                    }
                     battleRevealedByKey.clear()
                     battleFourConfirmedKey = null
-                    // Reset to 0 so the first real move is always caught. At 50ms poll intervals
-                    // the enemy is very unlikely to have acted before this snapshot fires.
-                    // Stale residuals from the previous battle are filtered by enemyStartingMoveset.
-                    lastEnemyMoveId = 0
+                    battleRevealedByKey2.clear()
+                    battleFourConfirmedKey2 = null
                     battleJustStarted = false
-                } else if (speciesId != lastKnownEnemySpeciesId) {
-                    // Trainer sent out a new Pokémon — re-snapshot its moves.
-                    // Lua does this dynamically via Battle.BattleParties[slot].moves[1-4] per active attacker.
-                    val switchMoves = mutableSetOf<Int>()
-                    for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
-                                              DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
-                        val m = enemyMon.u16(offset)
-                        if (m != 0) switchMoves.add(m)
+                } else {
+                    // Enemy1 species change — trainer sent out a new Pokémon
+                    if (speciesId != lastKnownEnemySpeciesId) {
+                        val switchMoves = mutableSetOf<Int>()
+                        for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
+                                                  DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
+                            val m = enemyMon.u16(offset)
+                            if (m != 0) switchMoves.add(m)
+                        }
+                        enemyStartingMoveset = switchMoves
+                        lastKnownEnemySpeciesId = speciesId
+                        lastEnemyMoveId = currentEnemyMoveId
                     }
-                    enemyStartingMoveset = switchMoves
-                    lastKnownEnemySpeciesId = speciesId
-                    // Consume residual from the fainted Pokémon's last move so it's not
-                    // re-attributed to the new one.
-                    lastEnemyMoveId = currentEnemyMoveId
-                } else if (currentEnemyMoveId != 0 && currentEnemyMoveId != lastEnemyMoveId) {
-                    // Validate: move must be in starting moveset to guard Sketch/Mimic
-                    // (Lua: check lastMoveByAttacker == attacker.moves[1..4])
-                    // Note: gHitMarker/gMoveResultFlags skipped — transient within one game frame,
-                    // unreliable at 250ms polling; moveset snapshot is sufficient.
-                    if (currentEnemyMoveId in enemyStartingMoveset || enemyStartingMoveset.isEmpty()) {
-                        // ── Persistent store (Lua Tracker.TrackMove — flat by speciesId, unbounded) ──
-                        val persistent = revealedBySpecies.getOrPut(speciesId) { mutableListOf() }
-                        val existingIdx = persistent.indexOfFirst { it.id == currentEnemyMoveId }
-                        if (existingIdx == -1) {
-                            // New move: insert at front (Lua: table.insert(moves, 1, entry))
-                            persistent.add(0, TrackedMove(currentEnemyMoveId, level, level, level))
-                        } else {
-                            val entry = persistent[existingIdx]
-                            entry.level = level
-                            if (level < entry.minLv) entry.minLv = level
-                            if (level > entry.maxLv) entry.maxLv = level
-                            // Bubble to front if outside display window (Lua: moveIndexSeen > 4)
-                            if (existingIdx > 3) {
-                                persistent.removeAt(existingIdx)
-                                persistent.add(0, entry)
+                    // Enemy2 species change (doubles)
+                    if (isDoubles && enemy2Mon != null && speciesId2 > 0 && speciesId2 != lastKnownEnemy2SpeciesId) {
+                        val switchMoves2 = mutableSetOf<Int>()
+                        for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
+                                                  DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
+                            val m = enemy2Mon.u16(offset)
+                            if (m != 0) switchMoves2.add(m)
+                        }
+                        enemy2StartingMoveset = switchMoves2
+                        lastKnownEnemy2SpeciesId = speciesId2
+                    }
+                    // New move detected — attribute to enemy1, enemy2, or both based on starting moveset
+                    if (currentEnemyMoveId != 0 && currentEnemyMoveId != lastEnemyMoveId) {
+                        // Track for enemy1
+                        if (currentEnemyMoveId in enemyStartingMoveset || enemyStartingMoveset.isEmpty()) {
+                            val persistent = revealedBySpecies.getOrPut(speciesId) { mutableListOf() }
+                            val existingIdx = persistent.indexOfFirst { it.id == currentEnemyMoveId }
+                            if (existingIdx == -1) {
+                                persistent.add(0, TrackedMove(currentEnemyMoveId, level, level, level))
+                            } else {
+                                val entry = persistent[existingIdx]
+                                entry.level = level
+                                if (level < entry.minLv) entry.minLv = level
+                                if (level > entry.maxLv) entry.maxLv = level
+                                if (existingIdx > 3) { persistent.removeAt(existingIdx); persistent.add(0, entry) }
+                            }
+                            val battleKey = speciesId * 1000L + level
+                            if (battleFourConfirmedKey != battleKey) {
+                                val battleRevealed = battleRevealedByKey.getOrPut(battleKey) { mutableListOf() }
+                                if (currentEnemyMoveId !in battleRevealed) {
+                                    battleRevealed.add(currentEnemyMoveId)
+                                    if (battleRevealed.size == 4) battleFourConfirmedKey = battleKey
+                                }
                             }
                         }
-                        // ── Ephemeral battle notes (Lua Tracker.recordBattleMoveByPokemonLevel) ──
-                        val battleKey = speciesId * 1000L + level
-                        if (battleFourConfirmedKey != battleKey) {
-                            val battleRevealed = battleRevealedByKey.getOrPut(battleKey) { mutableListOf() }
-                            if (currentEnemyMoveId !in battleRevealed) {
-                                battleRevealed.add(currentEnemyMoveId)
-                                if (battleRevealed.size == 4) battleFourConfirmedKey = battleKey
+                        // Track for enemy2 (doubles)
+                        if (isDoubles && speciesId2 > 0 &&
+                            (currentEnemyMoveId in enemy2StartingMoveset || enemy2StartingMoveset.isEmpty())) {
+                            val persistent2 = revealedBySpecies.getOrPut(speciesId2) { mutableListOf() }
+                            val existingIdx2 = persistent2.indexOfFirst { it.id == currentEnemyMoveId }
+                            if (existingIdx2 == -1) {
+                                persistent2.add(0, TrackedMove(currentEnemyMoveId, level2, level2, level2))
+                            } else {
+                                val entry2 = persistent2[existingIdx2]
+                                entry2.level = level2
+                                if (level2 < entry2.minLv) entry2.minLv = level2
+                                if (level2 > entry2.maxLv) entry2.maxLv = level2
+                                if (existingIdx2 > 3) { persistent2.removeAt(existingIdx2); persistent2.add(0, entry2) }
+                            }
+                            val battleKey2 = speciesId2 * 1000L + level2
+                            if (battleFourConfirmedKey2 != battleKey2) {
+                                val battleRevealed2 = battleRevealedByKey2.getOrPut(battleKey2) { mutableListOf() }
+                                if (currentEnemyMoveId !in battleRevealed2) {
+                                    battleRevealed2.add(currentEnemyMoveId)
+                                    if (battleRevealed2.size == 4) battleFourConfirmedKey2 = battleKey2
+                                }
                             }
                         }
+                        lastEnemyMoveId = currentEnemyMoveId
                     }
-                    lastEnemyMoveId = currentEnemyMoveId
                 }
 
                 var ability1Id = 0; var ability2Id = 0
-
                 val baseStats = MemoryBridge.readBytes(
                     addresses.baseStatsTable + speciesId * DataHelper.BASE_STATS_ENTRY_SIZE,
                     DataHelper.BASE_STATS_ENTRY_SIZE
@@ -682,9 +753,6 @@ object TrackerPoller {
                     ability2Id = baseStats[DataHelper.BASE_STATS_ABILITY2].toInt() and 0xFF
                 }
 
-                // Read live types from gBattleMons — the game engine updates these for
-                // Conversion, Conversion 2, Camouflage, and Color Change (ability 16).
-                // Fall back to base stats if the battle struct read failed.
                 val type1 = (enemyMon[DataHelper.BMON_TYPE1].toInt() and 0xFF)
                     .let { if (it <= 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0 }
                 val type2 = (enemyMon[DataHelper.BMON_TYPE2].toInt() and 0xFF)
@@ -694,8 +762,6 @@ object TrackerPoller {
                 val currentHp = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_CURRENT_HP) else 0
                 val maxHpRaw = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_MAX_HP) else 0
 
-                // ── Enemy PP decode from party struct ─────────────────────────
-                // Decrypt enemy party struct to read current PP from Attacks substructure
                 val enemyPpByMoveId: Map<Int, Int> = if (enemyRaw != null && enemyRaw.size >= 100) {
                     val ePers = enemyRaw.u32(DataHelper.OFF_PERSONALITY)
                     val eOt   = enemyRaw.u32(DataHelper.OFF_OT_ID)
@@ -749,17 +815,82 @@ object TrackerPoller {
             } else null
         } else null
 
-        // ── Player live types (gBattleMons slot 0, offsets 0x21/0x22) ───────────
-        // Updated by Conversion, Conversion 2, Camouflage, Color Change, etc.
+        // ── Enemy 2 decode (doubles, slot 3 = RightOther) ────────────────────────
+        val enemy2: EnemyData? = if (isDoubles && enemy2Mon != null && speciesId2 > 0) {
+            var ability1Id2 = 0; var ability2Id2 = 0
+            val baseStats2 = MemoryBridge.readBytes(
+                addresses.baseStatsTable + speciesId2 * DataHelper.BASE_STATS_ENTRY_SIZE,
+                DataHelper.BASE_STATS_ENTRY_SIZE
+            )
+            if (baseStats2 != null) {
+                ability1Id2 = baseStats2[DataHelper.BASE_STATS_ABILITY1].toInt() and 0xFF
+                ability2Id2 = baseStats2[DataHelper.BASE_STATS_ABILITY2].toInt() and 0xFF
+            }
+            val type1_2 = (enemy2Mon[DataHelper.BMON_TYPE1].toInt() and 0xFF)
+                .let { if (it <= 18) it else baseStats2?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0 }
+            val type2_2 = (enemy2Mon[DataHelper.BMON_TYPE2].toInt() and 0xFF)
+                .let { if (it <= 18) it else baseStats2?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: 0 }
+            val bst2 = addresses.extPokemonMap[speciesId2]?.bst ?: BstTable.bst(speciesId2)
+            val currentHp2 = if (enemy2Raw != null) enemy2Raw.u16(DataHelper.OFF_CURRENT_HP) else 0
+            val maxHpRaw2  = if (enemy2Raw != null) enemy2Raw.u16(DataHelper.OFF_MAX_HP) else 0
+            val enemyPpByMoveId2: Map<Int, Int> = if (enemy2Raw != null && enemy2Raw.size >= 100) {
+                val ePers = enemy2Raw.u32(DataHelper.OFF_PERSONALITY)
+                val eOt   = enemy2Raw.u32(DataHelper.OFF_OT_ID)
+                val eKey  = ePers xor eOt
+                val eDec  = ByteArray(48)
+                for (wi in 0 until 12) {
+                    val w = enemy2Raw.u32(DataHelper.OFF_ENCRYPTED + wi * 4) xor eKey
+                    eDec[wi*4+0] = (w and 0xFF).toByte()
+                    eDec[wi*4+1] = ((w shr 8) and 0xFF).toByte()
+                    eDec[wi*4+2] = ((w shr 16) and 0xFF).toByte()
+                    eDec[wi*4+3] = ((w shr 24) and 0xFF).toByte()
+                }
+                val eOrder2 = PokemonDecoder.SUBSTRUCTURE_ORDER[(ePers % 24).toInt()]
+                val atkOff2 = eOrder2[1] * 12
+                buildMap {
+                    for (slot in 0..3) {
+                        val mId = (eDec[atkOff2 + slot*2].toInt() and 0xFF) or
+                                  ((eDec[atkOff2 + slot*2 + 1].toInt() and 0xFF) shl 8)
+                        val pp  = eDec[atkOff2 + 8 + slot].toInt() and 0xFF
+                        if (mId != 0) put(mId, pp)
+                    }
+                }
+            } else emptyMap()
+            val persistent2 = revealedBySpecies[speciesId2]
+            val battleKey2 = speciesId2 * 1000L + level2
+            val fourConfirmed2 = if (battleFourConfirmedKey2 == battleKey2)
+                battleRevealedByKey2[battleKey2]?.toList() else null
+            val displayIds2 = fourConfirmed2 ?: persistent2?.take(4)?.map { it.id } ?: emptyList()
+            EnemyData(
+                speciesId               = speciesId2,
+                natDexId                = addresses.extPokemonMap[speciesId2]?.spriteId ?: speciesId2,
+                name                    = addresses.extPokemonMap[speciesId2]?.name ?: SpeciesNames.get(speciesId2),
+                level                   = level2,
+                type1                   = type1_2,
+                type2                   = type2_2,
+                ability1Id              = ability1Id2,
+                ability2Id              = ability2Id2,
+                bst                     = bst2,
+                revealedMoveIds         = displayIds2,
+                ppByMoveId              = enemyPpByMoveId2,
+                status                  = enemy2Mon[DataHelper.BMON_STATUS].toInt() and 0xFF,
+                currentHp               = currentHp2,
+                maxHp                   = maxHpRaw2,
+                totalTrackedMoveCount   = persistent2?.size ?: 0,
+                fourConfirmedThisBattle = fourConfirmed2,
+                allTrackedMoves         = persistent2?.toList() ?: emptyList(),
+            )
+        } else null
+
+        // ── Player live types (gBattleMons slot 0) ──────────────────────────────
         val playerTypeBytes = MemoryBridge.readBytes(
             addresses.battleMons + DataHelper.BMON_TYPE1.toLong(), 2
         )
         val playerType1 = playerTypeBytes?.get(0)?.toInt()?.and(0xFF) ?: -1
         val playerType2 = playerTypeBytes?.get(1)?.toInt()?.and(0xFF) ?: -1
 
-        // ── Player stat stages (gBattleMons slot 0, offset 0x18, 8 bytes) ─────
-        // Memory layout per Lua Battle.lua: [HP, Atk, Def, Spe, SpA, SpD, Acc, Eva]
-        // We reorder to display as:         [Atk, Def, SpA, SpD, Spe, Acc, Eva]
+        // ── Player stat stages (gBattleMons slot 0, offset 0x18) ────────────────
+        // Memory layout: [HP, Atk, Def, Spe, SpA, SpD, Acc, Eva]; display: [Atk,Def,SpA,SpD,Spe,Acc,Eva]
         val playerStatStages = MemoryBridge.readBytes(addresses.battleMons + 0x18L, 8)
             ?.let { b ->
                 intArrayOf(
@@ -773,38 +904,43 @@ object TrackerPoller {
                 )
             }
 
-        // ── Trainer opponent ID ───────────────────────────────────────────────
+        // ── Active player party indices for doubles (gBattlerPartyIndexes) ──────
+        // +0 = LeftOwn, +4 = RightOwn (Lua: gBattlerPartyIndexes + 4)
+        val playerMon1PartyIdx = if (isDoubles && addresses.gBattlerPartyIndexes != 0L) {
+            (MemoryBridge.readU8(addresses.gBattlerPartyIndexes + 0L) ?: 0).coerceIn(0, 5)
+        } else 0
+        val playerMon2PartyIdx = if (isDoubles && addresses.gBattlerPartyIndexes != 0L) {
+            (MemoryBridge.readU8(addresses.gBattlerPartyIndexes + 4L) ?: 0).coerceIn(0, 5)
+        } else -1
+
+        // ── Trainer opponent ID ──────────────────────────────────────────────────
         val trainerOpponentId = if (!isWild && addresses.trainerBattleOpponent != 0L)
             MemoryBridge.readU16(addresses.trainerBattleOpponent) ?: 0
         else 0
 
-        // ── Weather ───────────────────────────────────────────────────────────
+        // ── Weather ──────────────────────────────────────────────────────────────
         val weatherBytes = MemoryBridge.readBytes(addresses.battleWeather, 2)
         val weatherBits = weatherBytes?.let {
             (it[0].toInt() and 0xFF) or ((it[1].toInt() and 0xFF) shl 8)
         } ?: 0
-
         val weather = when {
-            weatherBits and 0x07 != 0 -> Weather.RAIN   // bits 0-2
-            weatherBits and 0x18 != 0 -> Weather.SAND   // bits 3-4
-            weatherBits and 0x60 != 0 -> Weather.SUN    // bits 5-6
-            weatherBits and 0x80 != 0 -> Weather.HAIL   // bit 7
+            weatherBits and 0x07 != 0 -> Weather.RAIN
+            weatherBits and 0x18 != 0 -> Weather.SAND
+            weatherBits and 0x60 != 0 -> Weather.SUN
+            weatherBits and 0x80 != 0 -> Weather.HAIL
             else -> Weather.NONE
         }
 
-        // ── Side statuses (reflect/light screen/spikes/safeguard) ────────────
+        // ── Side statuses ────────────────────────────────────────────────────────
         val sideStatus = MemoryBridge.readBytes(addresses.sideStatuses, 4)
         val playerSideStatus = sideStatus?.let {
             (it[0].toInt() and 0xFF) or ((it[1].toInt() and 0xFF) shl 8)
         } ?: 0
-
-        // Side timers: 0x00..0x0F = player side timer block
         val sideTimer = MemoryBridge.readBytes(addresses.sideTimers, 16)
         val reflectTurns      = sideTimer?.get(4)?.toInt()?.and(0xFF) ?: 0
         val lightScreenTurns  = sideTimer?.get(5)?.toInt()?.and(0xFF) ?: 0
         val safeguardTurns    = sideTimer?.get(6)?.toInt()?.and(0xFF) ?: 0
-
-        val spikes = (playerSideStatus ushr 9) and 0x03  // bits 9-10
+        val spikes = (playerSideStatus ushr 9) and 0x03
 
         return BattleState(
             isActive           = true,
@@ -821,6 +957,10 @@ object TrackerPoller {
             playerStatStages   = playerStatStages,
             playerType1        = playerType1,
             playerType2        = playerType2,
+            isDoubles          = isDoubles,
+            enemy2             = enemy2,
+            playerMon1PartyIdx = playerMon1PartyIdx,
+            playerMon2PartyIdx = playerMon2PartyIdx,
         )
     }
 
