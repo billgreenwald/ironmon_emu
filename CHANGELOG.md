@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.5.0] - 2026-07-05
+
+### Added
+- **Doubles battle support** — the tracker now detects doubles battles and automatically switches the MY MON and OPPONENT tabs into Mon 1 / Mon 2 sub-tabs. Swipe left/right navigates between the two active Pokémon per side; the outer tab-pager becomes tap-only so inner swipes aren't hijacked. A "Mon 1 · Mon 2" indicator row appears below the tab bar to signal doubles mode. Enemy 2 species, level, types, HP, and revealed moves are fully tracked using the same `gBattleMons` slot logic as the Lua tracker.
+
 ## [3.4.11] - 2026-07-05
 
 ### Fixed
