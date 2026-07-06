@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.1] - 2026-07-05
+
+### Fixed
+- **43 missing FRLG locations now named correctly** — S.S. Anne Rooms (IDs 177–178), Canyon Entrance / Sevault Canyon / Tanoby Ruins (255–257), Summit Path 1F–3F (282–284), Ruby Path floors (285–290), Trainer Tower 1F–8F (298–305), Lost Cave Rooms 1–14 (321–334), Tanoby Chambers / Monean / Liptoo / Weepth / Dilford / Scufib / Rixy / Viapois (335–339, 362–363) were all returning "Unknown Location". All 192 Lua-tracker FRLG mapLayoutIds are now covered.
+- **Diglett's Cave correctly named "Diglett's Cave B1F"** — was missing the floor suffix, now matches the Lua tracker.
+
 ## [3.5.0] - 2026-07-05
 
 ### Added
