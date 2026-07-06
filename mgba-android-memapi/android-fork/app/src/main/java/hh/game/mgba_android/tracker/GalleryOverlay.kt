@@ -123,6 +123,16 @@ fun GalleryOverlay(
                                 }
                                 .transformable(state = transformableState),
                             imageOptions = ImageOptions(contentScale = ContentScale.Fit),
+                            loading = {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = TextSecGallery)
+                                }
+                            },
+                            failure = {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text("Image unavailable", color = TextSecGallery, fontSize = 13.sp)
+                                }
+                            },
                         )
                     }
 
