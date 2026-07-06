@@ -1,5 +1,8 @@
 package hh.game.mgba_android.tracker
 
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -22,6 +25,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.skydoves.landscapist.ImageOptions
 import com.skydoves.landscapist.glide.GlideImage
+import com.skydoves.landscapist.glide.GlideImageState
 import hh.game.mgba_android.tracker.tables.ImageAssetMap
 import kotlinx.coroutines.launch
 
@@ -123,6 +127,24 @@ fun GalleryOverlay(
                                 }
                                 .transformable(state = transformableState),
                             imageOptions = ImageOptions(contentScale = ContentScale.Fit),
+                            onImageStateChanged = { state ->
+                                val path = images[page]
+                                when (state) {
+                                    is GlideImageState.Loading ->
+                                        Log.d("Gallery", "loading: $path")
+                                    is GlideImageState.Success -> {
+                                        val sizeStr = when (val d = state.data) {
+                                            is BitmapDrawable -> "${d.bitmap?.width}x${d.bitmap?.height}"
+                                            is Drawable -> "${d.intrinsicWidth}x${d.intrinsicHeight}"
+                                            else -> d?.javaClass?.simpleName ?: "null"
+                                        }
+                                        Log.d("Gallery", "success: $path size=$sizeStr src=${state.dataSource}")
+                                    }
+                                    is GlideImageState.Failure ->
+                                        Log.e("Gallery", "failure: $path reason=${state.reason}")
+                                    else -> {}
+                                }
+                            },
                             loading = {
                                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     CircularProgressIndicator(color = TextSecGallery)
