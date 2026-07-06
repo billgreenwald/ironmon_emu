@@ -1,10 +1,12 @@
 package hh.game.mgba_android.tracker
 
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -12,26 +14,32 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.skydoves.landscapist.ImageOptions
-import com.skydoves.landscapist.glide.GlideImage
-import com.skydoves.landscapist.glide.GlideImageState
+import com.bumptech.glide.Glide
 import hh.game.mgba_android.tracker.tables.ImageAssetMap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val GalleryBg      = Color(0xFF0A0A0A)
 private val GalleryHeader  = Color(0xFF1A1A2E)
 private val TextSecGallery = Color(0xFFAAAAAA)
+
+private sealed interface GalleryImageState {
+    object Loading : GalleryImageState
+    data class Success(val bitmap: Bitmap) : GalleryImageState
+    data class Failure(val reason: String) : GalleryImageState
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -97,6 +105,7 @@ fun GalleryOverlay(
                     val pagerState = rememberPagerState(pageCount = { images.size })
                     val scope = rememberCoroutineScope()
                     var currentPageScale by remember { mutableFloatStateOf(1f) }
+                    val context = LocalContext.current
 
                     HorizontalPager(
                         state = pagerState,
@@ -105,9 +114,28 @@ fun GalleryOverlay(
                     ) { page ->
                         var scale by remember(page) { mutableFloatStateOf(1f) }
                         var offset by remember(page) { mutableStateOf(Offset.Zero) }
+                        var imgState by remember(page) { mutableStateOf<GalleryImageState>(GalleryImageState.Loading) }
 
                         LaunchedEffect(scale, pagerState.currentPage) {
                             if (page == pagerState.currentPage) currentPageScale = scale
+                        }
+
+                        LaunchedEffect(images[page]) {
+                            imgState = GalleryImageState.Loading
+                            Log.d("Gallery", "loading: ${images[page]}")
+                            val future = Glide.with(context).asBitmap()
+                                .load("file:///android_asset/${images[page]}")
+                                .submit()
+                            try {
+                                val bmp = withContext(Dispatchers.IO) { future.get() }
+                                Log.d("Gallery", "success: ${images[page]} size=${bmp.width}x${bmp.height}")
+                                imgState = GalleryImageState.Success(bmp)
+                            } catch (e: Exception) {
+                                Log.e("Gallery", "failure: ${images[page]} reason=$e")
+                                imgState = GalleryImageState.Failure(e.message ?: "unknown")
+                            } finally {
+                                future.cancel(true)
+                            }
                         }
 
                         val transformableState = rememberTransformableState { zoomChange, panChange, _ ->
@@ -115,8 +143,7 @@ fun GalleryOverlay(
                             if (scale > 1f) offset += panChange else offset = Offset.Zero
                         }
 
-                        GlideImage(
-                            imageModel = { "file:///android_asset/${images[page]}" },
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer {
@@ -126,36 +153,22 @@ fun GalleryOverlay(
                                     translationY = offset.y
                                 }
                                 .transformable(state = transformableState),
-                            imageOptions = ImageOptions(contentScale = ContentScale.Fit),
-                            onImageStateChanged = { state ->
-                                val path = images[page]
-                                when (state) {
-                                    is GlideImageState.Loading ->
-                                        Log.d("Gallery", "loading: $path")
-                                    is GlideImageState.Success -> {
-                                        val sizeStr = when (val d = state.data) {
-                                            is BitmapDrawable -> "${d.bitmap?.width}x${d.bitmap?.height}"
-                                            is Drawable -> "${d.intrinsicWidth}x${d.intrinsicHeight}"
-                                            else -> d?.javaClass?.simpleName ?: "null"
-                                        }
-                                        Log.d("Gallery", "success: $path size=$sizeStr src=${state.dataSource}")
-                                    }
-                                    is GlideImageState.Failure ->
-                                        Log.e("Gallery", "failure: $path reason=${state.reason}")
-                                    else -> {}
-                                }
-                            },
-                            loading = {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            when (val s = imgState) {
+                                is GalleryImageState.Loading ->
                                     CircularProgressIndicator(color = TextSecGallery)
-                                }
-                            },
-                            failure = {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                is GalleryImageState.Success ->
+                                    Image(
+                                        bitmap = s.bitmap.asImageBitmap(),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit,
+                                    )
+                                is GalleryImageState.Failure ->
                                     Text("Image unavailable", color = TextSecGallery, fontSize = 13.sp)
-                                }
-                            },
-                        )
+                            }
+                        }
                     }
 
                     // ── Page navigation footer ──────────────────────────────
