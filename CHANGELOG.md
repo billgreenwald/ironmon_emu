@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.5.2] - 2026-07-09
+
+### Fixed
+- **All dungeon floors now link to the image gallery** — previously only the first floor of multi-floor areas showed the ↗ indicator and gallery tap. Rock Tunnel B1F, Victory Road 2F/3F, Seafoam Islands B1F–B4F, Pokemon Tower 1F–4F/6F–7F, Rocket Hideout B2F, S.S. Anne Kitchen/Captain's Office/Rooms, and Safari Zone North/West now all open the same gallery as the corresponding dungeon's other floors.
+
 ## [3.5.1] - 2026-07-05
 
 ### Fixed

@@ -191,6 +191,33 @@ object ImageAssetMap {
                 "maps/hidden_items/s_ss_anne.png",
             ),
         ),
+        "S.S. Anne Kitchen" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/ss_anne.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/ss_anne_1.png",
+                "maps/hidden_items/ss_anne_2.png",
+                "maps/hidden_items/ss_anne_3.png",
+                "maps/hidden_items/s_ss_anne.png",
+            ),
+        ),
+        "S.S. Anne Captain's Office" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/ss_anne.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/ss_anne_1.png",
+                "maps/hidden_items/ss_anne_2.png",
+                "maps/hidden_items/ss_anne_3.png",
+                "maps/hidden_items/s_ss_anne.png",
+            ),
+        ),
+        "S.S. Anne Rooms" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/ss_anne.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/ss_anne_1.png",
+                "maps/hidden_items/ss_anne_2.png",
+                "maps/hidden_items/ss_anne_3.png",
+                "maps/hidden_items/s_ss_anne.png",
+            ),
+        ),
         "Mt. Moon 1F" to RouteImages(
             routeMaps   = listOf("maps/route_maps/mt_moon.png"),
             hiddenItems = (1..8).map { "maps/hidden_items/mt_moon_$it.png" },
@@ -204,6 +231,9 @@ object ImageAssetMap {
             hiddenItems = (1..8).map { "maps/hidden_items/mt_moon_$it.png" },
         ),
         "Rock Tunnel 1F" to RouteImages(
+            routeMaps = listOf("maps/route_maps/rock_tunnel.png"),
+        ),
+        "Rock Tunnel B1F" to RouteImages(
             routeMaps = listOf("maps/route_maps/rock_tunnel.png"),
         ),
         "Underground Path (N-S)" to RouteImages(
@@ -232,12 +262,45 @@ object ImageAssetMap {
                 "maps/hidden_items/safari_zone_2.png",
             ),
         ),
+        "Safari Zone North" to RouteImages(
+            hiddenItems = listOf(
+                "maps/hidden_items/safari_zone_1.png",
+                "maps/hidden_items/safari_zone_2.png",
+            ),
+        ),
+        "Safari Zone West" to RouteImages(
+            hiddenItems = listOf(
+                "maps/hidden_items/safari_zone_1.png",
+                "maps/hidden_items/safari_zone_2.png",
+            ),
+        ),
+        "Pokemon Tower 1F" to RouteImages(
+            hiddenItems = listOf("maps/hidden_items/pokemon_tower.png"),
+        ),
+        "Pokemon Tower 2F" to RouteImages(
+            hiddenItems = listOf("maps/hidden_items/pokemon_tower.png"),
+        ),
+        "Pokemon Tower 3F" to RouteImages(
+            hiddenItems = listOf("maps/hidden_items/pokemon_tower.png"),
+        ),
+        "Pokemon Tower 4F" to RouteImages(
+            hiddenItems = listOf("maps/hidden_items/pokemon_tower.png"),
+        ),
         "Pokemon Tower 5F" to RouteImages(
+            hiddenItems = listOf("maps/hidden_items/pokemon_tower.png"),
+        ),
+        "Pokemon Tower 6F" to RouteImages(
+            hiddenItems = listOf("maps/hidden_items/pokemon_tower.png"),
+        ),
+        "Pokemon Tower 7F" to RouteImages(
             hiddenItems = listOf("maps/hidden_items/pokemon_tower.png"),
         ),
         "Rocket Hideout B1F" to RouteImages(
             routeMaps   = listOf("maps/route_maps/rocket_hideout.png"),
             hiddenItems = listOf("maps/hidden_items/rocket_hideout_b1.png"),
+        ),
+        "Rocket Hideout B2F" to RouteImages(
+            routeMaps = listOf("maps/route_maps/rocket_hideout.png"),
         ),
         "Rocket Hideout B3F" to RouteImages(
             hiddenItems = listOf("maps/hidden_items/rocket_hideout_b3.png"),
@@ -297,7 +360,43 @@ object ImageAssetMap {
                 "maps/hidden_items/seafoam_islands_2.png",
             ),
         ),
+        "Seafoam Islands B1F" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/seafoam_islands.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/seafoam_islands_1.png",
+                "maps/hidden_items/seafoam_islands_2.png",
+            ),
+        ),
+        "Seafoam Islands B2F" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/seafoam_islands.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/seafoam_islands_1.png",
+                "maps/hidden_items/seafoam_islands_2.png",
+            ),
+        ),
+        "Seafoam Islands B3F" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/seafoam_islands.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/seafoam_islands_1.png",
+                "maps/hidden_items/seafoam_islands_2.png",
+            ),
+        ),
+        "Seafoam Islands B4F" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/seafoam_islands.png"),
+            hiddenItems = listOf(
+                "maps/hidden_items/seafoam_islands_1.png",
+                "maps/hidden_items/seafoam_islands_2.png",
+            ),
+        ),
         "Victory Road 1F" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/victory_road.png"),
+            hiddenItems = listOf("maps/hidden_items/victory_road.png"),
+        ),
+        "Victory Road 2F" to RouteImages(
+            routeMaps   = listOf("maps/route_maps/victory_road.png"),
+            hiddenItems = listOf("maps/hidden_items/victory_road.png"),
+        ),
+        "Victory Road 3F" to RouteImages(
             routeMaps   = listOf("maps/route_maps/victory_road.png"),
             hiddenItems = listOf("maps/hidden_items/victory_road.png"),
         ),
