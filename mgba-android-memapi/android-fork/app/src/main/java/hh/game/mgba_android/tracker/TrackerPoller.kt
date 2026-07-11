@@ -694,52 +694,63 @@ object TrackerPoller {
                     }
                     // New move detected — attribute to enemy1, enemy2, or both based on starting moveset
                     if (currentEnemyMoveId != 0 && currentEnemyMoveId != lastEnemyMoveId) {
-                        // Track for enemy1
-                        if (currentEnemyMoveId in enemyStartingMoveset || enemyStartingMoveset.isEmpty()) {
-                            val persistent = revealedBySpecies.getOrPut(speciesId) { mutableListOf() }
-                            val existingIdx = persistent.indexOfFirst { it.id == currentEnemyMoveId }
-                            if (existingIdx == -1) {
-                                persistent.add(0, TrackedMove(currentEnemyMoveId, level, level, level))
-                            } else {
-                                val entry = persistent[existingIdx]
-                                entry.level = level
-                                if (level < entry.minLv) entry.minLv = level
-                                if (level > entry.maxLv) entry.maxLv = level
-                                if (existingIdx > 3) { persistent.removeAt(existingIdx); persistent.add(0, entry) }
-                            }
-                            val battleKey = speciesId * 1000L + level
-                            if (battleFourConfirmedKey != battleKey) {
-                                val battleRevealed = battleRevealedByKey.getOrPut(battleKey) { mutableListOf() }
-                                if (currentEnemyMoveId !in battleRevealed) {
-                                    battleRevealed.add(currentEnemyMoveId)
-                                    if (battleRevealed.size == 4) battleFourConfirmedKey = battleKey
-                                }
-                            }
-                        }
-                        // Track for enemy2 (doubles)
-                        if (isDoubles && speciesId2 > 0 &&
-                            (currentEnemyMoveId in enemy2StartingMoveset || enemy2StartingMoveset.isEmpty())) {
-                            val persistent2 = revealedBySpecies.getOrPut(speciesId2) { mutableListOf() }
-                            val existingIdx2 = persistent2.indexOfFirst { it.id == currentEnemyMoveId }
-                            if (existingIdx2 == -1) {
-                                persistent2.add(0, TrackedMove(currentEnemyMoveId, level2, level2, level2))
-                            } else {
-                                val entry2 = persistent2[existingIdx2]
-                                entry2.level = level2
-                                if (level2 < entry2.minLv) entry2.minLv = level2
-                                if (level2 > entry2.maxLv) entry2.maxLv = level2
-                                if (existingIdx2 > 3) { persistent2.removeAt(existingIdx2); persistent2.add(0, entry2) }
-                            }
-                            val battleKey2 = speciesId2 * 1000L + level2
-                            if (battleFourConfirmedKey2 != battleKey2) {
-                                val battleRevealed2 = battleRevealedByKey2.getOrPut(battleKey2) { mutableListOf() }
-                                if (currentEnemyMoveId !in battleRevealed2) {
-                                    battleRevealed2.add(currentEnemyMoveId)
-                                    if (battleRevealed2.size == 4) battleFourConfirmedKey2 = battleKey2
-                                }
-                            }
-                        }
+                        // Skip if HITMARKER_UNABLE_TO_USE_MOVE is set (Truant, full paralysis, etc.)
+                        // Mirrors Lua Battle.lua hitmarkerFlag80000 check.
+                        val hitMarker = if (addresses.gHitMarker != 0L)
+                            MemoryBridge.readU32(addresses.gHitMarker) ?: 0L else 0L
+                        val moveBlocked = (hitMarker and DataHelper.HITMARKER_UNABLE_TO_USE) != 0L
+                        // Skip if enemy already fainted this turn (player KO'd them before they acted).
+                        val enemyFainted = enemyRaw != null && level > 0 &&
+                            enemyRaw.u16(DataHelper.OFF_CURRENT_HP) == 0
+                        // Always advance lastEnemyMoveId so a blocked value doesn't re-trigger next poll.
                         lastEnemyMoveId = currentEnemyMoveId
+                        if (!moveBlocked && !enemyFainted) {
+                            // Track for enemy1
+                            if (currentEnemyMoveId in enemyStartingMoveset || enemyStartingMoveset.isEmpty()) {
+                                val persistent = revealedBySpecies.getOrPut(speciesId) { mutableListOf() }
+                                val existingIdx = persistent.indexOfFirst { it.id == currentEnemyMoveId }
+                                if (existingIdx == -1) {
+                                    persistent.add(0, TrackedMove(currentEnemyMoveId, level, level, level))
+                                } else {
+                                    val entry = persistent[existingIdx]
+                                    entry.level = level
+                                    if (level < entry.minLv) entry.minLv = level
+                                    if (level > entry.maxLv) entry.maxLv = level
+                                    if (existingIdx > 3) { persistent.removeAt(existingIdx); persistent.add(0, entry) }
+                                }
+                                val battleKey = speciesId * 1000L + level
+                                if (battleFourConfirmedKey != battleKey) {
+                                    val battleRevealed = battleRevealedByKey.getOrPut(battleKey) { mutableListOf() }
+                                    if (currentEnemyMoveId !in battleRevealed) {
+                                        battleRevealed.add(currentEnemyMoveId)
+                                        if (battleRevealed.size == 4) battleFourConfirmedKey = battleKey
+                                    }
+                                }
+                            }
+                            // Track for enemy2 (doubles)
+                            if (isDoubles && speciesId2 > 0 &&
+                                (currentEnemyMoveId in enemy2StartingMoveset || enemy2StartingMoveset.isEmpty())) {
+                                val persistent2 = revealedBySpecies.getOrPut(speciesId2) { mutableListOf() }
+                                val existingIdx2 = persistent2.indexOfFirst { it.id == currentEnemyMoveId }
+                                if (existingIdx2 == -1) {
+                                    persistent2.add(0, TrackedMove(currentEnemyMoveId, level2, level2, level2))
+                                } else {
+                                    val entry2 = persistent2[existingIdx2]
+                                    entry2.level = level2
+                                    if (level2 < entry2.minLv) entry2.minLv = level2
+                                    if (level2 > entry2.maxLv) entry2.maxLv = level2
+                                    if (existingIdx2 > 3) { persistent2.removeAt(existingIdx2); persistent2.add(0, entry2) }
+                                }
+                                val battleKey2 = speciesId2 * 1000L + level2
+                                if (battleFourConfirmedKey2 != battleKey2) {
+                                    val battleRevealed2 = battleRevealedByKey2.getOrPut(battleKey2) { mutableListOf() }
+                                    if (currentEnemyMoveId !in battleRevealed2) {
+                                        battleRevealed2.add(currentEnemyMoveId)
+                                        if (battleRevealed2.size == 4) battleFourConfirmedKey2 = battleKey2
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
