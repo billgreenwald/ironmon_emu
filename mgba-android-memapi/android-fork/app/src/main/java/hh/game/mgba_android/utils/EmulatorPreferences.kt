@@ -26,6 +26,7 @@ object EmulatorPreferences {
     private const val KEY_NAME_ENTRY_ENABLED = "pref_name_entry_enabled"
     private const val KEY_TRAINER_NAME       = "pref_trainer_name"
     private const val KEY_RIVAL_NAME         = "pref_rival_name"
+    private const val KEY_LAST_SHADER        = "pref_last_shader"
 
     val speedOptions = listOf(1 to 60f, 2 to 120f, 3 to 180f, 4 to 240f)
     // All mappable GBA inputs (matches getKey() string names)
@@ -134,6 +135,13 @@ object EmulatorPreferences {
 
     fun setRivalName(ctx: Context, v: String) {
         ctx.getSharedPreferences(PREFS, 0).edit().putString(KEY_RIVAL_NAME, v).apply()
+    }
+
+    fun getLastShader(ctx: Context): String = ctx.getSharedPreferences(PREFS, 0)
+        .getString(KEY_LAST_SHADER, "") ?: ""
+
+    fun setLastShader(ctx: Context, shaderName: String) {
+        ctx.getSharedPreferences(PREFS, 0).edit().putString(KEY_LAST_SHADER, shaderName).apply()
     }
 
     fun getGbaKeyBinding(ctx: Context, btn: GbaButton): Int {
