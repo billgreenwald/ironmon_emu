@@ -458,7 +458,16 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         // Always copy to ensure we have the latest shaders (e.g. after app update)
         val shaderDir = File(filesDir, "shaders")
         copyAssets("shaders", shaderDir.absolutePath)
-        
+
+        val savedShader = EmulatorPreferences.getLastShader(this)
+        if (savedShader.isNotEmpty()) {
+            lifecycleScope.launch {
+                TrackerPoller.state.first { it is TrackerState.Active }
+                val shaderFile = File(shaderDir, savedShader)
+                if (shaderFile.exists()) setShader(shaderFile.absolutePath)
+            }
+        }
+
         // Initialize Tools Button
         findViewById<View>(R.id.tools_btn).setOnClickListener {
             val options = arrayOf("Shaders", "Memory Tools", "Close ROM", "Save State", "Load State", "Cheats", "Sound", "Next Run →", "Tracker Size", "Settings", "Name Entry Keyboard")
@@ -587,11 +596,11 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                 val selectedName = shaderFiles[which]
                 if (selectedName == "Clear") {
                     setShader("")
-                    // Toast.makeText(this, "Shader Cleared", Toast.LENGTH_SHORT).show()
+                    EmulatorPreferences.setLastShader(this, "")
                 } else {
                     val selectedFile = File(shaderDir, selectedName)
                     setShader(selectedFile.absolutePath)
-                    // Toast.makeText(this, "Applied: $selectedName", Toast.LENGTH_SHORT).show()
+                    EmulatorPreferences.setLastShader(this, selectedName)
                 }
             }
             .show()
