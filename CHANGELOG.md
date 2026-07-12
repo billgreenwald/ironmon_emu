@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.5.4] - 2026-07-12
+
+### Improved
+- **Shader selection is now remembered across sessions** — the last shader picked via Tools → Shaders is automatically re-applied when the app reopens. Choosing "Clear" also persists, so no shader is applied on next launch.
+
 ## [3.5.2] - 2026-07-09
 
 ### Fixed
