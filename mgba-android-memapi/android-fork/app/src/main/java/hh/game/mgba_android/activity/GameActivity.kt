@@ -292,6 +292,26 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         trackerExpanded = splitFraction != 1.0f  // game-overlay mode starts collapsed
         val arrowPx = if (hideCollapseButton) 0 else (24 * resources.displayMetrics.density).toInt()
         val gameWidth = if (isOverlay) screenWidthPx else (screenWidthPx * splitFraction).toInt()
+
+        Log.d("IronmonSettings", buildString {
+            appendLine("=== ROM START SETTINGS ===")
+            appendLine("  rom: $gamepath")
+            appendLine("  screen: ${screenWidthPx}px  gameWidth: ${gameWidth}px")
+            appendLine("  splitFraction: $splitFraction  isOverlay: $isOverlay")
+            appendLine("  trackerCollapsible: $trackerCollapsible  hideCollapseButton: $hideCollapseButton")
+            appendLine("  controlsScale: ${EmulatorPreferences.getControlsScale(this@GameActivity)}  controlsAlpha: ${EmulatorPreferences.getControlsAlpha(this@GameActivity)}")
+            appendLine("  hideOnScreenControls: ${EmulatorPreferences.getHideOnScreenControls(this@GameActivity)}  alwaysShowControls: ${EmulatorPreferences.getAlwaysShowControls(this@GameActivity)}")
+            appendLine("  invertControlsLayout: ${EmulatorPreferences.getInvertControlsLayout(this@GameActivity)}")
+            appendLine("  defaultFps: ${EmulatorPreferences.getDefaultFps(this@GameActivity)}  secondaryFps: ${EmulatorPreferences.getSecondaryFps(this@GameActivity)}")
+            appendLine("  speedButton: ${EmulatorPreferences.getSpeedButton(this@GameActivity)}  lAsSpeed: ${EmulatorPreferences.getLAsSpeed(this@GameActivity)}  speedToggleMode: ${EmulatorPreferences.getSpeedToggleMode(this@GameActivity)}")
+            appendLine("  showFps: ${EmulatorPreferences.getShowFps(this@GameActivity)}  muted: ${EmulatorPreferences.getMuted(this@GameActivity)}")
+            appendLine("  gameOverCondition: ${EmulatorPreferences.getGameOverCondition(this@GameActivity)}")
+            appendLine("  ruleset: ${EmulatorPreferences.getRuleset(this@GameActivity)}")
+            appendLine("  lastShader: ${EmulatorPreferences.getLastShader(this@GameActivity)}")
+            appendLine("  nameEntry: ${EmulatorPreferences.getNameEntryEnabled(this@GameActivity)}  trainer: '${EmulatorPreferences.getTrainerName(this@GameActivity)}'  rival: '${EmulatorPreferences.getRivalName(this@GameActivity)}'")
+            append("=========================")
+        })
+
         val trackerLeft = when {
             isOverlay && !trackerExpanded -> screenWidthPx - arrowPx
             isOverlay -> 0

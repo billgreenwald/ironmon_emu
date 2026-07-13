@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.5.5] - 2026-07-13
+
+### Fixed
+- **On-screen controls no longer overlap the tracker panel** — the padboard was rendering at full screen width instead of being bounded to the game zone, causing the R and A buttons to land inside the tracker. Wrapped the padboard in a clipping container that is hard-constrained to the game zone boundary; all button positions and touch targets are unaffected. Controls also cannot visually bleed past the game boundary when the size slider is set above 100%.
+
+### Improved
+- **All settings logged at ROM start** — each time a ROM loads, a single `IronmonSettings` logcat block captures split fraction, screen/game pixel widths, controls scale and opacity, FPS, speed-button config, game-over condition, ruleset, shader, and name-entry state. Filter with `adb logcat -s IronmonSettings` to snapshot a user's full configuration instantly.
+
 ## [3.5.4] - 2026-07-12
 
 ### Improved
