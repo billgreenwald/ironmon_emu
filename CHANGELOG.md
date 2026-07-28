@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.5.6] - 2026-07-27
+## [3.5.7] - 2026-07-28
 
 ### Fixed
 - **Opponent's exact HP is no longer shown** — the enemy HP bar previously displayed the precise `current/max` HP number, which is hidden information in Ironmon. The bar (relative HP) remains; the numeric value is now shown only for the player's own Pokémon.
