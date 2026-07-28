@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.5.6] - 2026-07-27
+
+### Fixed
+- **Doubles no longer falsely triggers in single battles on Max ROM hacks** — on the Max variants, `gBattlersCount` can read a garbage value ≥ 4 during a single battle, which flipped the tracker into its doubles layout and left the enemy Pokémon unfindable (empty "Party slot empty" / opponent sub-pages). Doubles now additionally requires the engine's authoritative `BATTLE_TYPE_DOUBLE` flag bit, and the UI falls back to the single-column view whenever no valid second enemy is present.
+
 ## [3.5.5] - 2026-07-13
 
 ### Fixed

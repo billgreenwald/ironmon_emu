@@ -111,6 +111,10 @@ object DataHelper {
     //   0x14-0x17: pp[4] (u8 each)
     //   0x18-0x1F: statStages[8] (u8 each)
     //   0x20: flags, 0x21: type1, 0x22: type2
+    // ── gBattleTypeFlags bits (Gen III engine constants, shared across all games) ──
+    const val BATTLE_TYPE_DOUBLE:  Int = 0x01  // (1 << 0)
+    const val BATTLE_TYPE_TRAINER: Int = 0x08  // (1 << 3)
+
     const val BATTLE_MON_SIZE: Int = 0x58  // 88 bytes per slot
     const val BMON_SPECIES:    Int = 0x00
     const val BMON_MOVE1:      Int = 0x0C

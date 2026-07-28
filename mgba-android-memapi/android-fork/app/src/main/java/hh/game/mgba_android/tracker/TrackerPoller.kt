@@ -577,8 +577,16 @@ object TrackerPoller {
         // gBattleOutcome: 0 = battle ongoing, non-zero = battle ended
         val battleOutcome = MemoryBridge.readU8(addresses.battleOutcome) ?: return BattleState.NONE
         val isActive = battlersCount > 0 && battleOutcome == 0
-        // gBattlersCount == 4 means 2v2 doubles (Lua: Battle.numBattlers == 4)
-        val isDoubles = isActive && battlersCount >= 4
+
+        // Battle type flags: BATTLE_TYPE_TRAINER = 0x08, BATTLE_TYPE_DOUBLE = 0x01
+        val typeFlags = MemoryBridge.readBytes(addresses.battleTypeFlags, 4)
+        val isWild = typeFlags != null && (typeFlags[0].toInt() and DataHelper.BATTLE_TYPE_TRAINER) == 0
+
+        // gBattlersCount == 4 means 2v2 doubles (Lua: Battle.numBattlers == 4), but on some
+        // ROM hacks (Max variants) gBattlersCount reads a garbage value ≥ 4 in single battles.
+        // Also require the engine's own BATTLE_TYPE_DOUBLE flag, which is 0 in a real single battle.
+        val isDoublesFlag = typeFlags != null && (typeFlags[0].toInt() and DataHelper.BATTLE_TYPE_DOUBLE) != 0
+        val isDoubles = isActive && isDoublesFlag && battlersCount >= 4
 
         // Detect battle transitions
         if (!isActive && lastBattleActive) {
@@ -592,10 +600,6 @@ object TrackerPoller {
         lastBattleActive = isActive
 
         if (!isActive) return BattleState.NONE
-
-        // Battle type flags: BATTLE_TYPE_TRAINER = (1 << 3) = 0x08
-        val typeFlags = MemoryBridge.readBytes(addresses.battleTypeFlags, 4)
-        val isWild = typeFlags != null && (typeFlags[0].toInt() and 0x08) == 0
 
         // ── Pre-read enemy2 slot data (doubles only) ────────────────────────────
         // Slot layout: 0=PlayerLeft, 1=EnemyLeft, 2=PlayerRight, 3=EnemyRight
