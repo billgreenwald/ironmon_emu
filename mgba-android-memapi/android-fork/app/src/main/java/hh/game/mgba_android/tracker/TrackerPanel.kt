@@ -1008,7 +1008,7 @@ private fun EnemyView(
                     )
                 }
                 Spacer(Modifier.height(2.dp))
-                HpBar(enemy.hpPercent, enemy.currentHp, enemy.maxHp)
+                HpBar(enemy.hpPercent, enemy.currentHp, enemy.maxHp, showNumbers = false)
             }
         }
         Spacer(Modifier.height(2.dp))
@@ -1596,7 +1596,7 @@ private fun HpBar(pokemon: PokemonData) {
 }
 
 @Composable
-private fun HpBar(pct: Float, current: Int, max: Int) {
+private fun HpBar(pct: Float, current: Int, max: Int, showNumbers: Boolean = true) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -1605,8 +1605,11 @@ private fun HpBar(pct: Float, current: Int, max: Int) {
             progress = pct, color = hpColor(pct), trackColor = Color(0xFF303050),
             modifier = Modifier.weight(1f).height(3.dp).clip(RoundedCornerShape(2.dp)),
         )
-        Spacer(Modifier.width(4.dp))
-        Text("$current/$max", color = TextSecondary, fontSize = ssp(12))
+        // Exact HP is hidden info in Ironmon — only shown for the player's own mon.
+        if (showNumbers) {
+            Spacer(Modifier.width(4.dp))
+            Text("$current/$max", color = TextSecondary, fontSize = ssp(12))
+        }
     }
 }
 
