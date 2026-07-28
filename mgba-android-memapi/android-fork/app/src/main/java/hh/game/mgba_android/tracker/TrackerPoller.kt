@@ -511,7 +511,12 @@ object TrackerPoller {
         }
 
         // ── Game stats (steps / battles / center visits) ─────────────────────
-        val stats = StatsReader.read(addresses)
+        // MAX_FR_GEN4's SaveBlock1 game-stats offset could not be resolved (the
+        // block reads all-zero / garbage at every reasoned offset), so hide stats
+        // for that variant rather than show wrong numbers. Everything else on gen4
+        // (battle, route) uses the same SaveBlock1 pointer and works.
+        val stats = if (maxFrVariant == MaxFrVariant.MAX_FR_GEN4) null
+                    else StatsReader.read(addresses)
 
         // ── Trainer defeat counts ─────────────────────────────────────────────
         // ROM hacks (MaxFR / NatDex): use session-tracked event counts (ROM-agnostic).
