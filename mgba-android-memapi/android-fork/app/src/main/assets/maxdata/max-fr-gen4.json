@@ -9,7 +9,7 @@
     "VersionName": "Pok\u00e9mon Emerald"
   },
   "Addresses": {
-    "gameStatsOffset": "120D",
+    "gameStatsOffset": "15A9",
     "gBattleScriptingBattler": "202448B",
     "gBattleTerrain": "0X02022B50",
     "sEvoStructPtr": "203AB80",
