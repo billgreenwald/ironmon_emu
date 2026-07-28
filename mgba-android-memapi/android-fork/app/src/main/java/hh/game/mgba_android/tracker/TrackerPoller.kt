@@ -392,7 +392,17 @@ object TrackerPoller {
         // ── Battle ────────────────────────────────────────────────────────────
         // Capture pre-poll battle state so we can detect the active→ended transition below.
         val wasBattleActive = lastBattleActive
-        val battleRaw = pollBattle(game, addresses)
+        val battleRaw0 = pollBattle(game, addresses)
+
+        // Only trust live gBattleMons slot-0 reads (lead's live types + stat stages) when
+        // slot 0 actually holds the lead. On some ROM hacks (Max variants) the player slot
+        // reads all zeros in battle, which corrupted the lead's type (→ Normal) and stat
+        // stages (→ all -6). Validate the slot-0 species against the party lead.
+        val slot0Species = if (battleRaw0.isActive) MemoryBridge.readU16(addresses.battleMons) ?: 0 else 0
+        val playerSlotValid = battleRaw0.isActive && party.isNotEmpty() && slot0Species == party[0].speciesId
+        val battleRaw = if (battleRaw0.isActive && !playerSlotValid)
+            battleRaw0.copy(playerType1 = -1, playerType2 = -1, playerStatStages = null)
+        else battleRaw0
 
         // Override lead Pokémon's types with live gBattleMons types while in battle.
         // This reflects Conversion, Conversion 2, Camouflage, and Color Change automatically.
@@ -501,7 +511,12 @@ object TrackerPoller {
         }
 
         // ── Game stats (steps / battles / center visits) ─────────────────────
-        val stats = StatsReader.read(addresses)
+        // MAX_FR_GEN4's SaveBlock1 game-stats offset could not be resolved (the
+        // block reads all-zero / garbage at every reasoned offset), so hide stats
+        // for that variant rather than show wrong numbers. Everything else on gen4
+        // (battle, route) uses the same SaveBlock1 pointer and works.
+        val stats = if (maxFrVariant == MaxFrVariant.MAX_FR_GEN4) null
+                    else StatsReader.read(addresses)
 
         // ── Trainer defeat counts ─────────────────────────────────────────────
         // ROM hacks (MaxFR / NatDex): use session-tracked event counts (ROM-agnostic).
@@ -577,8 +592,16 @@ object TrackerPoller {
         // gBattleOutcome: 0 = battle ongoing, non-zero = battle ended
         val battleOutcome = MemoryBridge.readU8(addresses.battleOutcome) ?: return BattleState.NONE
         val isActive = battlersCount > 0 && battleOutcome == 0
-        // gBattlersCount == 4 means 2v2 doubles (Lua: Battle.numBattlers == 4)
-        val isDoubles = isActive && battlersCount >= 4
+
+        // Battle type flags: BATTLE_TYPE_TRAINER = 0x08, BATTLE_TYPE_DOUBLE = 0x01
+        val typeFlags = MemoryBridge.readBytes(addresses.battleTypeFlags, 4)
+        val isWild = typeFlags != null && (typeFlags[0].toInt() and DataHelper.BATTLE_TYPE_TRAINER) == 0
+
+        // gBattlersCount == 4 means 2v2 doubles (Lua: Battle.numBattlers == 4), but on some
+        // ROM hacks (Max variants) gBattlersCount reads a garbage value ≥ 4 in single battles.
+        // Also require the engine's own BATTLE_TYPE_DOUBLE flag, which is 0 in a real single battle.
+        val isDoublesFlag = typeFlags != null && (typeFlags[0].toInt() and DataHelper.BATTLE_TYPE_DOUBLE) != 0
+        val isDoubles = isActive && isDoublesFlag && battlersCount >= 4
 
         // Detect battle transitions
         if (!isActive && lastBattleActive) {
@@ -592,10 +615,6 @@ object TrackerPoller {
         lastBattleActive = isActive
 
         if (!isActive) return BattleState.NONE
-
-        // Battle type flags: BATTLE_TYPE_TRAINER = (1 << 3) = 0x08
-        val typeFlags = MemoryBridge.readBytes(addresses.battleTypeFlags, 4)
-        val isWild = typeFlags != null && (typeFlags[0].toInt() and 0x08) == 0
 
         // ── Pre-read enemy2 slot data (doubles only) ────────────────────────────
         // Slot layout: 0=PlayerLeft, 1=EnemyLeft, 2=PlayerRight, 3=EnemyRight

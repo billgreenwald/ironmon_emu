@@ -238,7 +238,10 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
         return
     }
 
-    val isDoubles = state.battle.isDoubles
+    // Only treat as doubles when a valid second enemy actually exists — collapses
+    // to the single-column view if detection ever mis-fires (e.g. garbage battler
+    // count on Max hacks), so we never render empty sub-pages.
+    val isDoubles = state.battle.isDoubles && state.battle.enemy2 != null
 
     // Sub-tab pager shared between MY MONS and OPPONENTS tabs in doubles.
     // In singles this pager still exists but is never rendered.
