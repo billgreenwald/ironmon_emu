@@ -3,7 +3,9 @@
 ## [3.5.6] - 2026-07-27
 
 ### Fixed
-- **Doubles no longer falsely triggers in single battles on Max ROM hacks** — on the Max variants, `gBattlersCount` can read a garbage value ≥ 4 during a single battle, which flipped the tracker into its doubles layout and left the enemy Pokémon unfindable (empty "Party slot empty" / opponent sub-pages). Doubles now additionally requires the engine's authoritative `BATTLE_TYPE_DOUBLE` flag bit, and the UI falls back to the single-column view whenever no valid second enemy is present.
+- **Max FR (gen4) battle tracking corrected** — the gen4 address table (`max-fr-gen4.json`) had all of its battle-global and save-block addresses mistakenly copied from Emerald while its party addresses were FireRed-based, so `gBattleMons` and `gBattlersCount` pointed *inside* the enemy-party memory. This caused single battles to be misread as doubles (enemy unfindable) and the lead's live stat stages and type to read garbage (every stat stage showing −6, Fire type flipping to Normal on battle entry). Corrected 14 addresses (battle mons, battler count, party indexes, type flags, outcome, weather, side statuses/timers, communication, hit marker, move-result flags, battle results, and both save-block pointers) to the FireRed-consistent values.
+- **Doubles detection hardened** — doubles now additionally requires the engine's authoritative `BATTLE_TYPE_DOUBLE` flag bit (not just `gBattlersCount ≥ 4`), and the UI falls back to the single-column view whenever no valid second enemy is present, so a bad battler-count read can no longer hide the enemy.
+- **Live player type/stat-stages guarded** — the lead's live in-battle type override and stat-stage display are now applied only when the `gBattleMons` slot-0 species matches the party lead, preventing corrupted reads from overwriting the correct static data.
 
 ## [3.5.5] - 2026-07-13
 

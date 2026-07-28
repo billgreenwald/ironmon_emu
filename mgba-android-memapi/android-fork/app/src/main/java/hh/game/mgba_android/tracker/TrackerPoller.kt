@@ -392,7 +392,17 @@ object TrackerPoller {
         // ── Battle ────────────────────────────────────────────────────────────
         // Capture pre-poll battle state so we can detect the active→ended transition below.
         val wasBattleActive = lastBattleActive
-        val battleRaw = pollBattle(game, addresses)
+        val battleRaw0 = pollBattle(game, addresses)
+
+        // Only trust live gBattleMons slot-0 reads (lead's live types + stat stages) when
+        // slot 0 actually holds the lead. On some ROM hacks (Max variants) the player slot
+        // reads all zeros in battle, which corrupted the lead's type (→ Normal) and stat
+        // stages (→ all -6). Validate the slot-0 species against the party lead.
+        val slot0Species = if (battleRaw0.isActive) MemoryBridge.readU16(addresses.battleMons) ?: 0 else 0
+        val playerSlotValid = battleRaw0.isActive && party.isNotEmpty() && slot0Species == party[0].speciesId
+        val battleRaw = if (battleRaw0.isActive && !playerSlotValid)
+            battleRaw0.copy(playerType1 = -1, playerType2 = -1, playerStatStages = null)
+        else battleRaw0
 
         // Override lead Pokémon's types with live gBattleMons types while in battle.
         // This reflects Conversion, Conversion 2, Camouflage, and Color Change automatically.
