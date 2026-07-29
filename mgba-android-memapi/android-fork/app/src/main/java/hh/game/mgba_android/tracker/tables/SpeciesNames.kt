@@ -414,6 +414,15 @@ object SpeciesNames {
         return if (nationalId in NAMES.indices) NAMES[nationalId] else "#$internalId"
     }
 
+    // Reverse of INTERNAL_TO_NATIONAL (identity for 1–251). Randomizer logs list the
+    // National Dex number in the Base Stats sector; every app table keys on internal IDs.
+    private val NATIONAL_TO_INTERNAL: Map<Int, Int> by lazy {
+        INTERNAL_TO_NATIONAL.entries.associate { (internal, national) -> national to internal }
+    }
+
+    /** Maps a National Dex number (as printed in the randomizer log) to the Gen III internal species ID. */
+    fun nationalToInternal(nationalId: Int): Int = NATIONAL_TO_INTERNAL[nationalId] ?: nationalId
+
     // NatDex ROM hack species names (IDs 412–1235), from CyanSMP64/NatDexExtension pokeNameList.
     // IDs are the hack's internal species IDs, not National Dex numbers.
     private val NATDEX_NAMES = mapOf(

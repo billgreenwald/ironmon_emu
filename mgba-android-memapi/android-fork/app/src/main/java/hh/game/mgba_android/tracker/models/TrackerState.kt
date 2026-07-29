@@ -24,6 +24,8 @@ sealed class TrackerState {
         val bagDetail: BagDetailInfo? = null,
         val isGameOver: Boolean = false,
         val runAttempts: Int = 0,
+        // True when a randomizer .log file was found next to the ROM (gates the "Review Logs" banner)
+        val logAvailable: Boolean = false,
         val playerLearnset: LearnsetInfo? = null,
         val enemyLearnset: LearnsetInfo? = null,
         // Route encounter tracking: mapLayoutId → list of seen species IDs (in encounter order)
