@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.6.1] - 2026-07-29
+
+### Fixed
+- **Log viewer trainer filters now work** — the Rival / Gym / Elite 4 / Boss filters were classifying trainers by their log class text, which didn't match reliably. They now classify by trainer ID using the Ironmon Tracker's trainer-group data, so each filter shows the correct set.
+
+### Changed
+- **Log viewer "TMs" tab is now "Gym TMs"** — instead of the full TM list, it shows each gym badge → leader → the TM that leader awards on defeat (tap a leader to open their party). Brock→TM39, Misty→TM3, Lt. Surge→TM34, Erika→TM19, Koga→TM6, Sabrina→TM4, Blaine→TM38, Giovanni→TM26.
+
 ## [3.6.0] - 2026-07-28
 
 ### Added
