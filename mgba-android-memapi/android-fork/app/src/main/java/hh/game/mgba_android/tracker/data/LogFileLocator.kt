@@ -13,9 +13,9 @@ import java.io.InputStreamReader
  *
  * The randomizer names the log by appending `.log` to the full ROM filename
  * (e.g. `Seed12.gba` → `Seed12.gba.log`); some setups drop the ROM extension
- * (`Seed12.log`). Both are tried. The ROM folder is the SAF tree URI cached by
- * the game-list flow in SharedPreferences `"mGBA"` → `"folder_path"` (same key
- * QuickloadManager uses).
+ * (`Seed12.log`) or save the log as `.txt`. All variants are tried. The ROM
+ * folder is the SAF tree URI cached by the game-list flow in SharedPreferences
+ * `"mGBA"` → `"folder_path"` (same key QuickloadManager uses).
  */
 object LogFileLocator {
 
@@ -33,10 +33,10 @@ object LogFileLocator {
         return runCatching { Uri.parse(raw) }.getOrNull()
     }
 
-    /** Candidate log display names for a given ROM filename. */
+    /** Candidate log display names for a given ROM filename (.log preferred, .txt fallback). */
     private fun candidateNames(romFileName: String): List<String> {
         val base = romFileName.substringBeforeLast('.', romFileName)
-        return listOf("$romFileName.log", "$base.log")
+        return listOf("$romFileName.log", "$base.log", "$romFileName.txt", "$base.txt")
     }
 
     /** Finds the `.log` DocumentFile for [romFileName], or null if none exists. */
