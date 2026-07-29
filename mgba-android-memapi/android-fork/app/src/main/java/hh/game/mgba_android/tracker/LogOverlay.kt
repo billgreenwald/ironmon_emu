@@ -29,6 +29,7 @@ import hh.game.mgba_android.tracker.models.LogRoute
 import hh.game.mgba_android.tracker.models.LogTrainer
 import hh.game.mgba_android.tracker.models.TrackerState
 import hh.game.mgba_android.tracker.persistence.LogRepository
+import hh.game.mgba_android.tracker.tables.TrainerGroups
 import hh.game.mgba_android.tracker.tables.TypeChart
 
 // ── Palette (kept local, mirrors TrackerPanel) ────────────────────────────────
@@ -122,7 +123,7 @@ fun LogViewerOverlay(state: TrackerState.Active, onDismiss: () -> Unit) {
                             }
                         } else {
                             // ── Tabs ────────────────────────────────────
-                            val tabs = listOf("Pokémon", "Trainers", "Routes", "TMs", "Misc")
+                            val tabs = listOf("Pokémon", "Trainers", "Routes", "Gym TMs", "Misc")
                             ScrollableTabRow(
                                 selectedTabIndex = tab,
                                 containerColor = LogHeader,
@@ -138,9 +139,9 @@ fun LogViewerOverlay(state: TrackerState.Active, onDismiss: () -> Unit) {
                             Box(Modifier.weight(1f).fillMaxWidth()) {
                                 when (tab) {
                                     0 -> PokemonTab(data, state) { nav = LogNav.Pokemon(it) }
-                                    1 -> TrainersTab(data) { nav = LogNav.Trainer(it) }
+                                    1 -> TrainersTab(data, state.game) { nav = LogNav.Trainer(it) }
                                     2 -> RoutesTab(data) { nav = LogNav.Route(it) }
-                                    3 -> TmsTab(data)
+                                    3 -> TmsTab(data, state.game) { nav = LogNav.Trainer(it) }
                                     else -> MiscTab(data)
                                 }
                             }
@@ -343,22 +344,22 @@ private fun statColor(v: Int) = when {
 // ═══════════════════════════════════ TRAINERS ════════════════════════════════
 private enum class TrainerFilter(val label: String) { ALL("All"), RIVAL("Rival"), GYM("Gym"), ELITE("Elite 4"), BOSS("Boss") }
 
-private fun trainerMatchesFilter(t: LogTrainer, f: TrainerFilter): Boolean {
-    val c = t.trainerClass.lowercase()
-    return when (f) {
-        TrainerFilter.ALL -> true
-        TrainerFilter.RIVAL -> c.contains("rival")
-        TrainerFilter.GYM -> c.contains("leader")
-        TrainerFilter.ELITE -> c.contains("elite")
-        TrainerFilter.BOSS -> c.contains("champion") || c.contains("boss") || c.contains("team")
+private fun trainerMatchesFilter(t: LogTrainer, f: TrainerFilter, game: GameVersion): Boolean {
+    if (f == TrainerFilter.ALL) return true
+    return when (TrainerGroups.groupOf(game, t.num)) {
+        TrainerGroups.Group.RIVAL -> f == TrainerFilter.RIVAL
+        TrainerGroups.Group.GYM -> f == TrainerFilter.GYM
+        TrainerGroups.Group.ELITE4 -> f == TrainerFilter.ELITE
+        TrainerGroups.Group.BOSS -> f == TrainerFilter.BOSS
+        null -> false
     }
 }
 
 @Composable
-private fun TrainersTab(data: LogData, onOpen: (Int) -> Unit) {
+private fun TrainersTab(data: LogData, game: GameVersion, onOpen: (Int) -> Unit) {
     var filter by remember { mutableStateOf(TrainerFilter.ALL) }
     val trainers = remember(filter) {
-        data.trainers.values.filter { it.party.isNotEmpty() && trainerMatchesFilter(it, filter) }.sortedBy { it.num }
+        data.trainers.values.filter { it.party.isNotEmpty() && trainerMatchesFilter(it, filter, game) }.sortedBy { it.num }
     }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(8.dp)) {
@@ -503,15 +504,35 @@ private fun areaLabel(key: String) = when (key) {
     "RockSmash" -> "Rock Smash"; else -> key
 }
 
-// ═══════════════════════════════════ TMs ═════════════════════════════════════
+// ═══════════════════════════════════ GYM TMs ═════════════════════════════════
 @Composable
-private fun TmsTab(data: LogData) {
-    val tms = remember { data.tms.entries.sortedBy { it.key } }
+private fun TmsTab(data: LogData, game: GameVersion, onOpenTrainer: (Int) -> Unit) {
+    val gymTMs = remember(game) { TrainerGroups.gymTMs(game) }
+    if (gymTMs.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No gym TM data for this game.", color = LogTextSec, fontSize = 13.sp)
+        }
+        return
+    }
+    // Which TM each gym leader awards on defeat
     LazyColumn(Modifier.fillMaxSize()) {
-        items(tms, key = { it.key }) { (num, tm) ->
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp)) {
-                Text("TM%02d".format(num), color = LogTextSec, fontSize = 13.sp, modifier = Modifier.width(56.dp))
-                Text(tm.name.titlecaseWords(), color = LogText, fontSize = 13.sp)
+        items(gymTMs, key = { it.badge }) { g ->
+            val tm = data.tms[g.tmNumber]
+            val exists = data.trainers.containsKey(g.leaderTrainerId)
+            Row(
+                Modifier.fillMaxWidth()
+                    .then(if (exists) Modifier.clickable { onOpenTrainer(g.leaderTrainerId) } else Modifier)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Badge ${g.badge}", color = LogTextSec, fontSize = 11.sp, modifier = Modifier.width(64.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(g.leader, color = if (exists) LogAccent else LogText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "TM%02d  ·  %s".format(g.tmNumber, tm?.name?.titlecaseWords() ?: "?"),
+                        color = LogText, fontSize = 12.sp,
+                    )
+                }
             }
             Divider(color = Color(0xFF223), thickness = 0.5.dp)
         }
