@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.6.0] - 2026-07-28
+
+### Added
+- **Randomizer log viewer** — when a run ends, a blue "Review Logs" banner appears at the bottom of the tracker (alongside the red next-run banner) whenever a matching randomizer log sits next to the ROM. Tapping it opens a full-screen viewer with five tabs mirroring the Lua tracker: **Pokémon** (searchable/sortable list → base stats, types, abilities, held items, evolutions, and level-up / TM moves), **Trainers** (filterable by Rival/Gym/Elite 4/Boss → full party with levels, held items, and reconstructed movesets), **Routes** (wild encounters with level ranges and rates, plus route trainers), **TMs**, and **Misc** (game, randomizer version, seed, settings string). The log is auto-detected next to the ROM as either `.log` or `.txt`, and the banner is hidden when no log is present. Route wild-encounter data is currently FireRed/LeafGreen only; all other tabs work on every supported game.
+
 ## [3.5.7] - 2026-07-28
 
 ### Fixed
