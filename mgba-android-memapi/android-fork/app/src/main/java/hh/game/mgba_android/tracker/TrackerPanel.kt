@@ -174,9 +174,10 @@ private fun StatusText(msg: String) {
 // Matches Lua Constants.STAT_STATES: 0=blank, 1="+", 2="--", 3="="
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, onReroll: (() -> Unit)?) {
+private fun ColumnScope.ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, onReroll: (() -> Unit)?) {
     val statMarkings: SnapshotStateMap<Pair<Int, String>, Int> = remember { mutableStateMapOf() }
     var galleryRoute by remember { mutableStateOf<String?>(null) }
+    var showLog by remember { mutableStateOf(false) }
 
     PanelHeader(state)
 
@@ -321,7 +322,7 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
     // In singles: outer pager is swipeable as before.
     HorizontalPager(
         state = pagerState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.weight(1f).fillMaxWidth(),
         userScrollEnabled = !isDoubles,
     ) { page ->
         when (page) {
@@ -393,11 +394,32 @@ private fun ActivePanel(state: TrackerState.Active, onQuickload: (() -> Unit)?, 
         }
     }
 
+    // Blue "Review Logs" banner — bottom of the tracker, shown alongside the red
+    // "next run" banner on game over, but only when a randomizer .log was found.
+    if (state.isGameOver && state.logAvailable) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AccentBlue)
+                .clickable { showLog = true }
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text("📖  Review Logs", color = Color.White, fontSize = ssp(13), fontWeight = FontWeight.Bold)
+        }
+    }
+
     // Gallery overlay — shown as a full-screen Dialog above game + tracker
     galleryRoute?.let { name ->
         ImageAssetMap.MAP[name]?.let { images ->
             GalleryOverlay(routeName = name, routeImages = images, onDismiss = { galleryRoute = null })
         }
+    }
+
+    // Log viewer — full-screen Dialog above game + tracker
+    if (showLog) {
+        LogViewerOverlay(state = state, onDismiss = { showLog = false })
     }
 }
 

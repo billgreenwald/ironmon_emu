@@ -104,6 +104,11 @@ object TrackerPoller {
     private var appContext: Context? = null
     private var lastGameCode: String = ""
     private var romFamilyKey: String = ""  // derived from ROM filename prefix; key for RunRepository
+    @Volatile private var romFileName: String = ""  // full ROM filename (with ext); used to locate the .log
+    private val logAvailable = AtomicBoolean(false)  // set once when a matching .log is found next to the ROM
+
+    /** Full filename (with extension) of the loaded ROM, for locating its randomizer log. */
+    fun getRomFileName(): String = romFileName
     @Volatile private var runAttempts: Int = 0
     // Per-species notes for current run (keyed by species ID, cleared on new run)
     private val pokemonNotesCache = mutableMapOf<Int, String>()
@@ -191,7 +196,19 @@ object TrackerPoller {
         appContext = context.applicationContext
         if (romPath != null) {
             val fileName = java.io.File(romPath).name
+            romFileName = fileName
             romFamilyKey = hh.game.mgba_android.tracker.quickload.RomFamilyUtils.parseFamily(fileName, romPath).prefix
+            // One-time probe: is there a randomizer .log next to this ROM? Gates the
+            // "Review Logs" banner. Off the main thread since SAF enumeration is slow.
+            logAvailable.set(false)
+            val ctx = appContext
+            if (ctx != null && fileName.isNotEmpty()) {
+                scope.launch(Dispatchers.IO) {
+                    logAvailable.set(
+                        hh.game.mgba_android.tracker.data.LogFileLocator.exists(ctx, fileName)
+                    )
+                }
+            }
         }
         pollJob?.cancel()
         pollJob = scope.launch(Dispatchers.Default) {
@@ -571,6 +588,7 @@ object TrackerPoller {
             party = liveParty, battle = battle, currentRoute = route,
             stats = stats, bagDetail = bagDetail,
             isGameOver = isGameOver.get(), runAttempts = runAttempts,
+            logAvailable = logAvailable.get(),
             playerLearnset = playerLearnset, enemyLearnset = enemyLearnset,
             routeEncounters = encountersByRoute.mapValues { it.value.toList() },
             routeVisitOrder = routeVisitOrder.toList(),
