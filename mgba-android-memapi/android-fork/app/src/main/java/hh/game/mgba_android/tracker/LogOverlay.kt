@@ -123,7 +123,7 @@ fun LogViewerOverlay(state: TrackerState.Active, onDismiss: () -> Unit) {
                             }
                         } else {
                             // ── Tabs ────────────────────────────────────
-                            val tabs = listOf("Pokémon", "Trainers", "Routes", "TMs", "Misc")
+                            val tabs = listOf("Pokémon", "Trainers", "Routes", "Gym TMs", "Misc")
                             ScrollableTabRow(
                                 selectedTabIndex = tab,
                                 containerColor = LogHeader,
@@ -504,59 +504,37 @@ private fun areaLabel(key: String) = when (key) {
     "RockSmash" -> "Rock Smash"; else -> key
 }
 
-// ═══════════════════════════════════ TMs ═════════════════════════════════════
-private enum class TmFilter(val label: String) { ALL("All TMs"), GYM("Gym TMs") }
-
+// ═══════════════════════════════════ GYM TMs ═════════════════════════════════
 @Composable
 private fun TmsTab(data: LogData, game: GameVersion, onOpenTrainer: (Int) -> Unit) {
-    var filter by remember { mutableStateOf(TmFilter.ALL) }
     val gymTMs = remember(game) { TrainerGroups.gymTMs(game) }
-
-    Column(Modifier.fillMaxSize()) {
-        if (gymTMs.isNotEmpty()) {
-            Row(Modifier.horizontalScroll(rememberScrollState()).padding(8.dp)) {
-                TmFilter.values().forEach { f ->
-                    FilterChip(f.label, filter == f) { filter = f }
-                    Spacer(Modifier.width(6.dp))
-                }
-            }
+    if (gymTMs.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No gym TM data for this game.", color = LogTextSec, fontSize = 13.sp)
         }
-
-        if (filter == TmFilter.GYM && gymTMs.isNotEmpty()) {
-            // Which TM each gym leader awards on defeat
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(gymTMs, key = { it.badge }) { g ->
-                    val tm = data.tms[g.tmNumber]
-                    val exists = data.trainers.containsKey(g.leaderTrainerId)
-                    Row(
-                        Modifier.fillMaxWidth()
-                            .then(if (exists) Modifier.clickable { onOpenTrainer(g.leaderTrainerId) } else Modifier)
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("Badge ${g.badge}", color = LogTextSec, fontSize = 11.sp, modifier = Modifier.width(64.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(g.leader, color = if (exists) LogAccent else LogText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            Text(
-                                "TM%02d  ·  %s".format(g.tmNumber, tm?.name?.titlecaseWords() ?: "?"),
-                                color = LogText, fontSize = 12.sp,
-                            )
-                        }
-                    }
-                    Divider(color = Color(0xFF223), thickness = 0.5.dp)
+        return
+    }
+    // Which TM each gym leader awards on defeat
+    LazyColumn(Modifier.fillMaxSize()) {
+        items(gymTMs, key = { it.badge }) { g ->
+            val tm = data.tms[g.tmNumber]
+            val exists = data.trainers.containsKey(g.leaderTrainerId)
+            Row(
+                Modifier.fillMaxWidth()
+                    .then(if (exists) Modifier.clickable { onOpenTrainer(g.leaderTrainerId) } else Modifier)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Badge ${g.badge}", color = LogTextSec, fontSize = 11.sp, modifier = Modifier.width(64.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(g.leader, color = if (exists) LogAccent else LogText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "TM%02d  ·  %s".format(g.tmNumber, tm?.name?.titlecaseWords() ?: "?"),
+                        color = LogText, fontSize = 12.sp,
+                    )
                 }
             }
-        } else {
-            val tms = remember(data) { data.tms.entries.sortedBy { it.key } }
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(tms, key = { it.key }) { (num, tm) ->
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp)) {
-                        Text("TM%02d".format(num), color = LogTextSec, fontSize = 13.sp, modifier = Modifier.width(56.dp))
-                        Text(tm.name.titlecaseWords(), color = LogText, fontSize = 13.sp)
-                    }
-                    Divider(color = Color(0xFF223), thickness = 0.5.dp)
-                }
-            }
+            Divider(color = Color(0xFF223), thickness = 0.5.dp)
         }
     }
 }
