@@ -117,75 +117,97 @@ object TrainerRouteTable {
     // ── Emerald ───────────────────────────────────────────────────────────────
     // Source: RouteData.lua setupRouteInfoAsRSE(), offset=0
     val EMERALD: Map<Int, List<Int>> = mapOf(
-        3   to listOf(656),
-        4   to listOf(592, 593, 599, 600, 768, 769),
-        6   to listOf(661, 662, 663, 664, 665, 666),
-        18  to listOf(318, 615, 333, 603),
-        19  to listOf(520, 523, 526, 529, 532, 535, 36, 481, 293, 336, 703, 702, 736, 735),
-        20  to listOf(319, 696, 114, 136, 604, 483, 337),
-        21  to listOf(442, 152, 46, 441, 737, 738, 151),
-        22  to listOf(340, 339, 153, 443),
-        23  to listOf(444, 155, 692, 154, 445, 739),
-        24  to listOf(447, 157, 446, 741, 740, 156),
-        25  to listOf(490, 491, 697, 64, 57, 698, 58, 59, 158, 448, 345, 742, 680),
-        26  to listOf(302, 699, 334, 512, 700, 232, 701, 521, 524, 527, 530, 533, 536, 243, 358, 352, 353, 359, 351),
-        27  to listOf(704, 705, 706, 707, 51, 476, 218, 292, 299, 606, 312, 78, 94, 189, 469, 212, 211, 470, 44, 743, 744, 745),
-        28  to listOf(213, 471, 627, 626, 746, 747),
-        29  to listOf(326, 710, 420, 711, 434, 677, 419, 327, 708, 709),
-        30  to listOf(342, 714, 713, 338, 472, 679, 214, 143, 206, 629, 712, 628),
-        31  to listOf(183, 513, 752, 427, 749, 307, 748, 182, 751, 750),
-        32  to listOf(617, 322, 280, 631, 754, 753, 695, 694, 273, 605),
-        33  to listOf(364, 287, 538, 369, 227, 756, 755, 757, 545),
-        34  to listOf(37, 715, 344, 196, 52, 343, 408, 398),
-        35  to listOf(620, 224, 619, 225, 618, 223, 693, 559, 552, 761, 400, 416, 760, 399, 759, 415, 651, 522, 525, 528, 531, 534, 537),
-        36  to listOf(435, 53, 406, 405, 762, 436, 653, 763, 95, 560, 553, 226, 652, 45),
-        46  to listOf(165, 455, 168),
-        47  to listOf(171, 385, 166, 457, 167, 456, 686),
-        65  to listOf(426, 179, 425, 266),                                                     // Dewford Gym
-        69  to listOf(202, 204, 201, 648, 203, 205, 650, 268),                                 // Lavaridge Gym
-        70  to listOf(202, 204, 205, 501),                                                     // Lavaridge Gym 1F (Emerald variant)
-        79  to listOf(71, 89, 72, 90, 73, 91, 74, 269),
-        87  to listOf(20, 21),
-        89  to listOf(649, 191, 323, 802, 194, 267),
-        94  to listOf(320, 321, 265),                                                          // Rustboro Gym
-        100 to listOf(402, 401, 655, 654, 404, 803, 270),
-        108 to listOf(233, 246, 245, 235, 234, 244, 271),                                      // Mossdeep Gym
-        109 to listOf(128, 613, 115, 131, 614, 301, 130, 118, 129, 272),                       // Sootopolis Gym
-        110 to listOf(128, 613, 115, 502, 131, 614, 301, 130, 118, 129),                       // Sootopolis Gym 1F
-        111 to listOf(261),
-        112 to listOf(262),
-        113 to listOf(263),
-        114 to listOf(264),
-        115 to listOf(335),
-        126 to listOf(681, 392),
-        129 to listOf(16, 635),
-        135 to listOf(616, 10, 621),
-        140 to listOf(109),
-        141 to listOf(190),
-        143 to listOf(2),
-        145 to listOf(5, 27, 28, 30),
-        190 to listOf(496),
-        243 to listOf(65, 647, 493),
-        247 to listOf(611, 612, 332),
-        248 to listOf(274, 275, 281),
-        249 to listOf(215, 473, 630),
-        250 to listOf(188, 428, 429),
-        252 to listOf(561, 554, 407),
-        253 to listOf(237, 105, 248, 848, 850, 849),
-        254 to listOf(93, 76, 77),
-        272 to listOf(18, 19, 32),
-        275 to listOf(586, 22, 587, 116),
-        276 to listOf(588, 589, 590, 734, 514),
-        278 to listOf(494, 495),
-        279 to listOf(641, 138, 255, 294, 119, 256),
-        335 to listOf(809, 806, 810, 805, 808, 807, 811),
-        336 to listOf(717, 716),
-        337 to listOf(718, 720, 719, 727),
-        338 to listOf(721, 730, 722, 723),
-        339 to listOf(724, 726, 729),
-        340 to listOf(725),
-        341 to listOf(728, 731, 732, 601),
-        431 to listOf(804),
+        3   to listOf(656),                                                                     // Mauville City
+        4   to listOf(592, 593, 599, 600, 768, 769),                                            // Rustboro City
+        6   to listOf(661, 662, 663, 664, 665, 666),                                            // Lilycove City
+        18  to listOf(318, 615, 333, 603),                                                      // Route 102
+        19  to listOf(520, 523, 526, 529, 532, 535, 36, 481, 293, 336, 703, 702, 736, 735),     // Route 103
+        20  to listOf(319, 696, 114, 136, 604, 483, 337),                                       // Route 104
+        21  to listOf(442, 152, 46, 441, 737, 738, 151),                                        // Route 105
+        22  to listOf(340, 339, 153, 443),                                                      // Route 106
+        23  to listOf(444, 155, 692, 154, 445, 739),                                            // Route 107
+        24  to listOf(447, 157, 446, 741, 740, 156),                                            // Route 108
+        25  to listOf(490, 491, 697, 64, 57, 698, 58, 59, 158, 448, 345, 742, 680),             // Route 109
+        26  to listOf(302, 699, 334, 512, 700, 232, 701, 521, 524, 527, 530, 533, 536, 243, 358, 352, 353, 359, 351),  // Route 110
+        27  to listOf(704, 705, 706, 707, 51, 476, 218, 292, 299, 606, 312, 78, 94, 189, 469, 212, 211, 470, 44, 743, 744, 745),  // Route 111
+        28  to listOf(213, 471, 627, 626, 746, 747),                                            // Route 112
+        29  to listOf(326, 710, 420, 711, 434, 677, 419, 327, 708, 709),                        // Route 113
+        30  to listOf(342, 714, 713, 338, 472, 679, 214, 143, 206, 629, 712, 628),              // Route 114
+        31  to listOf(183, 513, 752, 427, 749, 307, 748, 182, 751, 750),                        // Route 115
+        32  to listOf(617, 322, 280, 631, 754, 753, 695, 694, 273, 605),                        // Route 116
+        33  to listOf(364, 287, 538, 369, 227, 756, 755, 757, 545),                             // Route 117
+        34  to listOf(37, 715, 344, 196, 52, 343, 408, 398),                                    // Route 118
+        35  to listOf(620, 224, 619, 225, 618, 223, 693, 559, 552, 761, 400, 416, 760, 399, 759, 415, 651, 522, 525, 528, 531, 534, 537),  // Route 119
+        36  to listOf(435, 53, 406, 405, 762, 436, 653, 763, 95, 560, 553, 226, 652, 45),       // Route 120
+        37  to listOf(764, 107, 127, 286, 766, 765, 254, 300, 11, 767),                         // Route 121
+        39  to listOf(539, 503, 39, 484, 106, 13, 92, 75, 195, 12, 249, 29, 238, 504, 505),     // Route 123
+        40  to listOf(450, 15, 687, 159, 449, 174, 595, 160),                                   // Route 124
+        41  to listOf(492, 161, 452, 451, 403, 506, 162, 678),                                  // Route 125
+        42  to listOf(576, 383, 164, 453, 163, 459, 377, 454),                                  // Route 126
+        43  to listOf(674, 577, 667, 669, 668, 374, 672, 384),                                  // Route 127
+        44  to listOf(671, 670, 673, 376, 386, 464, 578),                                       // Route 128
+        45  to listOf(675, 378, 387, 580, 676),                                                 // Route 129
+        46  to listOf(165, 455, 168),                                                           // Route 130
+        47  to listOf(171, 385, 166, 457, 167, 456, 686),                                       // Route 131
+        48  to listOf(169, 458, 350, 181, 594, 733, 758, 598),                                  // Route 132
+        49  to listOf(461, 414, 511, 137, 88, 460, 170),                                        // Route 133
+        50  to listOf(463, 172, 180, 509, 510, 397, 508, 413, 507),                             // Route 134
+        65  to listOf(426, 573, 572, 179, 574, 425, 266),                                       // Dewford Gym
+        69  to listOf(201, 203, 648, 650, 268),                                                 // Lavaridge Gym 1F
+        70  to listOf(202, 204, 205, 501),                                                      // Lavaridge Gym B1F
+        79  to listOf(71, 89, 72, 90, 73, 91, 74, 269),                                         // Petalburg Gym
+        87  to listOf(20, 21),                                                                  // Oceanic Museum 2F
+        89  to listOf(649, 191, 323, 802, 194, 267),                                            // Mauville Gym
+        94  to listOf(320, 321, 571, 265),                                                      // Rustboro Gym
+        100 to listOf(402, 401, 655, 654, 404, 803, 270),                                       // Fortree Gym
+        108 to listOf(233, 246, 245, 235, 591, 584, 583, 585, 582, 234, 575, 244, 271),         // Mossdeep Gym
+        109 to listOf(272),                                                                     // Sootopolis Gym 1F
+        110 to listOf(128, 613, 115, 502, 131, 614, 301, 130, 118, 129),                        // Sootopolis Gym B1F
+        111 to listOf(261),                                                                     // Sidney's Room
+        112 to listOf(262),                                                                     // Phoebe's Room
+        113 to listOf(263),                                                                     // Glacia's Room
+        114 to listOf(264),                                                                     // Drake's Room
+        115 to listOf(335),                                                                     // Champion's Room
+        126 to listOf(681, 392),                                                                // Meteor Falls 1F 2R
+        129 to listOf(16, 635),                                                                 // Rusturf Tunnel
+        135 to listOf(616, 10, 621),                                                            // Petalburg Woods
+        136 to listOf(146, 579, 597, 602, 126, 125, 313, 1, 124),                               // Mt. Chimney
+        138 to listOf(145, 35, 31, 640),                                                        // Mt. Pyre 2F
+        139 to listOf(247, 9, 236),                                                             // Mt. Pyre 3F
+        140 to listOf(109),                                                                     // Mt. Pyre 4F
+        141 to listOf(190),                                                                     // Mt. Pyre 5F
+        142 to listOf(108, 475),                                                                // Mt. Pyre 6F
+        143 to listOf(2),                                                                       // Aqua Hideout 1F
+        144 to listOf(3, 4, 192, 193),                                                          // Aqua Hideout B1F
+        145 to listOf(5, 27, 28, 30),                                                           // Aqua Hideout B2F
+        147 to listOf(6, 7, 8, 14, 567, 33, 34),                                                // Seafloor Cavern
+        163 to listOf(80, 96, 97, 81, 100, 83, 417, 38, 99, 82, 98, 540, 546, 79, 325, 324, 519),  // Victory Road 1F
+        188 to listOf(144, 375, 66, 547, 418, 642),                                             // Abandoned Ship 1F
+        190 to listOf(496),                                                                     // Abandoned Ship B1F
+        243 to listOf(65, 647, 493),                                                            // Seashore House
+        247 to listOf(611, 612, 332),                                                           // Trick House 1
+        248 to listOf(274, 275, 281),                                                           // Trick House 2
+        249 to listOf(215, 473, 630),                                                           // Trick House 3
+        250 to listOf(188, 428, 429),                                                           // Trick House 4
+        252 to listOf(561, 554, 407),                                                           // Trick House 6
+        253 to listOf(237, 105, 248, 848, 850, 849),                                            // Trick House 7
+        254 to listOf(93, 76, 77),                                                              // Trick House 8
+        271 to listOf(26, 17, 596),                                                             // Weather Institute 1F
+        272 to listOf(18, 19, 32),                                                              // Weather Institute 2F
+        275 to listOf(586, 22, 587, 116),                                                       // City Space Center 1F
+        276 to listOf(588, 589, 590, 734, 514),                                                 // City Space Center 2F
+        278 to listOf(494, 495),                                                                // S.S. Tidal Deck
+        279 to listOf(641, 138, 255, 294, 119, 256),                                            // S.S. Tidal Rooms
+        292 to listOf(632, 570, 474, 217, 566, 216),                                            // Jagged Pass
+        302 to listOf(23, 24, 25, 569),                                                         // Mt. Pyre Ext.
+        335 to listOf(809, 806, 810, 805, 808, 807, 811),                                       // Battle Dome Room
+        336 to listOf(717, 716),                                                                // Magma Hideout 1F
+        337 to listOf(718, 720, 719, 727),                                                      // Magma Hideout 2Fa
+        338 to listOf(721, 730, 722, 723),                                                      // Magma Hideout 2Fb
+        339 to listOf(724, 726, 729),                                                           // Magma Hideout 3Fa
+        340 to listOf(725),                                                                     // Magma Hideout 3Fb
+        341 to listOf(728, 731, 732, 601),                                                      // Magma Hideout 4F
+        431 to listOf(804),                                                                     // Meteor Falls Steven
     )
 
     // ── Ruby / Sapphire ───────────────────────────────────────────────────────
