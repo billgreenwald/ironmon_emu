@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.6.2] - 2026-07-30
+
+### Fixed
+- **Emerald route trainer counts were wrong** — Routes 121 and 123 showed "0 trainers" despite having them, and the overall counts were off. The Emerald trainer table was missing 22 maps entirely (158 trainers), including Routes 121–134, Mt. Pyre, Victory Road, the Aqua Hideout, Seafloor Cavern, the Weather Institute, and the Space Center. Five gyms (Dewford, Lavaridge 1F, Rustboro, Mossdeep, Sootopolis 1F) also had the Ruby/Sapphire trainer lists where the Emerald ones belong. The table now matches the Ironmon Tracker's `RouteData.lua` exactly (91 maps, 545 trainers).
+- **Emerald location names corrected** — added names for the Weather Institute (1F/2F) and Mt. Pyre Ext., fixed a Magma Hideout floor labeling off-by-one (map 335 is the Battle Dome Room, not Magma Hideout 1F), and renamed the Lilycove hideout to "Aqua Hideout" to match Emerald.
+
 ## [3.6.1] - 2026-07-29
 
 ### Fixed
