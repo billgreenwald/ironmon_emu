@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.6.6] - 2026-07-31
+
+### Changed
+- **Multi-map dungeons and gyms now show one combined trainer count**, matching the Ironmon Tracker. Standing on any floor of Mt. Pyre, the Weather Institute, Lavaridge/Sootopolis Gym, the Magma/Aqua Hideout, the Trick House, the Space Center, S.S. Tidal, and the rest shows the area name and the total trainer count for the whole place, instead of a per-floor slice. This fixes the whole family of per-floor count bugs (trainers appearing on the wrong floor, counts overflowing their total) and also means sub-maps like Mt. Pyre Summit no longer show "Unknown Location."
+
 ## [3.6.5] - 2026-07-31
 
 ### Fixed
