@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.6.5] - 2026-07-31
+
+### Fixed
+- **Mt. Pyre trainers now show on the Summit** — the 4 Team Aqua grunts were listed under "Mt. Pyre Ext.", but they're actually on the separate Summit map. The Exterior is now correctly trainer-less, and the Summit is named (it previously showed "Unknown Location") with its 4 trainers. Verified against the pokeemerald decompilation.
+
 ## [3.6.4] - 2026-07-30
 
 ### Fixed
