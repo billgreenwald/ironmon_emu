@@ -51,10 +51,18 @@ object CombinedAreas {
      * Collapse per-map trainer counts into one aggregate per combined area, assigned to
      * EVERY member map (so any floor of a dungeon shows the same combined total). Maps that
      * aren't part of a combined area pass through unchanged.
+     *
+     * [tableTotals] is the authoritative per-map trainer total from the curated trainer
+     * table (mapId → count). The area TOTAL is summed from this, NOT from [counts] — on the
+     * NatDex session path, [counts] can contain fallback `(defeats, defeats)` entries for
+     * member sub-maps the game reports but the table doesn't list, which would otherwise
+     * double-count the total. DEFEATED is summed across all members (so a win attributed to
+     * any sub-map still counts) and capped at the total.
      */
     fun collapseCounts(
         version: GameVersion,
         counts: Map<Int, Pair<Int, Int>>,
+        tableTotals: Map<Int, Int>,
     ): Map<Int, Pair<Int, Int>> {
         if (version != GameVersion.EMERALD) return counts
         val result = counts.toMutableMap()
@@ -62,10 +70,14 @@ object CombinedAreas {
             var defeated = 0
             var total = 0
             var any = false
-            for (mapId in area.members) counts[mapId]?.let {
-                defeated += it.first; total += it.second; any = true
+            for (mapId in area.members) {
+                counts[mapId]?.let { defeated += it.first; any = true }
+                tableTotals[mapId]?.let { total += it }
             }
-            if (any) for (mapId in area.members) result[mapId] = defeated to total
+            if (any && total > 0) {
+                val capped = minOf(defeated, total)
+                for (mapId in area.members) result[mapId] = capped to total
+            }
         }
         return result
     }
