@@ -85,6 +85,9 @@ object TrackerPoller {
     // Track wild/trainer type of the ACTIVE battle so we can check it at battle-end.
     // battleRaw.isWild is unreliable at end (pollBattle returns NONE when inactive).
     private var lastBattleWasWild = false
+    // Two-trainer double battle (Emerald optional double) of the ACTIVE battle — captured
+    // while active so we can credit BOTH defeated trainers at battle-end.
+    private var lastBattleWasTwoTrainerDouble = false
 
     // Ball picker: random starter position (1=Left, 2=Middle, 3=Right; 0=unset)
     private val chosenBall = AtomicInteger(0)
@@ -431,7 +434,10 @@ object TrackerPoller {
         // Reset tutorial flag at the start of each new battle (mirrors Lua Battle init reset)
         if (!wasBattleActive && battleRaw.isActive) recentBattleWasTutorial = false
         // Snapshot wild/trainer type while the battle is active (isWild is invalid in BattleState.NONE)
-        if (battleRaw.isActive) lastBattleWasWild = battleRaw.isWild
+        if (battleRaw.isActive) {
+            lastBattleWasWild = battleRaw.isWild
+            lastBattleWasTwoTrainerDouble = battleRaw.isTwoTrainerDouble
+        }
 
         // ── Wild encounter recording (Lua tracker: Tracker.TrackRouteEncounter) ───
         // Reset flag when battle ends so it's ready for the next encounter.
@@ -518,7 +524,9 @@ object TrackerPoller {
                 && wasBattleActive && !battleRaw.isActive
                 && !lastBattleWasWild && !recentBattleWasTutorial) {
             route?.mapLayoutId?.let { mapId ->
-                trainerDefeatsByRoute[mapId] = (trainerDefeatsByRoute[mapId] ?: 0) + 1
+                // A two-trainer double battle ends once but defeats BOTH trainers.
+                val defeatedNow = if (lastBattleWasTwoTrainerDouble) 2 else 1
+                trainerDefeatsByRoute[mapId] = (trainerDefeatsByRoute[mapId] ?: 0) + defeatedNow
                 appContext?.let { ctx ->
                     val data = RunRepository.load(ctx, romFamilyKey)
                     data.trainerDefeatsByRoute[mapId.toString()] = trainerDefeatsByRoute[mapId]!!
@@ -621,6 +629,10 @@ object TrackerPoller {
         // Also require the engine's own BATTLE_TYPE_DOUBLE flag, which is 0 in a real single battle.
         val isDoublesFlag = typeFlags != null && (typeFlags[0].toInt() and DataHelper.BATTLE_TYPE_DOUBLE) != 0
         val isDoubles = isActive && isDoublesFlag && battlersCount >= 4
+        // Two SEPARATE opposing trainers (Emerald optional double battle) — bit 15 lives in
+        // byte 1 (0x8000 >> 8 = 0x80). Winning ends one battle but defeats TWO trainers.
+        val isTwoTrainerDouble = isDoubles && !isWild && typeFlags != null &&
+            (typeFlags[1].toInt() and (DataHelper.BATTLE_TYPE_TWO_OPPONENTS shr 8)) != 0
 
         // Detect battle transitions
         if (!isActive && lastBattleActive) {
@@ -1007,6 +1019,7 @@ object TrackerPoller {
             playerType1        = playerType1,
             playerType2        = playerType2,
             isDoubles          = isDoubles,
+            isTwoTrainerDouble = isTwoTrainerDouble,
             enemy2             = enemy2,
             playerMon1PartyIdx = playerMon1PartyIdx,
             playerMon2PartyIdx = playerMon2PartyIdx,

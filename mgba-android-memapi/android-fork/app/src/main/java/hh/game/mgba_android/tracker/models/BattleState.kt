@@ -52,6 +52,7 @@ data class BattleState(
     val playerType2: Int = -1,         // updated by Conversion, Camouflage, etc.
     // ── Doubles support ────────────────────────────────────────────────────────
     val isDoubles: Boolean = false,
+    val isTwoTrainerDouble: Boolean = false, // two SEPARATE opposing trainers (Emerald optional double)
     val enemy2: EnemyData? = null,     // gBattleMons slot 3 (RightOther); null in singles
     val playerMon1PartyIdx: Int = 0,   // gBattlerPartyIndexes[0] (LeftOwn); 0 in singles
     val playerMon2PartyIdx: Int = -1,  // gBattlerPartyIndexes[4] (RightOwn); -1 in singles

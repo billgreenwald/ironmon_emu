@@ -112,8 +112,12 @@ object DataHelper {
     //   0x18-0x1F: statStages[8] (u8 each)
     //   0x20: flags, 0x21: type1, 0x22: type2
     // ── gBattleTypeFlags bits (Gen III engine constants, shared across all games) ──
-    const val BATTLE_TYPE_DOUBLE:  Int = 0x01  // (1 << 0)
-    const val BATTLE_TYPE_TRAINER: Int = 0x08  // (1 << 3)
+    const val BATTLE_TYPE_DOUBLE:  Int = 0x01    // (1 << 0)
+    const val BATTLE_TYPE_TRAINER: Int = 0x08    // (1 << 3)
+    // (1 << 15): Emerald/RSE = two SEPARATE opposing trainers (optional overworld double
+    // battle). FRLG reuses this bit as BATTLE_TYPE_GHOST (wild-only), so only meaningful
+    // when combined with a trainer double battle. Source: Lua RouteData.lua flag list.
+    const val BATTLE_TYPE_TWO_OPPONENTS: Int = 0x8000
 
     const val BATTLE_MON_SIZE: Int = 0x58  // 88 bytes per slot
     const val BMON_SPECIES:    Int = 0x00
