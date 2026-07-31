@@ -1,6 +1,7 @@
 package hh.game.mgba_android.tracker.data
 
 import hh.game.mgba_android.tracker.MemoryBridge
+import hh.game.mgba_android.tracker.tables.TrainerRouteTable
 
 /**
  * Reads trainer defeat flags from SaveBlock1.
@@ -61,6 +62,7 @@ object TrainerFlagReader {
         addresses: GameAddresses,
         trainerTable: Map<Int, List<Int>>,
         singleFightMaps: Set<Int> = emptySet(),
+        rivalIds: Set<Int> = emptySet(),
     ): Map<Int, Pair<Int, Int>> {
         if (trainerTable.isEmpty()) return emptyMap()
         val flagBytes = readFlagBytes(addresses) ?: return emptyMap()
@@ -70,7 +72,9 @@ object TrainerFlagReader {
                 if (mapId in singleFightMaps) {
                     put(mapId, minOf(defeated, 1) to 1)
                 } else {
-                    put(mapId, defeated to trainerIds.size)
+                    // Collapse rival variants (only one is ever fought) in the total.
+                    // Only one variant's flag can be set, so `defeated` needs no collapse.
+                    put(mapId, defeated to TrainerRouteTable.defeatableTotal(trainerIds, rivalIds))
                 }
             }
         }

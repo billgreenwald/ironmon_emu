@@ -192,8 +192,8 @@ object TrainerRouteTable {
         252 to listOf(561, 554, 407),                                                           // Trick House 6
         253 to listOf(237, 105, 248, 848, 850, 849),                                            // Trick House 7
         254 to listOf(93, 76, 77),                                                              // Trick House 8
-        271 to listOf(26, 17, 596),                                                             // Weather Institute 1F
-        272 to listOf(18, 19, 32),                                                              // Weather Institute 2F
+        271 to listOf(26, 17),                                                                  // Weather Institute 1F
+        272 to listOf(18, 19, 32, 596),                                                         // Weather Institute 2F (596: Aqua grunt is on 2F, not 1F)
         275 to listOf(586, 22, 587, 116),                                                       // City Space Center 1F
         276 to listOf(588, 589, 590, 734, 514),                                                 // City Space Center 2F
         278 to listOf(494, 495),                                                                // S.S. Tidal Deck
@@ -293,6 +293,18 @@ object TrainerRouteTable {
      */
     val FRLG_SINGLE_FIGHT: Set<Int> = setOf(5)  // Oak's Lab
 
+    /**
+     * Emerald rival trainer IDs — every starter×gender variant of the rival.
+     * A route lists all variants of its single rival battle, but only the one
+     * matching the run's chosen rival is ever fought, so they must collapse to
+     * one in the total (matches the Lua TrainerData.shouldUseTrainer rival filter).
+     * Source: TrainerData.lua setupTrainersAsEmerald() whichRival assignments.
+     */
+    val EMERALD_RIVAL: Set<Int> = setOf(
+        520, 521, 522, 523, 524, 525, 526, 527, 528, 529, 530, 531, 532, 533, 534,
+        535, 536, 537, 592, 593, 599, 600, 661, 662, 663, 664, 665, 666, 768, 769,
+    )
+
     fun get(version: GameVersion): Map<Int, List<Int>> = when (version) {
         GameVersion.FIRE_RED, GameVersion.LEAF_GREEN -> FRLG
         GameVersion.EMERALD                          -> EMERALD
@@ -303,5 +315,23 @@ object TrainerRouteTable {
     fun getSingleFightMaps(version: GameVersion): Set<Int> = when (version) {
         GameVersion.FIRE_RED, GameVersion.LEAF_GREEN -> FRLG_SINGLE_FIGHT
         else                                         -> emptySet()
+    }
+
+    /** Rival-variant IDs for a game version (used to collapse them in trainer totals). */
+    fun getRivalIds(version: GameVersion): Set<Int> = when (version) {
+        GameVersion.EMERALD -> EMERALD_RIVAL
+        else                -> emptySet()
+    }
+
+    /**
+     * Number of *defeatable* trainers on a route: every non-rival trainer, plus one
+     * for the rival battle (all its variants collapse to a single fight). No Emerald
+     * route hosts two distinct rival battles, so collapsing all rival IDs to 1 is safe.
+     */
+    fun defeatableTotal(trainerIds: List<Int>, rivalIds: Set<Int>): Int {
+        if (rivalIds.isEmpty()) return trainerIds.size
+        val nonRival = trainerIds.count { it !in rivalIds }
+        val hasRival = trainerIds.any { it in rivalIds }
+        return nonRival + if (hasRival) 1 else 0
     }
 }
