@@ -191,7 +191,7 @@ object RouteNames {
         189 to "Abandoned Ship B1F",190 to "Abandoned Ship B1F",
         271 to "Weather Institute 1F", 272 to "Weather Institute 2F",
         292 to "Jagged Pass",       293 to "Fiery Path",
-        302 to "Mt. Pyre Ext.",
+        302 to "Mt. Pyre Ext.",     303 to "Mt. Pyre Summit",
         322 to "Sky Pillar 1F",     324 to "Sky Pillar 3F",
         330 to "Sky Pillar 5F",     331 to "Sky Pillar 6F",
         335 to "Battle Dome Room",  336 to "Magma Hideout 1F",
