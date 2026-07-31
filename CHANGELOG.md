@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.6.3] - 2026-07-30
+
+### Fixed
+- **Emerald route trainer totals no longer count every rival variant** — a route lists all 5–6 starter/gender variants of its single rival battle, but only one is ever fought. The total now collapses them to one, matching the Ironmon Tracker. Corrects Route 110 (19→14), Route 119 (23→18), Route 103 (19→9), and the Rustboro/Lilycove rival spots (6→1).
+- **Weather Institute floor split** — Aqua grunt 596 is on 2F, not 1F, so the per-floor counts now read 1F = /2 and 2F = /4 (and the 2F count no longer overflows past its total).
+
 ## [3.6.2] - 2026-07-30
 
 ### Fixed
