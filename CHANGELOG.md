@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.6.4] - 2026-07-30
+
+### Fixed
+- **Emerald optional double battles now count both trainers** — on NatDex/MaxFR runs the route defeat counter treated every battle as one trainer, so beating two trainers who challenge you together as a double battle only counted as one. Routes with double battles were showing fewer defeats than they should. It now credits both. Always-double single trainers (Twins, couples, etc.) are unaffected — they're one trainer and still count once.
+
 ## [3.6.3] - 2026-07-30
 
 ### Fixed
