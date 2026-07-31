@@ -2,6 +2,7 @@ package hh.game.mgba_android.tracker.data
 
 import hh.game.mgba_android.tracker.MemoryBridge
 import hh.game.mgba_android.tracker.models.GameVersion
+import hh.game.mgba_android.tracker.tables.CombinedAreas
 import hh.game.mgba_android.tracker.tables.RouteNames
 
 data class RouteInfo(val mapLayoutId: Int, val name: String)
@@ -15,7 +16,11 @@ object RouteReader {
         ) ?: return null
         if (mapLayoutId == 0) return null
         val isEmerald = game == GameVersion.RUBY || game == GameVersion.SAPPHIRE || game == GameVersion.EMERALD
-        val name = RouteNames.get(mapLayoutId, isEmerald)
+        // For combined dungeon/gym areas, show the area name (e.g. "Mt. Pyre") on every member
+        // map, matching the Lua's getRouteOrAreaName. Also fixes "Unknown Location" on unnamed
+        // dungeon sub-maps (e.g. Mt. Pyre Summit).
+        val name = CombinedAreas.areaOf(game, mapLayoutId)?.name
+            ?: RouteNames.get(mapLayoutId, isEmerald)
         return RouteInfo(mapLayoutId, name)
     }
 }
