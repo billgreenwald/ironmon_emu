@@ -569,8 +569,12 @@ object TrackerPoller {
             TrainerFlagReader.readCounts(addresses, trainerTable, singleFightMaps, rivalIds)
         }
         // Collapse combined dungeon/gym areas so every floor shows the same aggregate count
-        // (matches the Lua tracker). No-op for maps that aren't part of a combined area.
-        val trainerCounts = CombinedAreas.collapseCounts(game, rawTrainerCounts)
+        // (matches the Lua tracker). Totals come from the trainer table (authoritative) so
+        // session-path fallback entries can't double-count. No-op for non-combined maps.
+        val tableTotals = trainerTable.mapValues {
+            TrainerRouteTable.defeatableTotal(it.value, rivalIds)
+        }
+        val trainerCounts = CombinedAreas.collapseCounts(game, rawTrainerCounts, tableTotals)
 
         // ── Healing items (matches Lua Program.updateBagItems + recalcLeadPokemonHealingInfo) ──
         val bagDetail = party.firstOrNull()?.let { lead ->
