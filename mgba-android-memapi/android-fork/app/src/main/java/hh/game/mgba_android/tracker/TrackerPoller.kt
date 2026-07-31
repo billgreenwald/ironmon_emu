@@ -540,6 +540,7 @@ object TrackerPoller {
         // Vanilla FRLG/Emerald: read live from SaveBlock1 flag bits.
         val trainerTable = TrainerRouteTable.get(game)
         val singleFightMaps = TrainerRouteTable.getSingleFightMaps(game)
+        val rivalIds = TrainerRouteTable.getRivalIds(game)
         val trainerCounts: Map<Int, Pair<Int, Int>> = if (maxFrVariant != MaxFrVariant.NONE || isNatDex) {
             buildMap {
                 for ((mapId, trainerIds) in trainerTable) {
@@ -547,7 +548,7 @@ object TrackerPoller {
                     if (mapId in singleFightMaps) {
                         put(mapId, minOf(defeats, 1) to 1)
                     } else {
-                        put(mapId, defeats to trainerIds.size)
+                        put(mapId, defeats to TrainerRouteTable.defeatableTotal(trainerIds, rivalIds))
                     }
                 }
                 // Include any routes with session defeats not in the table
@@ -556,7 +557,7 @@ object TrackerPoller {
                 }
             }
         } else {
-            TrainerFlagReader.readCounts(addresses, trainerTable, TrainerRouteTable.getSingleFightMaps(game))
+            TrainerFlagReader.readCounts(addresses, trainerTable, singleFightMaps, rivalIds)
         }
 
         // ── Healing items (matches Lua Program.updateBagItems + recalcLeadPokemonHealingInfo) ──
