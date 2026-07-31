@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.6.7] - 2026-07-31
+
+### Fixed
+- **Combined-area trainer totals no longer inflate as you fight** — in dungeons and gyms whose trainers span multiple sub-maps (Victory Road, Abandoned Ship, Seafloor Cavern, Mt. Pyre, etc.), the total could climb with each win because wins on sub-maps not in the trainer table were being added to the denominator. The total is now taken authoritatively from the trainer data, and defeats from any sub-map count toward it (capped at the total). Abandoned Ship reads /7, Seafloor Cavern /7, Victory Road /17, etc.
+
 ## [3.6.6] - 2026-07-31
 
 ### Changed
