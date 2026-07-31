@@ -199,7 +199,7 @@ object TrainerRouteTable {
         278 to listOf(494, 495),                                                                // S.S. Tidal Deck
         279 to listOf(641, 138, 255, 294, 119, 256),                                            // S.S. Tidal Rooms
         292 to listOf(632, 570, 474, 217, 566, 216),                                            // Jagged Pass
-        302 to listOf(23, 24, 25, 569),                                                         // Mt. Pyre Ext.
+        303 to listOf(23, 24, 25, 569),                                                         // Mt. Pyre Summit (trainers are here, not the Ext.; verified vs pokeemerald)
         335 to listOf(809, 806, 810, 805, 808, 807, 811),                                       // Battle Dome Room
         336 to listOf(717, 716),                                                                // Magma Hideout 1F
         337 to listOf(718, 720, 719, 727),                                                      // Magma Hideout 2Fa
