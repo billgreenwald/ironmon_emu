@@ -18,6 +18,7 @@ import hh.game.mgba_android.tracker.data.RouteReader
 import hh.game.mgba_android.tracker.data.StatsReader
 import hh.game.mgba_android.tracker.data.TrainerFlagReader
 import hh.game.mgba_android.utils.EmulatorPreferences
+import hh.game.mgba_android.tracker.tables.CombinedAreas
 import hh.game.mgba_android.tracker.tables.TrainerRouteTable
 import hh.game.mgba_android.tracker.models.BattleState
 import hh.game.mgba_android.tracker.models.EnemyData
@@ -549,7 +550,7 @@ object TrackerPoller {
         val trainerTable = TrainerRouteTable.get(game)
         val singleFightMaps = TrainerRouteTable.getSingleFightMaps(game)
         val rivalIds = TrainerRouteTable.getRivalIds(game)
-        val trainerCounts: Map<Int, Pair<Int, Int>> = if (maxFrVariant != MaxFrVariant.NONE || isNatDex) {
+        val rawTrainerCounts: Map<Int, Pair<Int, Int>> = if (maxFrVariant != MaxFrVariant.NONE || isNatDex) {
             buildMap {
                 for ((mapId, trainerIds) in trainerTable) {
                     val defeats = trainerDefeatsByRoute[mapId] ?: 0
@@ -567,6 +568,9 @@ object TrackerPoller {
         } else {
             TrainerFlagReader.readCounts(addresses, trainerTable, singleFightMaps, rivalIds)
         }
+        // Collapse combined dungeon/gym areas so every floor shows the same aggregate count
+        // (matches the Lua tracker). No-op for maps that aren't part of a combined area.
+        val trainerCounts = CombinedAreas.collapseCounts(game, rawTrainerCounts)
 
         // ── Healing items (matches Lua Program.updateBagItems + recalcLeadPokemonHealingInfo) ──
         val bagDetail = party.firstOrNull()?.let { lead ->
