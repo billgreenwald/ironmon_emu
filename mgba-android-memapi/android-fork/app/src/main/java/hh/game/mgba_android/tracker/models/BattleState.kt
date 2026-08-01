@@ -31,6 +31,7 @@ data class EnemyData(
     val fourConfirmedThisBattle: List<Int>? = null, // non-null when all 4 seen in current battle (Lua BattleNotes.FourMovesIfAllKnown)
     val moveStaleFlags: List<Boolean> = emptyList(), // per display slot: true = may have been replaced (Lua calculateMoveStars)
     val allTrackedMoves: List<TrackedMove> = emptyList(), // full persistent list for history sheet
+    val statStages: IntArray? = null,        // [Atk,Def,SpA,SpD,Spe,Acc,Eva] 0-12; 6=neutral
 ) {
     val hpPercent: Float get() = if (maxHp > 0) currentHp.toFloat() / maxHp else 0f
 }
