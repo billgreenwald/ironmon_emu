@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.6.8] - 2026-08-01
+
+### Added
+- **Enemy stat-stage changes now show in battle**, just like your own — when the opposing Pokémon's Attack, Defense, Sp. Atk, Sp. Def, Speed, accuracy, or evasion is raised or lowered, the signed change (green for boosts, red for drops) appears in the enemy panel. Previously only the player's stat changes were displayed. Works for both battlers in double battles.
+
 ## [3.6.7] - 2026-07-31
 
 ### Fixed
