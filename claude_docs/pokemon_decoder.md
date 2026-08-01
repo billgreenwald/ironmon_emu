@@ -1,6 +1,6 @@
 # PokemonDecoder
 
-**File:** `tracker/data/PokemonDecoder.kt`
+**File:** `tracker-core/src/commonMain/.../tracker/data/PokemonDecoder.kt`
 
 ## Purpose
 Decrypts the 100-byte Gen III Pokemon struct and extracts all fields into `PokemonData`. This is the most complex single piece of the tracker — implements XOR decryption and the 24 substructure permutation system.

@@ -1,6 +1,6 @@
 # Data Addresses & Game Settings
 
-**Files:** `tracker/data/DataHelper.kt`, `tracker/data/GameSettings.kt`
+**Files:** `tracker-core/src/commonMain/.../tracker/data/DataHelper.kt`, `tracker-core/src/commonMain/.../tracker/data/GameSettings.kt`
 
 ## Purpose
 Cross-game memory address constants. **CRITICAL: Always verify addresses against the Lua ironmon tracker source before changing anything here.**
