@@ -1,5 +1,7 @@
 package hh.game.mgba_android.tracker.quickload
 
+import kotlinx.serialization.Serializable
+
 enum class FamilyMode { BATCH, UPR }
 
 /**
@@ -22,6 +24,7 @@ data class RomFamily(
  * A group of sequentially numbered ROMs sharing the same prefix.
  * Uses plain paths so it can be serialized to the on-disk cache.
  */
+@Serializable
 data class RomFamilyGroup(
     val prefix: String,
     val extension: String,

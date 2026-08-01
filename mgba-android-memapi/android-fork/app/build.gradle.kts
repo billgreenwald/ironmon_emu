@@ -115,6 +115,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":tracker-core"))
     implementation("androidx.games:games-frame-pacing:2.1.3")
     implementation ("androidx.activity:activity-ktx:1.7.1")
     implementation ("androidx.room:room-runtime:2.5.1")

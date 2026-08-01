@@ -1,23 +1,9 @@
 package hh.game.mgba_android.tracker.data
 
-import android.util.Log
 import hh.game.mgba_android.tracker.MemoryBridge
+import hh.game.mgba_android.tracker.platform.TrackerLog
 import hh.game.mgba_android.tracker.tables.ItemTable
-
-data class BagItemEntry(val name: String, val quantity: Int)
-
-data class BagDetailInfo(
-    val hpHealPercent: Float,    // cumulative heal % of lead's max HP (capped at 9999)
-    val hpHealCount: Int,        // total number of HP healing items (capped at 99)
-    val hpItems: List<BagItemEntry>,
-    val ppItems: List<BagItemEntry>,
-    val statusItems: List<BagItemEntry>,
-    val battleItems: List<BagItemEntry>,
-) {
-    companion object {
-        val EMPTY = BagDetailInfo(0f, 0, emptyList(), emptyList(), emptyList(), emptyList())
-    }
-}
+// BagItemEntry / BagDetailInfo moved to :tracker-core commonMain (same package).
 
 /**
  * Reads the player's bag from SaveBlock1 and calculates total healing percentage + categorized lists.
@@ -88,7 +74,7 @@ object BagReader {
             addresses.saveBlock1Ptr
         }
 
-        Log.d(TAG, "sb1Ptr=0x${addresses.saveBlock1Ptr.toString(16)} sb1Addr=0x${saveBlock1Addr.toString(16)} sb2Ptr=0x${addresses.saveBlock2Ptr.toString(16)} encKeyOff=0x${addresses.encryptionKeyOffset.toString(16)} itemsOff=0x${addresses.bagPocket_Items_offset.toString(16)} itemsSize=${addresses.bagPocket_Items_size}")
+        TrackerLog.d(TAG, "sb1Ptr=0x${addresses.saveBlock1Ptr.toString(16)} sb1Addr=0x${saveBlock1Addr.toString(16)} sb2Ptr=0x${addresses.saveBlock2Ptr.toString(16)} encKeyOff=0x${addresses.encryptionKeyOffset.toString(16)} itemsOff=0x${addresses.bagPocket_Items_offset.toString(16)} itemsSize=${addresses.bagPocket_Items_size}")
 
         // 16-bit XOR encryption key for item quantities.
         // Ruby/Sapphire (saveBlock2Ptr == 0L) have no encryption — matches Lua getEncryptionKey check.

@@ -31,6 +31,7 @@ import hh.game.mgba_android.tracker.models.TrackerState
 import hh.game.mgba_android.tracker.persistence.LogRepository
 import hh.game.mgba_android.tracker.tables.TrainerGroups
 import hh.game.mgba_android.tracker.tables.TypeChart
+import hh.game.mgba_android.tracker.platform.AndroidTrackerPlatform
 
 // ── Palette (kept local, mirrors TrackerPanel) ────────────────────────────────
 private val LogBg       = Color(0xFF0F1621)
@@ -75,7 +76,7 @@ fun LogViewerOverlay(state: TrackerState.Active, onDismiss: () -> Unit) {
     val romFileName = remember { TrackerPoller.getRomFileName() }
 
     val result by produceState<LogRepository.Result?>(initialValue = null, romFileName) {
-        value = LogRepository.getLog(context, romFileName, state.game, state.isMaxFr, state.isNatDex)
+        value = LogRepository.getLog(AndroidTrackerPlatform.logSource(context), romFileName, state.game, state.isMaxFr, state.isNatDex)
     }
 
     var tab by remember { mutableIntStateOf(0) }

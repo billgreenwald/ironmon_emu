@@ -81,6 +81,7 @@ import org.libsdl.app.SDLUtils.onNativeKeyUp
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
+import hh.game.mgba_android.tracker.platform.AndroidTrackerPlatform
 
 open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
     // SDL library list — override SDLActivity default
@@ -340,7 +341,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
         }
 
         MemoryBridge.reader = { addr, len -> getMemoryRange(addr, len) }
-        TrackerPoller.start(applicationContext, lifecycleScope, gamepath)
+        TrackerPoller.start(AndroidTrackerPlatform.install(applicationContext), lifecycleScope, gamepath)
 
         val trackerView = ComposeView(this).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)

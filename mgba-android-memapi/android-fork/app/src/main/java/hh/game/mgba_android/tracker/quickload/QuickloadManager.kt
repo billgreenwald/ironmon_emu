@@ -24,6 +24,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeout
 import java.io.File
+import hh.game.mgba_android.tracker.platform.AndroidTrackerPlatform
 
 object QuickloadManager {
 
@@ -89,8 +90,9 @@ object QuickloadManager {
         folderUri = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(KEY_FOLDER, null)
             ?.let { Uri.parse(it) }
-        if (family.number != null) {
-            saveLastNumber(context, family.prefix, family.number)
+        val familyNumber = family.number
+        if (familyNumber != null) {
+            saveLastNumber(context, family.prefix, familyNumber)
         }
         currentFamilyMode = getFamilyMode(context, family.prefix)
 
@@ -160,7 +162,7 @@ object QuickloadManager {
         val fam = currentFamily ?: return null
         val nextNumber = fam.number?.plus(1) ?: return null
 
-        val cached = FamilyCache.load(context)
+        val cached = FamilyCache.load(AndroidTrackerPlatform.fileStore(context))
             .find { it.prefix == fam.prefix && it.extension == fam.extension }
         if (cached != null) {
             return cached.allMemberPaths.find { path ->
@@ -188,8 +190,9 @@ object QuickloadManager {
         if (nextPath != null) {
             val nextFileName = nextPath.substringAfterLast('/')
             val nextFamily = RomFamilyUtils.parseFamily(nextFileName, nextPath)
-            if (nextFamily.number != null) {
-                saveLastNumber(context, nextFamily.prefix, nextFamily.number)
+            val nextNumber = nextFamily.number
+            if (nextNumber != null) {
+                saveLastNumber(context, nextFamily.prefix, nextNumber)
             }
             return nextPath
         }

@@ -1,7 +1,8 @@
 package hh.game.mgba_android.tracker
 
-import android.content.Context
-import android.util.Log
+import hh.game.mgba_android.tracker.platform.TrackerEnvironment
+import hh.game.mgba_android.tracker.platform.TrackerLog
+import kotlinx.atomicfu.atomic
 import hh.game.mgba_android.tracker.data.BagDetailInfo
 import hh.game.mgba_android.tracker.data.BagReader
 import hh.game.mgba_android.tracker.data.DataHelper
@@ -17,7 +18,6 @@ import hh.game.mgba_android.tracker.data.PokemonDecoder
 import hh.game.mgba_android.tracker.data.RouteReader
 import hh.game.mgba_android.tracker.data.StatsReader
 import hh.game.mgba_android.tracker.data.TrainerFlagReader
-import hh.game.mgba_android.utils.EmulatorPreferences
 import hh.game.mgba_android.tracker.tables.CombinedAreas
 import hh.game.mgba_android.tracker.tables.TrainerRouteTable
 import hh.game.mgba_android.tracker.models.BattleState
@@ -31,8 +31,7 @@ import hh.game.mgba_android.tracker.tables.AbilityTable
 import hh.game.mgba_android.tracker.tables.BstTable
 import hh.game.mgba_android.tracker.tables.MoveNames
 import hh.game.mgba_android.tracker.tables.SpeciesNames
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.Volatile
 import kotlin.random.Random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -91,25 +90,25 @@ object TrackerPoller {
     private var lastBattleWasTwoTrainerDouble = false
 
     // Ball picker: random starter position (1=Left, 2=Middle, 3=Right; 0=unset)
-    private val chosenBall = AtomicInteger(0)
+    private val chosenBall = atomic(0)
 
     /** Re-randomize the ball picker (user pressed Reroll). */
-    fun rerollBall() { chosenBall.set(Random.nextInt(1, 4)) }
+    fun rerollBall() { chosenBall.value = Random.nextInt(1, 4) }
 
-    // Game over state — AtomicBoolean so compareAndSet prevents double-increment
+    // Game over state — atomic so compareAndSet prevents double-increment
     // if two poll coroutines both see battle-end before either sets the flag
-    private val isGameOver = AtomicBoolean(false)
+    private val isGameOver = atomic(false)
 
     // Catching tutorial state — mirrors Lua Program.updateCatchingTutorial / Battle.recentBattleWasTutorial
     private var recentBattleWasTutorial = false
     private var hasCompletedTutorial = false
 
-    // Run persistence
-    private var appContext: Context? = null
+    // Run persistence + platform capabilities (injected via start(); keeps this class common)
+    private var env: TrackerEnvironment? = null
     private var lastGameCode: String = ""
     private var romFamilyKey: String = ""  // derived from ROM filename prefix; key for RunRepository
     @Volatile private var romFileName: String = ""  // full ROM filename (with ext); used to locate the .log
-    private val logAvailable = AtomicBoolean(false)  // set once when a matching .log is found next to the ROM
+    private val logAvailable = atomic(false)  // set once when a matching .log is found next to the ROM
 
     /** Full filename (with extension) of the loaded ROM, for locating its randomizer log. */
     fun getRomFileName(): String = romFileName
@@ -118,7 +117,7 @@ object TrackerPoller {
     private val pokemonNotesCache = mutableMapOf<Int, String>()
 
     fun resetGameOver() {
-        isGameOver.set(false)
+        isGameOver.value = false
         revealedBySpecies.clear()
         battleRevealedByKey.clear()
         battleFourConfirmedKey = null
@@ -136,26 +135,26 @@ object TrackerPoller {
         pokemonNotesCache.clear()
         trainerDefeatsByRoute.clear()
         // Clear persisted route encounters + notes + trainer defeats for new run
-        appContext?.let { ctx ->
+        env?.let { ctx ->
             if (romFamilyKey.isNotEmpty()) {
-                val data = RunRepository.load(ctx, romFamilyKey)
+                val data = RunRepository.load(ctx.fileStore, romFamilyKey)
                 data.routeEncounters.clear()
                 data.visitedRoutes.clear()
                 data.pokemonNotes.clear()
                 data.trainerDefeatsByRoute.clear()
-                RunRepository.save(ctx, romFamilyKey, data)
+                RunRepository.save(ctx.fileStore, romFamilyKey, data)
             }
         }
     }
-    fun debugForceGameOver() { isGameOver.set(true) }
+    fun debugForceGameOver() { isGameOver.value = true }
 
     fun setRunAttempts(n: Int) {
         runAttempts = n
-        val ctx = appContext ?: return
+        val ctx = env ?: return
         if (romFamilyKey.isEmpty()) return
-        val data = RunRepository.load(ctx, romFamilyKey)
+        val data = RunRepository.load(ctx.fileStore, romFamilyKey)
         data.stats.attempts = n
-        RunRepository.save(ctx, romFamilyKey, data)
+        RunRepository.save(ctx.fileStore, romFamilyKey, data)
     }
 
     /** Called when the user triggers "Next Run" (banner or tools menu).
@@ -167,11 +166,11 @@ object TrackerPoller {
         // If it was already true (died normally), detection already incremented — skip.
         if (!isGameOver.getAndSet(true)) {
             runAttempts++
-            val ctx = appContext ?: return
+            val ctx = env ?: return
             if (romFamilyKey.isEmpty()) return
-            val data = RunRepository.load(ctx, romFamilyKey)
+            val data = RunRepository.load(ctx.fileStore, romFamilyKey)
             data.stats.attempts = runAttempts
-            RunRepository.save(ctx, romFamilyKey, data)
+            RunRepository.save(ctx.fileStore, romFamilyKey, data)
         }
         // Always clear route encounters and revealed moves for the new run,
         // and reset isGameOver so the next death can be detected.
@@ -183,12 +182,12 @@ object TrackerPoller {
         val trimmed = note.trim()
         if (trimmed.isEmpty()) pokemonNotesCache.remove(speciesId)
         else pokemonNotesCache[speciesId] = trimmed
-        appContext?.let { ctx ->
+        env?.let { ctx ->
             if (romFamilyKey.isNotEmpty()) {
-                val data = RunRepository.load(ctx, romFamilyKey)
+                val data = RunRepository.load(ctx.fileStore, romFamilyKey)
                 data.pokemonNotes.clear()
                 data.pokemonNotes.putAll(pokemonNotesCache)
-                RunRepository.save(ctx, romFamilyKey, data)
+                RunRepository.save(ctx.fileStore, romFamilyKey, data)
             }
         }
         _state.update { s -> if (s is TrackerState.Active) s.copy(pokemonNotes = pokemonNotesCache.toMap()) else s }
@@ -196,21 +195,18 @@ object TrackerPoller {
 
     private var pollJob: Job? = null
 
-    fun start(context: Context, scope: CoroutineScope, romPath: String? = null) {
-        appContext = context.applicationContext
+    fun start(environment: TrackerEnvironment, scope: CoroutineScope, romPath: String? = null) {
+        env = environment
         if (romPath != null) {
-            val fileName = java.io.File(romPath).name
+            val fileName = romPath.substringAfterLast('/')
             romFileName = fileName
             romFamilyKey = hh.game.mgba_android.tracker.quickload.RomFamilyUtils.parseFamily(fileName, romPath).prefix
             // One-time probe: is there a randomizer .log next to this ROM? Gates the
-            // "Review Logs" banner. Off the main thread since SAF enumeration is slow.
-            logAvailable.set(false)
-            val ctx = appContext
-            if (ctx != null && fileName.isNotEmpty()) {
-                scope.launch(Dispatchers.IO) {
-                    logAvailable.set(
-                        hh.game.mgba_android.tracker.data.LogFileLocator.exists(ctx, fileName)
-                    )
+            // "Review Logs" banner. Off the main thread since the log lookup is slow.
+            logAvailable.value = false
+            if (fileName.isNotEmpty()) {
+                scope.launch(Dispatchers.Default) {
+                    logAvailable.value = environment.logSource.exists(fileName)
                 }
             }
         }
@@ -262,24 +258,24 @@ object TrackerPoller {
 
         // Read ROM version byte (0=v1.0, 1=v1.1, 2=v1.2) and 4-char game code string
         val romVersion = GameSettings.readVersionByte { addr, len -> MemoryBridge.readBytes(addr, len) }
-        val gameCode = String(codeBytes.take(4).toByteArray(), Charsets.ISO_8859_1)
+        val gameCode = codeBytes.take(4).map { (it.toInt() and 0xFF).toChar() }.joinToString("")
         val romTitle = MemoryBridge.readBytes(0x080000A0L, 12)
-            ?.let { String(it, Charsets.ISO_8859_1).trimEnd('\u0000', ' ') } ?: ""
+            ?.let { b -> b.map { (it.toInt() and 0xFF).toChar() }.joinToString("").trimEnd('\u0000', ' ') } ?: ""
 
         // ── NatDex / MaxFR detection: run once per ROM load (game code change) ─────────────────────
         if (gameCode != lastGameCode) {
             isNatDex = GameSettings.isNatDex { addr, len -> MemoryBridge.readBytes(addr, len) }
-            val ctx = appContext
-            if (!isNatDex && ctx != null && game in setOf(
+            val environment = env
+            if (!isNatDex && environment != null && game in setOf(
                     GameVersion.EMERALD, GameVersion.FIRE_RED, GameVersion.LEAF_GREEN)) {
-                val detected = MaxFrAddressLoader.detectAndLoad(ctx) { addr, len -> MemoryBridge.readBytes(addr, len) }
+                val detected = MaxFrAddressLoader.detectAndLoad(environment.assetReader) { addr, len -> MemoryBridge.readBytes(addr, len) }
                 maxFrVariant = detected?.first ?: MaxFrVariant.NONE
                 cachedMaxFrAddresses = detected?.second
             } else {
                 maxFrVariant = MaxFrVariant.NONE
                 cachedMaxFrAddresses = null
             }
-            Log.d(TAG, "isNatDex=$isNatDex maxFrVariant=$maxFrVariant for gameCode=$gameCode")
+            TrackerLog.d(TAG, "isNatDex=$isNatDex maxFrVariant=$maxFrVariant for gameCode=$gameCode")
         }
 
         val addresses = cachedMaxFrAddresses
@@ -290,10 +286,10 @@ object TrackerPoller {
         // ── Run persistence: load attempt count + route encounters when game code changes ─────────
         if (gameCode != lastGameCode) {
             lastGameCode = gameCode
-            chosenBall.set(0)  // new ROM — reset ball picker
-            Log.d(TAG, "gameCode changed to $gameCode — restoring run data")
-            appContext?.let { ctx ->
-                val runData = RunRepository.load(ctx, romFamilyKey)
+            chosenBall.value = 0  // new ROM — reset ball picker
+            TrackerLog.d(TAG, "gameCode changed to $gameCode — restoring run data")
+            env?.let { ctx ->
+                val runData = RunRepository.load(ctx.fileStore, romFamilyKey)
                 runAttempts = runData.stats.attempts
                 // Restore notes from saved data
                 pokemonNotesCache.clear()
@@ -305,7 +301,7 @@ object TrackerPoller {
                 runData.routeEncounters.forEach { (mapIdStr, species) ->
                     val mapId = mapIdStr.toIntOrNull() ?: return@forEach
                     encountersByRoute[mapId] = species.map { (it as? Number)?.toInt() ?: it as Int }.toMutableList()
-                    Log.d(TAG, "restore mapId=$mapId species=${encountersByRoute[mapId]}")
+                    TrackerLog.d(TAG, "restore mapId=$mapId species=${encountersByRoute[mapId]}")
                 }
                 encountersByRoute.keys.sorted().forEach { routeVisitOrder.add(it) }
                 visitedRoutes.addAll(runData.visitedRoutes)
@@ -314,7 +310,7 @@ object TrackerPoller {
                 runData.trainerDefeatsByRoute.forEach { (mapIdStr, count) ->
                     mapIdStr.toIntOrNull()?.let { trainerDefeatsByRoute[it] = count }
                 }
-                Log.d(TAG, "restore done: encountersByRoute=$encountersByRoute visitedRoutes=$visitedRoutes trainerDefeatsByRoute=$trainerDefeatsByRoute")
+                TrackerLog.d(TAG, "restore done: encountersByRoute=$encountersByRoute visitedRoutes=$visitedRoutes trainerDefeatsByRoute=$trainerDefeatsByRoute")
             } ?: run { runAttempts = 0 }
         }
 
@@ -353,8 +349,7 @@ object TrackerPoller {
                     val spriteId = addresses.extPokemonMap[pokemon.speciesId]?.spriteId ?: pokemon.speciesId
                     val withNatDex = if (spriteId != pokemon.speciesId) pokemon.copy(natDexId = spriteId) else pokemon
                     val rated = if (slot == 0) {
-                        val ruleset = appContext?.let { EmulatorPreferences.getRuleset(it) }
-                            ?: GachaMonRuleset.STANDARD
+                        val ruleset = env?.settings?.getRuleset() ?: GachaMonRuleset.STANDARD
                         val score = GachaMonRating.calculateRatingScore(withNatDex, ruleset)
                         val stars = GachaMonRating.calculateStars(score)
                         withNatDex.copy(ratingScore = score, starRating = stars)
@@ -378,11 +373,11 @@ object TrackerPoller {
         val mapId = route?.mapLayoutId
         if (mapId != null && mapId !in visitedRoutes) {
             visitedRoutes.add(mapId)
-            appContext?.let { ctx ->
-                val data = RunRepository.load(ctx, romFamilyKey)
+            env?.let { ctx ->
+                val data = RunRepository.load(ctx.fileStore, romFamilyKey)
                 if (mapId !in data.visitedRoutes) {
                     data.visitedRoutes.add(mapId)
-                    RunRepository.save(ctx, romFamilyKey, data)
+                    RunRepository.save(ctx.fileStore, romFamilyKey, data)
                 }
             }
         }
@@ -395,8 +390,8 @@ object TrackerPoller {
         }
         val inStarterLab = mapId == starterLabLayoutId
         when {
-            count == 0 && inStarterLab -> if (chosenBall.get() == 0) chosenBall.set(Random.nextInt(1, 4))
-            count > 0 -> chosenBall.set(0)  // player chose a starter — dismiss picker
+            count == 0 && inStarterLab -> if (chosenBall.value == 0) chosenBall.value = Random.nextInt(1, 4)
+            count > 0 -> chosenBall.value = 0  // player chose a starter — dismiss picker
         }
         val showBallPicker = count == 0 && inStarterLab
 
@@ -455,17 +450,17 @@ object TrackerPoller {
                 val list = encountersByRoute.getOrPut(encounterMapId) { mutableListOf() }
                 if (sid !in list) {
                     list.add(sid)
-                    Log.d(TAG, "new encounter sid=$sid mapId=$encounterMapId gameCode=$gameCode — saving")
+                    TrackerLog.d(TAG, "new encounter sid=$sid mapId=$encounterMapId gameCode=$gameCode — saving")
                     // Persist to RunData so encounters survive app restarts
-                    appContext?.let { ctx ->
-                        val data = RunRepository.load(ctx, romFamilyKey)
+                    env?.let { ctx ->
+                        val data = RunRepository.load(ctx.fileStore, romFamilyKey)
                         val routeList = data.routeEncounters.getOrPut(encounterMapId.toString()) { mutableListOf() }
                         if (sid !in routeList) routeList.add(sid)
-                        Log.d(TAG, "saving routeEncounters=${data.routeEncounters}")
-                        RunRepository.save(ctx, romFamilyKey, data)
+                        TrackerLog.d(TAG, "saving routeEncounters=${data.routeEncounters}")
+                        RunRepository.save(ctx.fileStore, romFamilyKey, data)
                     }
                 } else {
-                    Log.d(TAG, "encounter sid=$sid mapId=$encounterMapId already in list=$list — skipping")
+                    TrackerLog.d(TAG, "encounter sid=$sid mapId=$encounterMapId already in list=$list — skipping")
                 }
             }
         }
@@ -473,9 +468,8 @@ object TrackerPoller {
         // ── Game over detection ───────────────────────────────────────────────
         // Mirrors Lua GameOverScreen.checkForGameOver — three selectable conditions.
         // Exclude catching tutorial battle — mirrors Lua Battle.recentBattleWasTutorial guard.
-        if (wasBattleActive && !battleRaw.isActive && !isGameOver.get() && !recentBattleWasTutorial) {
-            val condition = appContext?.let { EmulatorPreferences.getGameOverCondition(it) }
-                ?: GameOverCondition.LEAD_FAINTS
+        if (wasBattleActive && !battleRaw.isActive && !isGameOver.value && !recentBattleWasTutorial) {
+            val condition = env?.settings?.getGameOverCondition() ?: GameOverCondition.LEAD_FAINTS
             val isLost = when (condition) {
                 GameOverCondition.LEAD_FAINTS -> {
                     val lead = party.firstOrNull()
@@ -492,16 +486,16 @@ object TrackerPoller {
             }
             if (isLost && isGameOver.compareAndSet(false, true)) {
                 runAttempts++
-                appContext?.let { ctx ->
-                    val data = RunRepository.load(ctx, romFamilyKey)
+                env?.let { ctx ->
+                    val data = RunRepository.load(ctx.fileStore, romFamilyKey)
                     data.stats.attempts = runAttempts
-                    RunRepository.save(ctx, romFamilyKey, data)
+                    RunRepository.save(ctx.fileStore, romFamilyKey, data)
                 }
             }
         }
         // Auto-reset if party count drops to 0 (new game started / ROM reset)
         if (count == 0) {
-            isGameOver.set(false)
+            isGameOver.value = false
             revealedBySpecies.clear()
             battleRevealedByKey.clear()
             battleFourConfirmedKey = null
@@ -528,10 +522,10 @@ object TrackerPoller {
                 // A two-trainer double battle ends once but defeats BOTH trainers.
                 val defeatedNow = if (lastBattleWasTwoTrainerDouble) 2 else 1
                 trainerDefeatsByRoute[mapId] = (trainerDefeatsByRoute[mapId] ?: 0) + defeatedNow
-                appContext?.let { ctx ->
-                    val data = RunRepository.load(ctx, romFamilyKey)
+                env?.let { ctx ->
+                    val data = RunRepository.load(ctx.fileStore, romFamilyKey)
                     data.trainerDefeatsByRoute[mapId.toString()] = trainerDefeatsByRoute[mapId]!!
-                    RunRepository.save(ctx, romFamilyKey, data)
+                    RunRepository.save(ctx.fileStore, romFamilyKey, data)
                 }
             }
         }
@@ -592,27 +586,28 @@ object TrackerPoller {
         // ── Move staleness (Lua Utils.calculateMoveStars) — patch onto enemy after learnset read ──
         // Only applies to the persistent-list display (not when all 4 confirmed this battle,
         // since those moves were just used and are definitely current).
-        val battle = if (battleRaw.enemy != null && enemyLearnset != null
-                        && battleRaw.enemy.fourConfirmedThisBattle == null) {
-            val displayMoves = revealedBySpecies[battleRaw.enemy.speciesId]?.take(4) ?: emptyList()
+        val rawEnemy = battleRaw.enemy
+        val battle = if (rawEnemy != null && enemyLearnset != null
+                        && rawEnemy.fourConfirmedThisBattle == null) {
+            val displayMoves = revealedBySpecies[rawEnemy.speciesId]?.take(4) ?: emptyList()
             val staleFlags = calculateMoveStaleFlags(
-                displayMoves, enemyLearnset.allMoveLevels, battleRaw.enemy.level)
-            battleRaw.copy(enemy = battleRaw.enemy.copy(moveStaleFlags = staleFlags))
+                displayMoves, enemyLearnset.allMoveLevels, rawEnemy.level)
+            battleRaw.copy(enemy = rawEnemy.copy(moveStaleFlags = staleFlags))
         } else battleRaw
 
         return TrackerState.Active(
             game = game, romVersion = romVersion, romTitle = romTitle,
             party = liveParty, battle = battle, currentRoute = route,
             stats = stats, bagDetail = bagDetail,
-            isGameOver = isGameOver.get(), runAttempts = runAttempts,
-            logAvailable = logAvailable.get(),
+            isGameOver = isGameOver.value, runAttempts = runAttempts,
+            logAvailable = logAvailable.value,
             playerLearnset = playerLearnset, enemyLearnset = enemyLearnset,
             routeEncounters = encountersByRoute.mapValues { it.value.toList() },
             routeVisitOrder = routeVisitOrder.toList(),
             trainerCounts = trainerCounts,
             visitedRoutes = visitedRoutes.toSet(),
             showBallPicker = showBallPicker,
-            chosenBall = chosenBall.get(),
+            chosenBall = chosenBall.value,
             isNatDex = isNatDex,
             isMaxFr = maxFrVariant != MaxFrVariant.NONE,
             moveCategories = moveCategories,

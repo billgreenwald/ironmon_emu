@@ -1,5 +1,7 @@
 package hh.game.mgba_android.tracker
 
+import kotlin.concurrent.Volatile
+
 /**
  * Singleton bridge between GameActivity (JNI owner) and TrackerPoller.
  *

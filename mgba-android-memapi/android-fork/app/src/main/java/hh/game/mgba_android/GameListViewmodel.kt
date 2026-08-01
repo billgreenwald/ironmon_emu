@@ -13,6 +13,7 @@ import hh.game.mgba_android.tracker.quickload.RomFamilyUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import hh.game.mgba_android.tracker.platform.AndroidTrackerPlatform
 
 class GameListViewmodel : ViewModel() {
     val familyGroupData = MutableLiveData<List<RomFamilyGroup>>()
@@ -25,7 +26,7 @@ class GameListViewmodel : ViewModel() {
     fun loadFamilies(context: Context, documentfile: DocumentFile?) {
         viewModelScope.launch {
             documentfile ?: return@launch
-            val cached = withContext(Dispatchers.IO) { FamilyCache.load(context) }
+            val cached = withContext(Dispatchers.IO) { FamilyCache.load(AndroidTrackerPlatform.fileStore(context)) }
             if (cached.isNotEmpty()) {
                 familyGroupData.postValue(cached.map {
                     it.copy(lastPlayedNumber = QuickloadManager.getLastNumber(context, it.prefix))
@@ -85,7 +86,7 @@ class GameListViewmodel : ViewModel() {
                 }
                 .sortedBy { it.prefix }
         }
-        FamilyCache.save(context, groups)
+        FamilyCache.save(AndroidTrackerPlatform.fileStore(context), groups)
         familyGroupData.postValue(groups)
     }
 }

@@ -677,13 +677,14 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         Spacer(Modifier.height(4.dp))
 
         // Player stat stages — shown when in battle and any stage differs from neutral (6)
-        if (battle.isActive && battle.playerStatStages != null) {
+        val playerStages = battle.playerStatStages
+        if (battle.isActive && playerStages != null) {
             val stageLabels = listOf("Atk", "Def", "SpA", "SpD", "Spe", "Acc", "Eva")
-            val anyChanged = battle.playerStatStages.any { it != 6 }
+            val anyChanged = playerStages.any { it != 6 }
             if (anyChanged) {
                 Spacer(Modifier.height(2.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    battle.playerStatStages.forEachIndexed { i, stage ->
+                    playerStages.forEachIndexed { i, stage ->
                         val delta = stage - 6
                         if (delta != 0) {
                             val (stageText, stageColor) = if (delta > 0)
@@ -1075,11 +1076,12 @@ private fun EnemyView(
         }
 
         // Enemy stat stages — shown when any stage differs from neutral (6)
-        if (enemy.statStages != null && enemy.statStages.any { it != 6 }) {
+        val enemyStages = enemy.statStages
+        if (enemyStages != null && enemyStages.any { it != 6 }) {
             val stageLabels = listOf("Atk", "Def", "SpA", "SpD", "Spe", "Acc", "Eva")
             Spacer(Modifier.height(2.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                enemy.statStages.forEachIndexed { i, stage ->
+                enemyStages.forEachIndexed { i, stage ->
                     val delta = stage - 6
                     if (delta != 0) {
                         val (stageText, stageColor) = if (delta > 0)
