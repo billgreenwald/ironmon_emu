@@ -879,6 +879,7 @@ object TrackerPoller {
                     totalTrackedMoveCount   = persistent?.size ?: 0,
                     fourConfirmedThisBattle = fourConfirmed,
                     allTrackedMoves         = persistent?.toList() ?: emptyList(),
+                    statStages              = statStagesFrom(enemyMon),
                     // moveStaleFlags populated in poll() after learnset read
                 )
             } else null
@@ -948,6 +949,7 @@ object TrackerPoller {
                 totalTrackedMoveCount   = persistent2?.size ?: 0,
                 fourConfirmedThisBattle = fourConfirmed2,
                 allTrackedMoves         = persistent2?.toList() ?: emptyList(),
+                statStages              = statStagesFrom(enemy2Mon),
             )
         } else null
 
@@ -1074,6 +1076,18 @@ object TrackerPoller {
         ((this[offset + 1].toLong() and 0xFF) shl 8) or
         ((this[offset + 2].toLong() and 0xFF) shl 16) or
         ((this[offset + 3].toLong() and 0xFF) shl 24)
+
+    // gBattleMons statStages at offset 0x18; reorder memory
+    // [HP,Atk,Def,Spe,SpA,SpD,Acc,Eva] -> display [Atk,Def,SpA,SpD,Spe,Acc,Eva]
+    private fun statStagesFrom(mon: ByteArray): IntArray = intArrayOf(
+        mon[0x19].toInt() and 0xFF, // Atk
+        mon[0x1A].toInt() and 0xFF, // Def
+        mon[0x1C].toInt() and 0xFF, // SpA
+        mon[0x1D].toInt() and 0xFF, // SpD
+        mon[0x1B].toInt() and 0xFF, // Spe
+        mon[0x1E].toInt() and 0xFF, // Acc
+        mon[0x1F].toInt() and 0xFF, // Eva
+    )
 
     private const val POLL_INTERVAL_MS = 250L
     private const val BATTLE_POLL_INTERVAL_MS = 50L  // faster polling during battle for high-speed emulation

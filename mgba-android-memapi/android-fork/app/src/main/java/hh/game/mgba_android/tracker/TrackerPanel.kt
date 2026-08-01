@@ -1069,6 +1069,27 @@ private fun EnemyView(
             if (battle.playerSafeguard > 0)   Text("Safeguard (${battle.playerSafeguard}t)", color = TextSecondary, fontSize = ssp(12))
         }
 
+        // Enemy stat stages — shown when any stage differs from neutral (6)
+        if (enemy.statStages != null && enemy.statStages.any { it != 6 }) {
+            val stageLabels = listOf("Atk", "Def", "SpA", "SpD", "Spe", "Acc", "Eva")
+            Spacer(Modifier.height(2.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                enemy.statStages.forEachIndexed { i, stage ->
+                    val delta = stage - 6
+                    if (delta != 0) {
+                        val (stageText, stageColor) = if (delta > 0)
+                            "+$delta" to Color(0xFF4CAF50)   // green for boosts
+                        else
+                            "$delta" to Color(0xFFFF6B6B)     // red for drops
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(stageLabels[i], color = TextSecondary, fontSize = ssp(9))
+                            Text(stageText, color = stageColor, fontSize = ssp(11), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
         // Revealed moves
         var showMoveHistorySheet by remember { mutableStateOf(false) }
         if (enemy.revealedMoveIds.isNotEmpty()) {
