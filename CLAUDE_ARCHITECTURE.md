@@ -6,27 +6,53 @@ Quick reference for navigating this codebase. See `claude_docs/` for details on 
 
 ## Repo Layout
 
+As of the iOS-port groundwork, the tracker **logic** lives in a Kotlin Multiplatform module
+`:tracker-core` (shared, no Android deps). The app module keeps only the Android UI + glue.
+
 ```
 ironmon_emu/
   mgba-android-memapi/
     android-fork/          ← THE ACTIVE APP (all development happens here)
+      tracker-core/        ← KMP MODULE — shared tracker logic (android + jvm + linuxX64 targets)
+        src/commonMain/kotlin/hh/game/mgba_android/tracker/
+          MemoryBridge.kt   ← native read seam (reader lambda injected per-platform)
+          TrackerPoller.kt  ← the poll loop + battle/route/game-over logic (now common)
+          models/           ← TrackerState, PokemonData, BattleState, GameVersion
+          data/             ← GameSettings, DataHelper, PokemonDecoder + readers
+                              (GameStats/BagDetailInfo/LogSource live here too)
+          persistence/      ← RunData (@Serializable), RunRepository, ProfileManager,
+                              LogRepository, TrackerJson (kotlinx.serialization)
+          quickload/        ← RomFamily, RomFamilyGroup, FamilyCache
+          tables/           ← SpeciesNames, MoveStatsTable, TypeChart, etc.
+          platform/         ← SEAM INTERFACES: Logger/TrackerLog, FileStore, KeyValueStore,
+                              AssetReader, LogSource, TrackerSettings, TrackerEnvironment
+        src/commonTest/     ← serialization round-trip + game-code detection tests
       app/src/main/
         java/hh/game/mgba_android/
-          activity/         ← GameActivity (host for SDL + tracker)
-          tracker/          ← ALL tracker Kotlin code
-            MemoryBridge.kt
-            TrackerPoller.kt
-            TrackerPanel.kt
-            models/         ← TrackerState, PokemonData, BattleState, GameVersion
-            data/           ← GameSettings, DataHelper, PokemonDecoder + readers
-            persistence/    ← RunData, RunRepository, ProfileManager
-            quickload/      ← RomFamily, FamilyCache, QuickloadManager
-            tables/         ← SpeciesNames, MoveStatsTable, TypeChart, etc.
+          activity/         ← GameActivity (host for SDL + tracker; builds TrackerEnvironment)
+          tracker/          ← ANDROID-ONLY tracker code that stays app-side:
+            platform/AndroidPlatform.kt  ← Android impls of the seams + AndroidTrackerPlatform
+            TrackerPanel.kt, LogOverlay.kt, GalleryOverlay.kt, NamingOverlay.kt,
+            NameEntryButtons.kt, NamingReplayEngine.kt   ← Compose UI (→ SwiftUI on iOS)
+            data/LogFileLocator.kt        ← SAF log lookup (Android-specific)
+            quickload/QuickloadManager.kt ← bound-service IPC (Android-specific)
         cpp/                ← runGame.cpp (JNI), memapi_server.h, ards.h/cpp
         res/layout/         ← activity_game.xml, padboard.xml
     upstream/               ← Desktop mGBA (reference only, not the Android build)
   Ironmon-Tracker/          ← ORIGINAL LUA TRACKER (read-only reference — always check here first!)
 ```
+
+### KMP module notes
+- **Seams, not `expect/actual`:** platform needs are plain interfaces injected at startup. Android
+  builds a `TrackerEnvironment` in `AndroidTrackerPlatform.install()` and passes it to
+  `TrackerPoller.start(environment, scope, romPath)`. iOS will supply its own impls.
+- **`linuxX64` is a validation-only target** (never shipped): it compiles `commonMain` through
+  Kotlin/Native *on Linux*, catching iOS-incompatible code (java.* APIs, JVM `@Volatile`) without
+  a Mac. Run `:tracker-core:compileKotlinLinuxX64` / `:tracker-core:linuxX64Test` as the iOS gate.
+- **Persistence wire format preserved:** the Gson→kotlinx.serialization move keeps identical JSON
+  field names so existing `ironmon_run_*.json` device saves load unchanged.
+- Repositories now take injected stores, not `Context`: `RunRepository.load(fileStore, id)`,
+  `FamilyCache.load(fileStore)`, `LogRepository.getLog(logSource, …)`.
 
 ---
 
@@ -60,12 +86,16 @@ ironmon_emu/
 
 ## Data Flow (top to bottom)
 
+Everything from `MemoryBridge` down lives in the shared `:tracker-core` module; only the JNI
+source and the Compose UI are Android-specific.
+
 ```
-JNI: getMemoryRange(addr, len) → ByteArray
+JNI: getMemoryRange(addr, len) → ByteArray   [Android: runGame.cpp / iOS: Swift bridge]
          ↓
-    MemoryBridge          (thin wrapper, reader set by GameActivity)
+    MemoryBridge          (thin wrapper, reader lambda injected by the host platform)
          ↓
-    TrackerPoller         (250ms coroutine — reads everything, emits state)
+    TrackerPoller         (250ms coroutine — reads everything, emits state;
+                           platform needs injected via TrackerEnvironment)
     ├── GameSettings      (ROM detection: 0x080000AC)
     ├── DataHelper        (per-game addresses)
     ├── PokemonDecoder    (XOR decrypt + 24 orderings)

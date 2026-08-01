@@ -12,6 +12,21 @@ ANDROID_HOME=/home/bill/Android/Sdk /home/bill/gradle-8.4/bin/gradle :app:assemb
 /home/bill/Android/Sdk/platform-tools/adb shell am start -n hh.game.mgba_android/.activity.GameActivity
 ```
 
+## Shared module (`:tracker-core`, KMP)
+The tracker logic is a Kotlin Multiplatform library (`android` + `jvm` + `linuxX64` targets).
+Useful commands (same env prefix as above):
+```bash
+# Fast logic tests on the JVM (Linux, no device):
+gradle :tracker-core:jvmTest --no-daemon
+# iOS-compatibility gate — compiles commonMain through Kotlin/Native ON LINUX (no Mac needed):
+gradle :tracker-core:compileKotlinLinuxX64 --no-daemon
+gradle :tracker-core:linuxX64Test --no-daemon
+```
+- The `linuxX64` target is **validation-only** (never shipped); it enforces the same restrictions
+  the future iOS targets will. Konan toolchain downloads once to `~/.konan`.
+- Requires `kotlin.native.distribution.downloadFromMaven=true` in `gradle.properties` (else the
+  Kotlin/Native plugin adds an `ivy` repo that violates settings `FAIL_ON_PROJECT_REPOS`).
+
 ## Environment
 | Component | Path / Version |
 |-----------|---------------|
@@ -24,27 +39,35 @@ ANDROID_HOME=/home/bill/Android/Sdk /home/bill/gradle-8.4/bin/gradle :app:assemb
 | Kotlin | `1.9.22` |
 | Compose BOM | `2023.03.00` |
 | Material3 | `1.1.0` |
-| Gson | `2.10.1` |
 | adb | `/home/bill/Android/Sdk/platform-tools/adb` |
+| Kotlin MPP plugin | `1.9.22` (`:tracker-core`) |
+| kotlinx.serialization | `1.6.0` (JSON) |
+| kotlinx-datetime | `0.4.1` |
+| atomicfu | `0.23.1` (library-only, no gradle plugin) |
 
 ## Key Dependency Notes
 - **Material3 1.1.0 compat:** Use `LinearProgressIndicator(progress = Float, ...)` — NOT the lambda `progress = { Float }` form (requires newer BOM)
-- **Gson:** Already in deps — no new deps needed for persistence
+- **Persistence uses kotlinx.serialization** (not Gson) — see [`persistence.md`](persistence.md). Gson may still appear elsewhere in the app.
 - **Landscapist Glide:** For Pokemon sprite loading in TrackerPanel
+- **Common `@Volatile`** needs `import kotlin.concurrent.Volatile` (module opts into `kotlin.ExperimentalStdlibApi`); the JVM one isn't in commonMain.
 
 ## Project Structure
 ```
 android-fork/
+  tracker-core/         — KMP module: shared tracker logic (see CLAUDE_ARCHITECTURE.md)
+    build.gradle.kts    — MPP targets (android/jvm/linuxX64), serialization/datetime/atomicfu deps
+    src/commonMain/     — the shared logic; src/commonTest/ — tests
   app/
     src/main/
       java/hh/game/mgba_android/
         activity/       — GameActivity + other activities
-        tracker/        — ALL tracker code (see other docs)
+        tracker/        — Android-only tracker code: Compose UI, AndroidPlatform.kt seams,
+                          LogFileLocator (SAF), QuickloadManager (service IPC)
       cpp/              — runGame.cpp, memapi_server.h, ards.h/cpp
       res/layout/       — activity_game.xml, padboard.xml
-    build.gradle.kts    — deps, ndkVersion, compileSdk
-  build.gradle.kts      — AGP version
-  settings.gradle.kts   — module config
+    build.gradle.kts    — deps, ndkVersion, compileSdk; depends on :tracker-core
+  build.gradle.kts      — AGP + Kotlin MPP/serialization plugin versions
+  settings.gradle.kts   — includes :app and :tracker-core
 ```
 
 ## C++ / JNI Build
