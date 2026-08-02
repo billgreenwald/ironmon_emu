@@ -19,3 +19,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "mGBA_Android"
 include(":app")
+include(":tracker-core")

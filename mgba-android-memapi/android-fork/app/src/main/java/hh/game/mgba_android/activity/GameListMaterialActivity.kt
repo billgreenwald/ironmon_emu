@@ -108,6 +108,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.lifecycleScope
+import hh.game.mgba_android.tracker.platform.AndroidTrackerPlatform
 
 
 class GameListMaterialActivity : ComponentActivity() {
@@ -1053,7 +1054,7 @@ fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit, onSetting
 
     val currentRomNum = QuickloadManager.getLastNumber(context, group.prefix)
     val currentRuns = remember(group.prefix) {
-        RunRepository.load(context, group.prefix).stats.attempts
+        RunRepository.load(AndroidTrackerPlatform.fileStore(context), group.prefix).stats.attempts
     }
 
     var selectedMode by remember { mutableStateOf(QuickloadManager.getFamilyMode(context, group.prefix)) }
@@ -1131,9 +1132,9 @@ fun FamilySettingsDialog(group: RomFamilyGroup, onDismiss: () -> Unit, onSetting
                     }
                     totalRunsText.toIntOrNull()?.let { n ->
                         TrackerPoller.setRunAttempts(n)
-                        val data = RunRepository.load(context, group.prefix)
+                        val data = RunRepository.load(AndroidTrackerPlatform.fileStore(context), group.prefix)
                         data.stats.attempts = n
-                        RunRepository.save(context, group.prefix, data)
+                        RunRepository.save(AndroidTrackerPlatform.fileStore(context), group.prefix, data)
                     }
                     onSettingsChanged()
                     onDismiss()

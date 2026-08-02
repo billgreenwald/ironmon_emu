@@ -1,6 +1,8 @@
 # MemoryBridge
 
-**File:** `tracker/MemoryBridge.kt`
+**File:** `tracker-core/src/commonMain/.../tracker/MemoryBridge.kt` (shared KMP module). The
+`reader` lambda is injected per-platform: Android sets it from JNI `getMemoryRange`; iOS will set
+it from a Swift bridge over the same `mCore` `rawRead8`/`busRead8` calls.
 
 ## Purpose
 Singleton bridge between GameActivity (JNI owner) and the rest of the tracker. All memory reads from the emulator core flow through here.

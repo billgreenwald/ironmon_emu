@@ -1,9 +1,15 @@
 package hh.game.mgba_android.tracker.data
 
-import android.content.Context
-import android.util.Log
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
+import hh.game.mgba_android.tracker.platform.AssetReader
+import hh.game.mgba_android.tracker.platform.TrackerLog
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 object MaxFrAddressLoader {
 
@@ -24,14 +30,14 @@ object MaxFrAddressLoader {
      * Should be called once per ROM load (when game code changes), not every poll tick.
      */
     fun detectAndLoad(
-        context: Context,
+        assets: AssetReader,
         reader: (Long, Int) -> ByteArray?,
     ): Pair<MaxFrVariant, GameAddresses>? {
         for ((variant, file) in VARIANTS) {
             try {
-                val text = context.assets.open(file).bufferedReader().use { it.readText() }
-                val root = JsonParser.parseString(text).asJsonObject
-                val addr = root.getAsJsonObject("Addresses")
+                val text = assets.readText(file) ?: continue
+                val root = Json.parseToJsonElement(text).jsonObject
+                val addr = root["Addresses"]!!.jsonObject
                 val gBattleMovesAddr = hex(addr, "gBattleMoves")
                 // Probe move 1 (Pound) at gBattleMoves + 12:
                 // struct is 12 bytes; byte offsets 1-4 = power/type/accuracy/pp
@@ -40,11 +46,11 @@ object MaxFrAddressLoader {
                     bytes[2].toInt() and 0xFF == 0   &&  // type (Normal)
                     bytes[3].toInt() and 0xFF == 100 &&  // accuracy
                     bytes[4].toInt() and 0xFF == 35) {   // pp
-                    Log.d(TAG, "Detected $variant via $file (gBattleMoves=0x${gBattleMovesAddr.toString(16).uppercase()})")
-                    return variant to build(context, root, addr)
+                    TrackerLog.d(TAG, "Detected $variant via $file (gBattleMoves=0x${gBattleMovesAddr.toString(16).uppercase()})")
+                    return variant to build(assets, root, addr)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error reading $file", e)
+                TrackerLog.e(TAG, "Error reading $file", e)
             }
         }
         return null
@@ -52,71 +58,74 @@ object MaxFrAddressLoader {
 
     // All values in the JSON Addresses section are hex strings, with or without "0X" prefix.
     private fun hex(o: JsonObject, key: String): Long {
-        val s = o.get(key)?.asString?.uppercase() ?: return 0L
+        val s = o[key]?.jsonPrimitive?.contentOrNull?.uppercase() ?: return 0L
         val digits = s.removePrefix("0X").trimStart('0').ifEmpty { "0" }
         return digits.toLong(16)
     }
 
     private fun hexInt(o: JsonObject, key: String): Int = hex(o, key).toInt()
 
-    private fun loadLua(context: Context, root: JsonObject, fileKey: String, startIdKey: String, spriteStartKey: String): Map<Int, MaxExtPokemon> {
-        val file        = root.get(fileKey)?.asString ?: return emptyMap()
-        val startId     = root.get(startIdKey)?.asInt ?: return emptyMap()
-        val spriteStart = root.get(spriteStartKey)?.asInt ?: startId
+    private fun str(o: JsonObject, key: String): String? = o[key]?.jsonPrimitive?.contentOrNull
+    private fun int(o: JsonObject, key: String): Int? = o[key]?.jsonPrimitive?.intOrNull
+
+    private fun loadLua(assets: AssetReader, root: JsonObject, fileKey: String, startIdKey: String, spriteStartKey: String): Map<Int, MaxExtPokemon> {
+        val file        = str(root, fileKey) ?: return emptyMap()
+        val startId     = int(root, startIdKey) ?: return emptyMap()
+        val spriteStart = int(root, spriteStartKey) ?: startId
         return try {
-            val lua = context.assets.open(file).bufferedReader().use { it.readText() }
+            val lua = assets.readText(file) ?: return emptyMap()
             MaxExtPokemonParser.parseFirstBlock(lua, startId, spriteStart)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load $file", e)
+            TrackerLog.e(TAG, "Failed to load $file", e)
             emptyMap()
         }
     }
 
-    private fun loadLuaLegendaries(context: Context, root: JsonObject): Map<Int, MaxExtPokemon> {
-        val startId     = root.get("gen4LegendaryStartId")?.asInt ?: return emptyMap()
-        val spriteStart = root.get("gen4LegendarySpriteStart")?.asInt ?: startId
-        val spriteIds   = root.getAsJsonArray("gen4LegendarySpriteIds")
-            ?.mapNotNull { runCatching { it.asInt }.getOrNull() } ?: emptyList()
-        val file        = root.get("gen4File")?.asString ?: return emptyMap()
+    private fun loadLuaLegendaries(assets: AssetReader, root: JsonObject): Map<Int, MaxExtPokemon> {
+        val startId     = int(root, "gen4LegendaryStartId") ?: return emptyMap()
+        val spriteStart = int(root, "gen4LegendarySpriteStart") ?: startId
+        val spriteIds   = root["gen4LegendarySpriteIds"]?.jsonArray
+            ?.mapNotNull { runCatching { it.jsonPrimitive.int }.getOrNull() } ?: emptyList()
+        val file        = str(root, "gen4File") ?: return emptyMap()
         return try {
-            val lua = context.assets.open(file).bufferedReader().use { it.readText() }
+            val lua = assets.readText(file) ?: return emptyMap()
             MaxExtPokemonParser.parseSecondBlock(lua, startId, spriteStart, spriteIds)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load gen4 legendaries from $file", e)
+            TrackerLog.e(TAG, "Failed to load gen4 legendaries from $file", e)
             emptyMap()
         }
     }
 
-    private fun build(context: Context, root: JsonObject, a: JsonObject): GameAddresses {
+    private fun build(assets: AssetReader, root: JsonObject, a: JsonObject): GameAddresses {
         val extMap = buildMap<Int, MaxExtPokemon> {
-            putAll(loadLua(context, root, "gen4File", "gen4StartId", "gen4SpriteStart"))
-            putAll(loadLua(context, root, "gen5File", "gen5StartId", "gen5SpriteStart"))
-            putAll(loadLuaLegendaries(context, root))
+            putAll(loadLua(assets, root, "gen4File", "gen4StartId", "gen4SpriteStart"))
+            putAll(loadLua(assets, root, "gen5File", "gen5StartId", "gen5SpriteStart"))
+            putAll(loadLuaLegendaries(assets, root))
         }
         // Load abilities and moves into the global store
-        MaxExtDataStore.abilityMap = loadAbilities(context, root)
-        MaxExtDataStore.moveMap    = loadMoves(context, root)
+        MaxExtDataStore.abilityMap = loadAbilities(assets, root)
+        MaxExtDataStore.moveMap    = loadMoves(assets, root)
         return buildAddresses(a, extMap)
     }
 
-    private fun loadAbilities(context: Context, root: JsonObject): Map<Int, MaxExtAbility> {
-        val file = root.get("abilitiesFile")?.asString ?: return emptyMap()
+    private fun loadAbilities(assets: AssetReader, root: JsonObject): Map<Int, MaxExtAbility> {
+        val file = str(root, "abilitiesFile") ?: return emptyMap()
         return try {
-            val lua = context.assets.open(file).bufferedReader().use { it.readText() }
+            val lua = assets.readText(file) ?: return emptyMap()
             MaxExtAbilityParser.parse(lua)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load $file", e)
+            TrackerLog.e(TAG, "Failed to load $file", e)
             emptyMap()
         }
     }
 
-    private fun loadMoves(context: Context, root: JsonObject): Map<Int, MaxExtMove> {
-        val file = root.get("movesFile")?.asString ?: return emptyMap()
+    private fun loadMoves(assets: AssetReader, root: JsonObject): Map<Int, MaxExtMove> {
+        val file = str(root, "movesFile") ?: return emptyMap()
         return try {
-            val lua = context.assets.open(file).bufferedReader().use { it.readText() }
+            val lua = assets.readText(file) ?: return emptyMap()
             MaxExtMoveParser.parse(lua)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load $file", e)
+            TrackerLog.e(TAG, "Failed to load $file", e)
             emptyMap()
         }
     }

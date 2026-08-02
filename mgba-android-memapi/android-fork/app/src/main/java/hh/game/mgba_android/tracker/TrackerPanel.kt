@@ -1,5 +1,6 @@
 package hh.game.mgba_android.tracker
 
+import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -25,12 +27,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.skydoves.landscapist.glide.GlideImage
 import hh.game.mgba_android.tracker.data.BagDetailInfo
 import hh.game.mgba_android.tracker.data.BattlePowerCalc
@@ -672,13 +677,14 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
         Spacer(Modifier.height(4.dp))
 
         // Player stat stages — shown when in battle and any stage differs from neutral (6)
-        if (battle.isActive && battle.playerStatStages != null) {
+        val playerStages = battle.playerStatStages
+        if (battle.isActive && playerStages != null) {
             val stageLabels = listOf("Atk", "Def", "SpA", "SpD", "Spe", "Acc", "Eva")
-            val anyChanged = battle.playerStatStages.any { it != 6 }
+            val anyChanged = playerStages.any { it != 6 }
             if (anyChanged) {
                 Spacer(Modifier.height(2.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    battle.playerStatStages.forEachIndexed { i, stage ->
+                    playerStages.forEachIndexed { i, stage ->
                         val delta = stage - 6
                         if (delta != 0) {
                             val (stageText, stageColor) = if (delta > 0)
@@ -1070,11 +1076,12 @@ private fun EnemyView(
         }
 
         // Enemy stat stages — shown when any stage differs from neutral (6)
-        if (enemy.statStages != null && enemy.statStages.any { it != 6 }) {
+        val enemyStages = enemy.statStages
+        if (enemyStages != null && enemyStages.any { it != 6 }) {
             val stageLabels = listOf("Atk", "Def", "SpA", "SpD", "Spe", "Acc", "Eva")
             Spacer(Modifier.height(2.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                enemy.statStages.forEachIndexed { i, stage ->
+                enemyStages.forEachIndexed { i, stage ->
                     val delta = stage - 6
                     if (delta != 0) {
                         val (stageText, stageColor) = if (delta > 0)
@@ -1521,7 +1528,7 @@ private fun MoveHistorySheet(enemy: EnemyData, isMaxFr: Boolean = false, isNatDe
     val sorted = remember(enemy.allTrackedMoves) {
         enemy.allTrackedMoves.sortedByDescending { it.minLv }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -1684,7 +1691,7 @@ private fun hpColor(pct: Float): Color = when {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun LearnsetSheet(learnset: LearnsetInfo, currentLevel: Int, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(Modifier.padding(16.dp)) {
             Text("Level-up Moves", color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
@@ -1711,11 +1718,58 @@ fun LearnsetSheet(learnset: LearnsetInfo, currentLevel: Int, onDismiss: () -> Un
     }
 }
 
+// ── Bottom-sheet wrapper with animations-off guard ────────────────────────────
+// On devices whose system animation scale is 0 (common on Retroid handhelds,
+// whose setup guides tell users to disable animations), Material3 1.1.0's
+// ModalBottomSheet dismisses through a settle animation that never completes, so
+// onDismissRequest never fires and the internal SheetState wedges — every detail
+// sheet then opens only once per run. When animations are disabled we fall back
+// to a plain Dialog, whose dismissal is instant and cannot wedge. Normal setups
+// keep the animated ModalBottomSheet unchanged.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TrackerBottomSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val context = LocalContext.current
+    val animationsEnabled = remember {
+        Settings.Global.getFloat(
+            context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f,
+        ) > 0f
+    }
+    if (animationsEnabled) {
+        ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg, content = content)
+    } else {
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            BoxWithConstraints(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f))
+                    .pointerInput(Unit) { detectTapGestures { onDismiss() } },
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = maxHeight * 0.9f)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                        .background(CardBg)
+                        .navigationBarsPadding()
+                        // Consume taps on the sheet so they don't reach the scrim.
+                        .pointerInput(Unit) { detectTapGestures { } },
+                    content = content,
+                )
+            }
+        }
+    }
+}
+
 // ── Move detail sheet ─────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoveDetailSheet(move: MoveData, battlePower: String? = null, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(move.moveName, color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold,
@@ -1749,7 +1803,7 @@ fun MoveDetailSheet(move: MoveData, battlePower: String? = null, onDismiss: () -
 @Composable
 fun AbilityDetailSheet(abilityId: Int, isMaxFr: Boolean = false, onDismiss: () -> Unit) {
     val info = AbilityTable.get(abilityId, isMaxFr)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(Modifier.padding(16.dp)) {
             Text(info.name, color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
@@ -1790,7 +1844,7 @@ private fun EvoDetailSheet(evoLevel: Int, evoMethod: String?, onDismiss: () -> U
         evoMethod == "UPGRD"                  -> "Evolves when traded holding an Up-Grade."
         else                                  -> "Evolution method unknown."
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             Text("Evolution", color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
@@ -1804,7 +1858,7 @@ private fun EvoDetailSheet(evoLevel: Int, evoMethod: String?, onDismiss: () -> U
 @Composable
 fun TypeDefenseSheet(type1: Int, type2: Int, isNatDex: Boolean = false, onDismiss: () -> Unit) {
     val chart = TypeChart.defenseChart(type1, type2, isNatDex)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
             Row {
                 Text("Type Defenses: ", color = TextPrimary, fontSize = ssp(14), fontWeight = FontWeight.Bold)
@@ -1873,7 +1927,7 @@ private fun RouteMonSheet(
     val type2 = bytes?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: type1
     val bst   = BstTable.bst(speciesId)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
 
             // ── Header: sprite + name + types ──────────────────────────────
@@ -2006,7 +2060,7 @@ private fun StatusBadge(status: Int) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IVStatSheet(pokemon: PokemonData, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(Modifier.padding(16.dp)) {
             Text("Stats Detail", color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
@@ -2054,7 +2108,7 @@ fun IVStatSheet(pokemon: PokemonData, onDismiss: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BagDetailSheet(detail: BagDetailInfo, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
             Text("Bag Detail", color = TextPrimary, fontSize = ssp(16), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
@@ -2094,7 +2148,7 @@ fun CoverageCalcSheet(isNatDex: Boolean = false, onDismiss: () -> Unit) {
     }
     var selectedTypes by remember { mutableStateOf(emptySet<Int>()) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(
             Modifier
                 .padding(16.dp)
@@ -2201,7 +2255,7 @@ fun CoverageCalcSheet(isNatDex: Boolean = false, onDismiss: () -> Unit) {
 @Composable
 private fun NoteEditSheet(speciesId: Int, speciesName: String, initialNote: String, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf(initialNote) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    TrackerBottomSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 16.dp)

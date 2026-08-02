@@ -5,7 +5,7 @@ Subsystem readers called by `TrackerPoller` each tick. All read via `MemoryBridg
 ---
 
 ## RouteReader
-**File:** `tracker/data/RouteReader.kt`
+**File:** `tracker-core/src/commonMain/.../tracker/data/RouteReader.kt`
 
 Reads current map location.
 
@@ -26,7 +26,7 @@ object RouteReader {
 ---
 
 ## StatsReader
-**File:** `tracker/data/StatsReader.kt`
+**File:** `tracker-core/src/commonMain/.../tracker/data/StatsReader.kt`
 
 Reads game stats (steps, battles, Pokemon Center visits) from SaveBlock1 with XOR decryption.
 
@@ -54,7 +54,7 @@ object StatsReader {
 ---
 
 ## BagReader
-**File:** `tracker/data/BagReader.kt`
+**File:** `tracker-core/src/commonMain/.../tracker/data/BagReader.kt`
 
 Reads Items and Berries pockets, computes healing summary for lead Pokemon.
 
@@ -85,7 +85,7 @@ object BagReader {
 ---
 
 ## LearnsetReader
-**File:** `tracker/data/LearnsetReader.kt`
+**File:** `tracker-core/src/commonMain/.../tracker/data/LearnsetReader.kt`
 
 Reads level-up learnset from ROM.
 

@@ -1,5 +1,7 @@
 package hh.game.mgba_android.tracker.data
 
+import kotlin.concurrent.Volatile
+
 /**
  * Global store for Gen4/Gen5 ability and move data loaded from Lua assets.
  * Set by TrackerPoller when a MaxFR variant is detected; cleared on game unload.

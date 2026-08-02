@@ -1,9 +1,20 @@
 # Persistence Layer
 
-**Files:** `tracker/persistence/RunData.kt`, `RunRepository.kt`, `ProfileManager.kt`
+**Files (now in the shared `:tracker-core` module):**
+`tracker-core/src/commonMain/.../tracker/persistence/RunData.kt`, `RunRepository.kt`,
+`ProfileManager.kt`, `LogRepository.kt`, `TrackerJson.kt`, and
+`quickload/FamilyCache.kt`. Android implementations of the storage seams live in
+`app/.../tracker/platform/AndroidPlatform.kt`.
 
 ## Purpose
 Saves run history (attempt count, encounter log, trainer log) per ROM to JSON files on device storage.
+
+## Serialization (kotlinx.serialization)
+Uses `kotlinx.serialization`, not Gson. Codec is `trackerJson` in `TrackerJson.kt`
+(`ignoreUnknownKeys = true`, `encodeDefaults = true`). **Wire format is preserved from the old
+Gson models** — `@SerialName` values equal the old `@SerializedName` values and every field is
+defaulted — so existing `ironmon_run_*.json` device saves deserialize unchanged. See
+`commonTest/.../SerializationTest.kt` for the round-trip + legacy-JSON guards.
 
 ---
 
@@ -36,48 +47,52 @@ data class TrainerEntry(trainerName, location, won, timestamp)
 ---
 
 ## RunRepository (`RunRepository.kt`)
-Gson-based JSON file storage.
+JSON storage through an injected `FileStore` seam (no `Context` — keeps it common).
 
-**Storage location:** `context.filesDir/ironmon_run_<profileId>.json`
+**File name:** `ironmon_run_<profileId>.json`. On Android the `FileStore` is backed by
+`context.filesDir` (`FilesDirFileStore` in `AndroidPlatform.kt`).
 
 ```kotlin
 object RunRepository {
-    fun load(context: Context, profileId: String): RunData
-    fun save(context: Context, profileId: String, data: RunData)
-    fun delete(context: Context, profileId: String)
+    fun load(store: FileStore, profileId: String): RunData
+    fun save(store: FileStore, profileId: String, data: RunData)
+    fun delete(store: FileStore, profileId: String)
     fun romCodeMatches(data: RunData, currentCode: String): Boolean
 }
 ```
 
-**Gson dependency:** `com.google.code.gson:gson:2.10.1` — already in `app/build.gradle.kts`
+Call sites obtain the store via `AndroidTrackerPlatform.fileStore(context)`.
 
 ---
 
 ## ProfileManager (`ProfileManager.kt`)
-Multi-profile support via SharedPreferences (currently single "default" profile for MVP).
+Multi-profile support through an injected `KeyValueStore` seam (currently unwired — single
+"default" profile for MVP).
 
 ```kotlin
 object ProfileManager {
-    fun getActiveProfileId(context): String     // default = "default"
-    fun setActiveProfileId(context, profileId)
-    fun listProfiles(context): List<String>
-    fun addProfile(context, profileId)
-    fun removeProfile(context, profileId)
+    fun getActiveProfileId(store: KeyValueStore): String     // default = "default"
+    fun setActiveProfileId(store: KeyValueStore, profileId)
+    fun listProfiles(store: KeyValueStore): List<String>
+    fun addProfile(store: KeyValueStore, profileId)
+    fun removeProfile(store: KeyValueStore, profileId)
 }
 ```
 
-**SharedPreferences key:** `"ironmon_profiles"` (comma-separated profile list + active key)
+**Android KeyValueStore** is backed by SharedPreferences `"ironmon_profiles"`
+(`AndroidTrackerPlatform.keyValueStore(context)`; comma-separated profile list + active key).
 
 ---
 
 ## Flow: Run Attempt Increment
 1. TrackerPoller detects lead HP == 0 (game over)
 2. Sets `isGameOver = true` in TrackerState
-3. Calls `RunRepository.load()` → increments `stats.attempts` → `RunRepository.save()`
+3. Calls `RunRepository.load(env.fileStore, …)` → increments `stats.attempts` → `RunRepository.save(env.fileStore, …)`
 4. TrackerPanel shows "GAME OVER" banner + "Run N" badge
 
 ## Troubleshooting
-- **Run count not persisting:** Check `context.filesDir` write permissions (should always be accessible)
+- **Run count not persisting:** Check the `FileStore` (Android `filesDir`) write path
 - **Wrong profile loaded:** `ProfileManager.getActiveProfileId()` defaults to "default"
 - **Data lost after reinstall:** `filesDir` is per-install; use `getExternalFilesDir()` for backup (not implemented)
-- **Gson parse error after schema change:** Delete JSON file or handle missing fields with default values
+- **Parse error after schema change:** all fields must stay defaulted; `trackerJson` ignores unknown
+  keys and `RunRepository.load` falls back to a fresh `RunData()` on failure

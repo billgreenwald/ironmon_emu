@@ -1,12 +1,15 @@
 # TrackerPoller
 
-**File:** `tracker/TrackerPoller.kt`
+**File:** `tracker-core/src/commonMain/.../tracker/TrackerPoller.kt` (shared KMP module)
 
 ## Purpose
 The heart of the tracker. 250ms coroutine loop that reads emulator memory and builds `TrackerState`. Also owns game-over detection and run persistence.
 
 ## Lifecycle
-- `TrackerPoller.start(context, scope)` — called in `GameActivity.onCreate()` after MemoryBridge is set
+- `TrackerPoller.start(environment, scope, romPath)` — called in `GameActivity.onCreate()` after
+  MemoryBridge is set. `environment` is a `TrackerEnvironment` (FileStore/AssetReader/LogSource/
+  TrackerSettings), built by `AndroidTrackerPlatform.install(applicationContext)`. Platform access
+  goes through it — the poller no longer touches `Context` or `EmulatorPreferences` directly.
 - `TrackerPoller.stop()` — called in `GameActivity.onDestroy()` before MemoryBridge is cleared
 - Runs on `Dispatchers.Default` (background thread)
 
@@ -14,7 +17,7 @@ The heart of the tracker. 250ms coroutine loop that reads emulator memory and bu
 ```kotlin
 object TrackerPoller {
     val state: StateFlow<TrackerState>
-    fun start(context: Context, scope: CoroutineScope)
+    fun start(environment: TrackerEnvironment, scope: CoroutineScope, romPath: String? = null)
     fun stop()
     fun resetGameOver()          // manual reset from UI
     fun manualNextRun()          // increment run counter + set game over (quickload path)

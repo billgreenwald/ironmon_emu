@@ -12,7 +12,7 @@ object PokemonDecoder {
     // sHiddenPowerType[] from pret pokefirered source — maps HP index 0-15 to ROM type IDs
     private val HP_TYPE_ROM_IDS = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17)
 
-    internal val SUBSTRUCTURE_ORDER: Array<IntArray> = arrayOf(
+    val SUBSTRUCTURE_ORDER: Array<IntArray> = arrayOf(
         intArrayOf(0, 1, 2, 3), // 0:  GAEM
         intArrayOf(0, 1, 3, 2), // 1:  GAME
         intArrayOf(0, 2, 1, 3), // 2:  GEAM

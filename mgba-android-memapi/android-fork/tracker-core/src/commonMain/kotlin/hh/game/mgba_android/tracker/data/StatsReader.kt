@@ -1,13 +1,8 @@
 package hh.game.mgba_android.tracker.data
 
-import android.util.Log
 import hh.game.mgba_android.tracker.MemoryBridge
-
-data class GameStats(
-    val steps: Long,
-    val totalBattles: Long,
-    val pokemonCenterVisits: Long,
-)
+import hh.game.mgba_android.tracker.platform.TrackerLog
+// GameStats moved to :tracker-core commonMain (same package) so shared code can reference it.
 
 object StatsReader {
 
@@ -23,11 +18,11 @@ object StatsReader {
         // Resolve SaveBlock1 address (pointer for FR/LG/Emerald; direct address for Ruby/Sapphire)
         val saveBlock1Addr: Long = if (addresses.saveBlock1IsPointer) {
             val ptrBytes = MemoryBridge.readBytes(addresses.saveBlock1Ptr, 4)
-            if (ptrBytes == null) { Log.w(TAG, "sb1 ptr read null @ 0x${addresses.saveBlock1Ptr.toString(16)}"); return null }
+            if (ptrBytes == null) { TrackerLog.w(TAG, "sb1 ptr read null @ 0x${addresses.saveBlock1Ptr.toString(16)}"); return null }
             val addr = ptrBytes.toLittleEndianLong()
             if (addr == 0L) {
-                val hex = ptrBytes.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
-                Log.w(TAG, "sb1 ptr is 0 @ 0x${addresses.saveBlock1Ptr.toString(16)} bytes=$hex")
+                val hex = ptrBytes.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+                TrackerLog.w(TAG, "sb1 ptr is 0 @ 0x${addresses.saveBlock1Ptr.toString(16)} bytes=$hex")
                 return null
             }
             addr
@@ -41,17 +36,17 @@ object StatsReader {
             0L
         } else {
             val sb2PtrBytes = MemoryBridge.readBytes(addresses.saveBlock2Ptr, 4)
-            if (sb2PtrBytes == null) { Log.w(TAG, "sb2 ptr read null @ 0x${addresses.saveBlock2Ptr.toString(16)}"); return null }
+            if (sb2PtrBytes == null) { TrackerLog.w(TAG, "sb2 ptr read null @ 0x${addresses.saveBlock2Ptr.toString(16)}"); return null }
             val sb2Addr = sb2PtrBytes.toLittleEndianLong()
-            if (sb2Addr == 0L) { Log.w(TAG, "sb2 ptr is 0 (save not initialized?)"); return null }
+            if (sb2Addr == 0L) { TrackerLog.w(TAG, "sb2 ptr is 0 (save not initialized?)"); return null }
             val keyBytes = MemoryBridge.readBytes(sb2Addr + addresses.encryptionKeyOffset, 4)
-            if (keyBytes == null) { Log.w(TAG, "xor key read null @ 0x${(sb2Addr + addresses.encryptionKeyOffset).toString(16)}"); return null }
+            if (keyBytes == null) { TrackerLog.w(TAG, "xor key read null @ 0x${(sb2Addr + addresses.encryptionKeyOffset).toString(16)}"); return null }
             keyBytes.toLittleEndianLong()
         }
 
         val statsBase = saveBlock1Addr + addresses.gameStatsOffset
 
-        Log.d(TAG, "sb1Ptr=0x${addresses.saveBlock1Ptr.toString(16)} sb1Addr=0x${saveBlock1Addr.toString(16)} statsOff=0x${addresses.gameStatsOffset.toString(16)} sb2Ptr=0x${addresses.saveBlock2Ptr.toString(16)} encKeyOff=0x${addresses.encryptionKeyOffset.toString(16)} xorKey=0x${xorKey.toString(16)}")
+        TrackerLog.d(TAG, "sb1Ptr=0x${addresses.saveBlock1Ptr.toString(16)} sb1Addr=0x${saveBlock1Addr.toString(16)} statsOff=0x${addresses.gameStatsOffset.toString(16)} sb2Ptr=0x${addresses.saveBlock2Ptr.toString(16)} encKeyOff=0x${addresses.encryptionKeyOffset.toString(16)} xorKey=0x${xorKey.toString(16)}")
 
         fun readStat(idx: Int): Long {
             val bytes = MemoryBridge.readBytes(statsBase + idx * SIZEOF_GAME_STAT, 4) ?: return 0L
@@ -62,7 +57,7 @@ object StatsReader {
         val steps = readStat(IDX_STEPS)
         val battles = readStat(IDX_TOTAL_BATTLES)
         val centers = readStat(IDX_USED_POKECENTER)
-        Log.d(TAG, "steps=$steps battles=$battles centers=$centers")
+        TrackerLog.d(TAG, "steps=$steps battles=$battles centers=$centers")
 
         return GameStats(
             steps               = steps,

@@ -20,7 +20,9 @@ object GameSettings {
 
     fun detectGame(codeBytes: ByteArray): GameVersion {
         if (codeBytes.size < 4) return GameVersion.UNKNOWN
-        val code = String(codeBytes.take(4).toByteArray(), Charsets.ISO_8859_1)
+        // ROM game codes are 4-char ASCII; map bytes → chars directly (ISO-8859-1 equivalent,
+        // pure-common — no JVM String(bytes, Charset)/Charsets).
+        val code = codeBytes.take(4).map { (it.toInt() and 0xFF).toChar() }.joinToString("")
         return when {
             code in FIRE_RED_CODES   -> GameVersion.FIRE_RED
             code in LEAF_GREEN_CODES -> GameVersion.LEAF_GREEN
