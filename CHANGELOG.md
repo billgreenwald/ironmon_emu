@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.6.9] - 2026-08-01
+
+### Fixed
+- **Tracker detail sheets now reopen every time on animations-disabled devices** — on setups with Android animation scales turned off (common on Retroid Pocket and similar handhelds), tapping a tracker item opened its move/ability/type detail sheet only the first time each run; every later tap did nothing until a new run. All 11 detail sheets now fall back to an instant, non-wedging dialog when animations are off, while keeping the normal swipe-to-dismiss sheet on standard setups.
+
+### Changed
+- **Internal groundwork for iOS** — the tracker's game-reading logic was extracted into a shared Kotlin Multiplatform module so a future iOS build can reuse it. No change to Android behavior; existing run history, saves, and settings are unaffected.
+
 ## [3.6.8] - 2026-08-01
 
 ### Added
