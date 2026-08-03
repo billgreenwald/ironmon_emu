@@ -12,8 +12,9 @@ protocol MemoryProvider: AnyObject {
 /// (the type `MemoryBridge.reader` expects), built from the provider's `Data`.
 enum MemoryBridgeInstaller {
     static func install(_ provider: MemoryProvider) {
+        // address/length arrive boxed as KotlinInt (function-type params box primitives).
         IosTracker.shared.setMemoryReader { address, length in
-            provider.read(address: address, length: length)?.toKotlinByteArray()
+            provider.read(address: address.int32Value, length: length.int32Value)?.toKotlinByteArray()
         }
     }
 }
