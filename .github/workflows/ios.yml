@@ -65,11 +65,6 @@ jobs:
         run: bash iosApp/scripts/build-libmgba.sh
       - name: Build TrackerCore.xcframework (release)
         run: gradle :tracker-core:assembleTrackerCoreReleaseXCFramework
-      - name: Dump exported ObjC names (diagnostic)
-        run: |
-          HDR=$(find tracker-core/build -path "*TrackerCore.xcframework*/Headers/TrackerCore.h" | head -1)
-          echo "HEADER=$HDR"
-          grep -nE "@interface (TrackerState|Active|Disconnected|NoGameLoaded|PokemonData|EnemyData)" "$HDR" | head -40
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project

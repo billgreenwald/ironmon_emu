@@ -63,11 +63,12 @@ struct ContentView: View {
 }
 
 /// Thin renderer of the shared `TrackerState`. MVP: run info, party, and active-battle enemy.
+/// Uses `TrackerStateSwift` helpers so we never name the interop-mangled sealed-subclass types.
 struct TrackerPanel: View {
-    let state: TrackerState
+    let state: TrackerState?
 
     var body: some View {
-        if let active = state as? TrackerStateActive {
+        if let s = state, let active = TrackerStateSwift.shared.active(state: s) {
             List {
                 Section("Run") {
                     row("Game", "\(active.game.name)")
@@ -91,7 +92,7 @@ struct TrackerPanel: View {
                 }
             }
             .listStyle(.plain)
-        } else if state is TrackerStateNoGameLoaded {
+        } else if let s = state, TrackerStateSwift.shared.isNoGameLoaded(state: s) {
             status("No game loaded", "gamecontroller")
         } else {
             status("Waiting for game…", "bolt.horizontal.circle")

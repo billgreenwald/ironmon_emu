@@ -5,7 +5,7 @@ import TrackerCore
 /// SwiftUI source of truth. All tracker logic stays in :tracker-core; this only wires + forwards.
 @MainActor
 final class EmulatorController: ObservableObject {
-    @Published private(set) var trackerState: TrackerState = TrackerStateDisconnected()
+    @Published private(set) var trackerState: TrackerState?   // nil until the first poll emits
     @Published private(set) var romLoaded = false
     @Published var errorMessage: String?
 
