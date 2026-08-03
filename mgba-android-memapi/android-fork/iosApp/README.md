@@ -4,20 +4,27 @@ This directory is the SwiftUI iOS app. It consumes the shared `:tracker-core` KM
 prebuilt `TrackerCore.xcframework` and renders `TrackerState`. Everything here was written on
 Linux and compiles on GitHub Actions macOS runners — there is no local Mac in the loop.
 
-## What's already scaffolded (done)
+## Status: route B (same mGBA core + lean native frontend) — IMPLEMENTED, awaiting first CI compile
 
-- **Shared logic → iOS framework.** `:tracker-core` now has `iosArm64` + `iosSimulatorArm64`
-  targets bundled into `TrackerCore.xcframework`
-  (`../tracker-core/build/XCFrameworks/release/…`).
-- **iOS seam implementations** (`../tracker-core/src/iosMain/.../platform/IosPlatform.kt`):
-  `IosLogger`, `NsUserDefaultsKeyValueStore`, `DocumentsFileStore`, `BundleAssetReader`,
-  `NoopLogSource`, `IosTrackerSettings`, and the Swift-facing `IosTracker` facade.
-- **SwiftUI app** (`Sources/App/`): `iOSApp.swift`, `ContentView.swift` (renders `TrackerState`),
-  `TrackerViewModel.swift` (observes the shared state flow), `MemoryProvider.swift` (the memory
-  bridge + a stub), and the `KotlinByteArray`↔`Data` helper.
-- **Project generation**: `project.yml` (XcodeGen — no checked-in `.xcodeproj`).
-- **CI**: `.github/workflows/ios.yml` — Linux tests, an unsigned simulator build, and a signed
-  `.ipa` job.
+The emulator is built from the **same libmgba** the Android app uses (not a fork of another app),
+with a lean Metal/AVAudio/touch frontend. Written on Linux; its first real compile happens on the
+macOS CI runner (expect a fix-up round or two — that's what the `ios-simulator` job is for).
+
+- **Shared logic → iOS framework.** `:tracker-core` (`iosArm64` + `iosSimulatorArm64`) →
+  `TrackerCore.xcframework`. iOS seams in `iosMain/.../platform/IosPlatform.kt` (`IosTracker`).
+- **Emulator core.** `scripts/build-libmgba.sh` builds `libmgba.xcframework` from the fork's
+  `app/src/main/cpp/mgba` (recipe validated on Linux: `-DLIBMGBA_ONLY=ON -DM_CORE_GBA=ON`, static).
+  `Sources/Emulator/EmulatorCore.{h,mm}` owns the live `mCore` and drives it single-threaded via
+  `runFrame`, exposing video/audio/input/memory to Swift.
+- **Frontend** (`Sources/App/`): `GameMetalView` (Metal blit of the 240×160 framebuffer),
+  `EmulatorAudio` (AVAudioSourceNode, 48 kHz), `GamepadView` (touch → keys), `EmulatorController`
+  (ties core+audio+tracker), `MgbaMemoryProvider` (feeds the tracker live reads), and a
+  landscape-split `ContentView` (game+controls left, tracker right).
+- **CI** (`.github/workflows/ios.yml`): Linux tests + the iOS-compat gate; a macOS **simulator**
+  build; a macOS **unsigned `.ipa`** artifact (for Sideloadly); and a signed `.ipa` job.
+
+**To get the beta:** push → the `ios-unsigned-ipa` job produces `IronmonTracker-unsigned-ipa` →
+download → install with **Sideloadly** (your Apple ID) → import a GBA ROM in-app.
 
 The app **builds and runs today**, showing "Disconnected" — because no emulator is wired in yet.
 The two remaining pieces are yours: **(A) signing secrets** and **(B) the mGBA core**.

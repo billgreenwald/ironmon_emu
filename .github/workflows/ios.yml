@@ -58,6 +58,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.4"
+      - name: Build libmgba.xcframework
+        working-directory: mgba-android-memapi/android-fork
+        run: bash iosApp/scripts/build-libmgba.sh
       - name: Build TrackerCore.xcframework (release)
         run: gradle :tracker-core:assembleTrackerCoreReleaseXCFramework
       - name: Install XcodeGen
@@ -77,6 +80,58 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+  # ── Unsigned .ipa for Sideloadly/AltStore (no secrets needed) ───────────────────────────────
+  ios-unsigned-ipa:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install SDK packages needed to configure :app
+        run: yes | sdkmanager "platforms;android-34" "build-tools;34.0.0" >/dev/null
+        working-directory: .
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.4"
+      - name: Build libmgba.xcframework
+        working-directory: mgba-android-memapi/android-fork
+        run: bash iosApp/scripts/build-libmgba.sh
+      - name: Build TrackerCore.xcframework (release)
+        run: gradle :tracker-core:assembleTrackerCoreReleaseXCFramework
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: mgba-android-memapi/android-fork/iosApp
+        run: xcodegen generate
+      - name: Build unsigned .app for device
+        working-directory: mgba-android-memapi/android-fork/iosApp
+        run: |
+          xcodebuild \
+            -project IronmonTracker.xcodeproj \
+            -scheme IronmonTracker \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build/dd \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+      - name: Package .app into unsigned .ipa (Sideloadly re-signs on install)
+        working-directory: mgba-android-memapi/android-fork/iosApp
+        run: |
+          APP=$(find build/dd/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -1)
+          echo "Packaging $APP"
+          rm -rf Payload IronmonTracker.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qry IronmonTracker.ipa Payload
+      - name: Upload unsigned .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: IronmonTracker-unsigned-ipa
+          path: mgba-android-memapi/android-fork/iosApp/IronmonTracker.ipa
+
   # ── Signed .ipa for sideloading (manual trigger; requires secrets) ──────────────────────────
   ios-device-ipa:
     runs-on: macos-14
@@ -94,6 +149,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.4"
+      - name: Build libmgba.xcframework
+        working-directory: mgba-android-memapi/android-fork
+        run: bash iosApp/scripts/build-libmgba.sh
       - name: Build TrackerCore.xcframework (release)
         run: gradle :tracker-core:assembleTrackerCoreReleaseXCFramework
       - name: Install XcodeGen

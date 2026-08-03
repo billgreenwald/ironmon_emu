@@ -1,8 +1,10 @@
 # XcodeGen spec — generates IronmonTracker.xcodeproj at build time (no checked-in .pbxproj).
 # Regenerate locally/CI with:  xcodegen generate   (run from this iosApp/ directory)
 #
-# Prerequisite: the KMP framework must be built first so ./build/XCFrameworks/... exists:
-#   (cd .. && ./gradlew :tracker-core:assembleTrackerCoreXCFramework)
+# Prerequisites (both produced by CI before `xcodegen generate`):
+#   1. libmgba:     ./scripts/build-libmgba.sh        -> build/libmgba/libmgba.xcframework
+#   2. shared logic: (cd .. && ./gradlew :tracker-core:assembleTrackerCoreReleaseXCFramework)
+#                    -> ../tracker-core/build/XCFrameworks/release/TrackerCore.xcframework
 name: IronmonTracker
 options:
   bundleIdPrefix: com.example.ironmon      # ← CHANGE to your own reverse-DNS prefix
@@ -15,6 +17,8 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.9"
+    CLANG_CXX_LANGUAGE_STANDARD: "c++17"
+    CLANG_CXX_LIBRARY: "libc++"
     # CODE_SIGN_STYLE / DEVELOPMENT_TEAM are supplied by CI (or your local Xcode) — not hard-coded.
 
 targets:
@@ -22,20 +26,31 @@ targets:
     type: application
     platform: iOS
     sources:
-      - path: Sources/App
+      - path: Sources/App          # SwiftUI + Metal shader + bridging header
+      - path: Sources/Emulator     # EmulatorCore.{h,mm} (Obj-C++ over libmgba)
     info:
       path: Sources/App/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.ironmon.tracker   # ← CHANGE to match your prefix
         GENERATE_INFOPLIST_FILE: NO
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/App/Bridging-Header.h
+        # So the bridging header's `#import "EmulatorCore.h"` resolves.
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/Sources/Emulator"
     dependencies:
-      # Prebuilt KMP shared logic. Path is relative to this project.yml (iosApp/).
+      # libmgba static core (headers expose <mgba/core/core.h> etc). Static → link, don't embed.
+      - framework: build/libmgba/libmgba.xcframework
+        embed: false
+      # KMP shared logic (built static via isStatic=true → link, don't embed).
       - framework: ../tracker-core/build/XCFrameworks/release/TrackerCore.xcframework
-        embed: true
+        embed: false
+      # System frameworks (Swift auto-links on import, listed for clarity/safety).
+      - sdk: MetalKit.framework
+      - sdk: AVFoundation.framework
     # Bundle the maxData assets (JSON + Lua) as a folder reference so the "maxdata/" path prefix
-    # the shared AssetReader expects is preserved. See README "Bundling assets".
-    # Uncomment once you've confirmed the folder is copied into the app bundle:
+    # the shared AssetReader expects is preserved. Vanilla FR/LG/Emerald works without it.
+    # Uncomment once confirmed the folder copies into the bundle:
     # resources:
     #   - path: ../app/src/main/assets/maxdata
     #     type: folder
