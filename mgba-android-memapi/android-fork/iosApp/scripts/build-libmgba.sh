@@ -12,7 +12,10 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-MGBA="$(cd "$HERE/../../app/src/main/cpp/mgba" && pwd)"
+# Vendored, pruned mGBA core (committed under iosApp/vendor/mgba). The Android build's copy at
+# app/src/main/cpp/mgba is gitignored (not on CI), so iOS uses this self-contained subset. It is
+# the same huhao1987/mgba@98f74c02 core, pruned to what LIBMGBA_ONLY needs (validated on Linux).
+MGBA="$(cd "$HERE/../vendor/mgba" && pwd)"
 OUT="${1:-$HERE/../build/libmgba}"
 DEPLOY_TARGET="15.0"
 
