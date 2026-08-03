@@ -26,6 +26,7 @@ build_slice() {
   local bdir="$OUT/build-$tag"
   echo ">>> Configuring libmgba for $tag ($sysroot / $arch)"
   cmake -S "$MGBA" -B "$bdir" \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DCMAKE_SYSTEM_NAME=iOS \
     -DCMAKE_OSX_SYSROOT="$sysroot" \
     -DCMAKE_OSX_ARCHITECTURES="$arch" \
