@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
+
 plugins {
     kotlin("multiplatform")
     id("com.android.library")
@@ -21,8 +23,22 @@ kotlin {
     // commonMain is folded into each JVM compile and native/metadata compilation is skipped, so
     // iOS-incompatible code would slip through until macOS CI. linuxX64 catches it here.
     //
-    // NOTE: real iOS targets (iosArm64/iosSimulatorArm64) are added in Phase 2 on macOS CI.
     linuxX64()
+
+    // ── iOS targets ──────────────────────────────────────────────────────────────────────────
+    // Device (iosArm64) + Apple-silicon simulator (iosSimulatorArm64). Both are bundled into a
+    // single TrackerCore.xcframework that the SwiftUI app consumes. These only COMPILE on a macOS
+    // runner (Apple toolchain); on Linux they configure fine but their compile tasks are skipped,
+    // so :jvmTest / :compileKotlinLinuxX64 still work here. Build the framework on macOS with:
+    //   ./gradlew :tracker-core:assembleTrackerCoreXCFramework
+    val xcf = XCFramework("TrackerCore")
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "TrackerCore"
+            isStatic = true
+            xcf.add(this)
+        }
+    }
 
     sourceSets {
         // kotlin.concurrent.Volatile is @ExperimentalStdlibApi in Kotlin 1.9.x (stable in 2.1).

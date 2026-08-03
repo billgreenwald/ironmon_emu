@@ -1,0 +1,41 @@
+# XcodeGen spec — generates IronmonTracker.xcodeproj at build time (no checked-in .pbxproj).
+# Regenerate locally/CI with:  xcodegen generate   (run from this iosApp/ directory)
+#
+# Prerequisite: the KMP framework must be built first so ./build/XCFrameworks/... exists:
+#   (cd .. && ./gradlew :tracker-core:assembleTrackerCoreXCFramework)
+name: IronmonTracker
+options:
+  bundleIdPrefix: com.example.ironmon      # ← CHANGE to your own reverse-DNS prefix
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    # CODE_SIGN_STYLE / DEVELOPMENT_TEAM are supplied by CI (or your local Xcode) — not hard-coded.
+
+targets:
+  IronmonTracker:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/App
+    info:
+      path: Sources/App/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.ironmon.tracker   # ← CHANGE to match your prefix
+        GENERATE_INFOPLIST_FILE: NO
+    dependencies:
+      # Prebuilt KMP shared logic. Path is relative to this project.yml (iosApp/).
+      - framework: ../tracker-core/build/XCFrameworks/release/TrackerCore.xcframework
+        embed: true
+    # Bundle the maxData assets (JSON + Lua) as a folder reference so the "maxdata/" path prefix
+    # the shared AssetReader expects is preserved. See README "Bundling assets".
+    # Uncomment once you've confirmed the folder is copied into the app bundle:
+    # resources:
+    #   - path: ../app/src/main/assets/maxdata
+    #     type: folder

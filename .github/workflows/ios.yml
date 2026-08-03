@@ -1,0 +1,164 @@
+name: iOS
+
+# CI-only iOS pipeline (no local Mac). Three jobs:
+#   shared-tests    — Linux: fast KMP logic tests + the iOS-compat (linuxX64) gate
+#   ios-simulator   — macOS: build XCFramework + app for the simulator (NO signing) — first milestone
+#   ios-device-ipa  — macOS: signed .ipa for sideloading (manual dispatch; needs signing secrets)
+#
+# See mgba-android-memapi/android-fork/iosApp/README.md for what each secret is and how to set them.
+
+on:
+  push:
+    branches: [ main, feat/ios-scaffold ]
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: mgba-android-memapi/android-fork
+
+env:
+  # Gradle configures the whole build (incl. the :app Android library) even for iOS-only tasks,
+  # so the Android SDK must be present. NDK/CMake are only needed for :app native tasks (not run here).
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx3g
+
+jobs:
+  # ── Fast logic gate on Linux ────────────────────────────────────────────────────────────────
+  shared-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install SDK packages needed to configure :app
+        run: yes | sdkmanager "platforms;android-34" "build-tools;34.0.0" >/dev/null
+        working-directory: .
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.4"
+      - name: Shared tests + iOS-compat (linuxX64) gate
+        run: gradle :tracker-core:jvmTest :tracker-core:linuxX64Test :tracker-core:compileKotlinLinuxX64
+
+  # ── Build the shared framework + app for the simulator (no signing) ─────────────────────────
+  ios-simulator:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install SDK packages needed to configure :app
+        run: yes | sdkmanager "platforms;android-34" "build-tools;34.0.0" >/dev/null
+        working-directory: .
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.4"
+      - name: Build TrackerCore.xcframework (release)
+        run: gradle :tracker-core:assembleTrackerCoreReleaseXCFramework
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: mgba-android-memapi/android-fork/iosApp
+        run: xcodegen generate
+      - name: Build app for iOS Simulator (no code signing)
+        working-directory: mgba-android-memapi/android-fork/iosApp
+        run: |
+          xcodebuild \
+            -project IronmonTracker.xcodeproj \
+            -scheme IronmonTracker \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+  # ── Signed .ipa for sideloading (manual trigger; requires secrets) ──────────────────────────
+  ios-device-ipa:
+    runs-on: macos-14
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install SDK packages needed to configure :app
+        run: yes | sdkmanager "platforms;android-34" "build-tools;34.0.0" >/dev/null
+        working-directory: .
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.4"
+      - name: Build TrackerCore.xcframework (release)
+        run: gradle :tracker-core:assembleTrackerCoreReleaseXCFramework
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Import signing certificate + provisioning profile
+        env:
+          CERT_P12_BASE64: ${{ secrets.IOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+          PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN=$RUNNER_TEMP/build.keychain
+          KEYCHAIN_PW=$(uuidgen)
+          security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PW" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "$PROVISION_PROFILE_BASE64" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/profile.mobileprovision"
+
+      - name: Generate Xcode project
+        working-directory: mgba-android-memapi/android-fork/iosApp
+        run: xcodegen generate
+
+      - name: Archive + export signed .ipa
+        working-directory: mgba-android-memapi/android-fork/iosApp
+        env:
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          PROVISION_NAME: ${{ secrets.IOS_PROVISION_PROFILE_NAME }}
+          BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project IronmonTracker.xcodeproj \
+            -scheme IronmonTracker \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/IronmonTracker.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="$PROVISION_NAME" \
+            archive
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>development</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict><key>${BUNDLE_ID}</key><string>${PROVISION_NAME}</string></dict>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/IronmonTracker.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export"
+
+      - name: Upload .ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IronmonTracker-ipa
+          path: ${{ runner.temp }}/export/*.ipa
