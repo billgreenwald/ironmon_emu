@@ -51,6 +51,11 @@ sealed class TrackerState {
         // Per-species notes for current run (cleared on new run)
         val pokemonNotes: Map<Int, String> = emptyMap(),
     ) : TrackerState() {
-        val leadPokemon: PokemonData? get() = party.firstOrNull()
+        // The mon the tracker displays: during battle the ACTIVE on-field mon
+        // (gBattlerPartyIndexes[0], which follows mid-battle switches); otherwise party slot 0.
+        // Mirrors Lua Tracker.getViewedPokemon (LeftOwn in battle, else the lead).
+        val leadPokemon: PokemonData? get() =
+            if (battle.isActive) party.getOrNull(battle.playerMon1PartyIdx) ?: party.firstOrNull()
+            else party.firstOrNull()
     }
 }

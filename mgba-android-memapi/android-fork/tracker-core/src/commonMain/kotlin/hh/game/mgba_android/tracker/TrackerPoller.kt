@@ -410,21 +410,28 @@ object TrackerPoller {
         val wasBattleActive = lastBattleActive
         val battleRaw0 = pollBattle(game, addresses)
 
-        // Only trust live gBattleMons slot-0 reads (lead's live types + stat stages) when
-        // slot 0 actually holds the lead. On some ROM hacks (Max variants) the player slot
-        // reads all zeros in battle, which corrupted the lead's type (→ Normal) and stat
-        // stages (→ all -6). Validate the slot-0 species against the party lead.
+        // Which party slot is the player's ACTIVE on-field mon. gBattleMons slot 0 tracks the
+        // active battler, not necessarily party slot 0 — after a mid-battle switch this differs.
+        // Out of battle it defaults to 0 (party lead). Mirrors Lua Battle.Combatants.LeftOwn.
+        val activeIdx = if (battleRaw0.isActive && party.isNotEmpty())
+            battleRaw0.playerMon1PartyIdx.coerceIn(0, party.lastIndex) else 0
+
+        // Only trust live gBattleMons slot-0 reads (active mon's live types + stat stages) when
+        // slot 0 actually holds the active party mon. On some ROM hacks (Max variants) the player
+        // slot reads all zeros in battle, which corrupted the type (→ Normal) and stat stages
+        // (→ all -6). Validate the slot-0 species against the active party mon.
         val slot0Species = if (battleRaw0.isActive) MemoryBridge.readU16(addresses.battleMons) ?: 0 else 0
-        val playerSlotValid = battleRaw0.isActive && party.isNotEmpty() && slot0Species == party[0].speciesId
+        val playerSlotValid = battleRaw0.isActive && party.isNotEmpty() && slot0Species == party.getOrNull(activeIdx)?.speciesId
         val battleRaw = if (battleRaw0.isActive && !playerSlotValid)
             battleRaw0.copy(playerType1 = -1, playerType2 = -1, playerStatStages = null)
         else battleRaw0
 
-        // Override lead Pokémon's types with live gBattleMons types while in battle.
+        // Override the active Pokémon's types with live gBattleMons types while in battle.
         // This reflects Conversion, Conversion 2, Camouflage, and Color Change automatically.
         val liveParty = if (battleRaw.isActive && battleRaw.playerType1 in 0..18 && party.isNotEmpty()) {
-            val lead = party[0].copy(type1 = battleRaw.playerType1, type2 = battleRaw.playerType2)
-            listOf(lead) + party.drop(1)
+            party.mapIndexed { i, p ->
+                if (i == activeIdx) p.copy(type1 = battleRaw.playerType1, type2 = battleRaw.playerType2) else p
+            }
         } else party
 
         // Reset tutorial flag at the start of each new battle (mirrors Lua Battle init reset)
@@ -571,13 +578,14 @@ object TrackerPoller {
         val trainerCounts = CombinedAreas.collapseCounts(game, rawTrainerCounts, tableTotals)
 
         // ── Healing items (matches Lua Program.updateBagItems + recalcLeadPokemonHealingInfo) ──
-        val bagDetail = party.firstOrNull()?.let { lead ->
-            BagReader.read(addresses, lead.maxHp)
+        // Healing % is relative to the active mon (activeIdx = party lead out of battle).
+        val bagDetail = party.getOrNull(activeIdx)?.let { active ->
+            BagReader.read(addresses, active.maxHp)
         }
 
         // ── Learnsets (Lua PokemonData.readLevelUpMoves + Utils.getMovesLearnedHeader) ─────
-        val playerLearnset = party.firstOrNull()?.let { lead ->
-            LearnsetReader.read(lead.speciesId, lead.level, addresses)
+        val playerLearnset = party.getOrNull(activeIdx)?.let { active ->
+            LearnsetReader.read(active.speciesId, active.level, addresses)
         }
         val enemyLearnset = battleRaw.enemy?.let { enemy ->
             LearnsetReader.read(enemy.speciesId, enemy.level, addresses)
@@ -970,9 +978,12 @@ object TrackerPoller {
                 )
             }
 
-        // ── Active player party indices for doubles (gBattlerPartyIndexes) ──────
-        // +0 = LeftOwn, +4 = RightOwn (Lua: gBattlerPartyIndexes + 4)
-        val playerMon1PartyIdx = if (isDoubles && addresses.gBattlerPartyIndexes != 0L) {
+        // ── Active player party indices (gBattlerPartyIndexes) ─────────────────
+        // +0 = LeftOwn, +4 = RightOwn (Lua: gBattlerPartyIndexes + 4).
+        // LeftOwn is read in singles too: after a mid-battle switch the on-field mon is
+        // often NOT party slot 0, so this drives which mon the tracker displays. Mirrors
+        // the enemy read above and Lua Battle.updateViewSlots (re-read every tick).
+        val playerMon1PartyIdx = if (addresses.gBattlerPartyIndexes != 0L) {
             (MemoryBridge.readU8(addresses.gBattlerPartyIndexes + 0L) ?: 0).coerceIn(0, 5)
         } else 0
         val playerMon2PartyIdx = if (isDoubles && addresses.gBattlerPartyIndexes != 0L) {
