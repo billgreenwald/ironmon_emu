@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.6.10] - 2026-08-04
+
+### Fixed
+- **The tracker now follows the Pokémon you actually have out in battle** — after switching to a different party member mid-battle, the main panel kept showing your first party slot instead of the Pokémon on the field. It now tracks the active battler (its types, live moves, healing-item percentages, and learnset), matching the Ironmon Tracker, and returns to your lead once the battle ends.
+
 ## [3.6.9] - 2026-08-01
 
 ### Fixed
