@@ -50,15 +50,49 @@ private struct ActivePanel: View {
             PanelHeader(active: active)
             if active.isGameOver { GameOverBanner(runAttempts: Int(active.runAttempts)) }
             RouteStrip(active: active)
-            TrackerTabBar(tab: $tab, doubles: doubles)
-            TabView(selection: $tab) {
-                ScrollView { MainView(active: active).padding(6) }.tag(0)
-                ScrollView { EnemyView(active: active).padding(6) }.tag(1)
-                ScrollView { RouteView(active: active).padding(6) }.tag(2)
+            if active.showBallPicker {
+                BallPickerView(chosen: Int(active.chosenBall))
+            } else {
+                TrackerTabBar(tab: $tab, doubles: doubles)
+                TabView(selection: $tab) {
+                    ScrollView { MainView(active: active).padding(6) }.tag(0)
+                    ScrollView { EnemyView(active: active).padding(6) }.tag(1)
+                    ScrollView { RouteView(active: active).padding(6) }.tag(2)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
             if active.isGameOver && active.logAvailable { ReviewLogsBanner() }
         }
+    }
+}
+
+private struct BallPickerView: View {
+    let chosen: Int   // 1=Left, 2=Middle, 3=Right; 0=unset
+    private let labels = ["LEFT", "MIDDLE", "RIGHT"]
+    var body: some View {
+        VStack(spacing: 14) {
+            Text("Pick your starter ball").font(.system(size: 13, weight: .semibold))
+            HStack(spacing: 22) {
+                ForEach(1...3, id: \.self) { i in
+                    VStack(spacing: 4) {
+                        Text(chosen == i ? "▼" : " ").foregroundColor(TrackerTheme.accentRed)
+                        ZStack {
+                            Circle().fill(chosen == i ? TrackerTheme.accentRed : Color.gray.opacity(0.5))
+                            Circle().stroke(Color.white.opacity(0.7), lineWidth: 1)
+                        }
+                        .frame(width: 34, height: 34)
+                        Text(labels[i - 1]).font(.system(size: 9)).foregroundColor(TrackerTheme.textSecondary)
+                    }
+                }
+            }
+            Button { IosTracker.shared.rerollBall() } label: {
+                Text("↺ Reroll").font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
+                    .padding(.horizontal, 14).padding(.vertical, 6)
+                    .background(TrackerTheme.accentBlue, in: Capsule())
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 }
 
@@ -87,13 +121,17 @@ private struct PanelHeader: View {
 private struct GameOverBanner: View {
     let runAttempts: Int
     var body: some View {
-        HStack {
-            Text("GAME OVER").font(.system(size: 12, weight: .heavy)).foregroundColor(.white)
-            Spacer()
-            Text("Run \(runAttempts + 1) →").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
+        Button { IosTracker.shared.manualNextRun() } label: {
+            HStack {
+                Text("GAME OVER").font(.system(size: 12, weight: .heavy)).foregroundColor(.white)
+                Spacer()
+                Text("Run \(runAttempts + 1) →").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
+            }
+            .padding(.horizontal, 8).padding(.vertical, 5)
+            .frame(maxWidth: .infinity)
+            .background(Color(hex: 0xB00020))
         }
-        .padding(.horizontal, 8).padding(.vertical, 5)
-        .background(Color(hex: 0xB00020))
+        .buttonStyle(.plain)
     }
 }
 

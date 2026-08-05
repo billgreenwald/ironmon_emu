@@ -163,29 +163,86 @@ struct EnemyView: View {
 struct RouteView: View {
     let active: ActiveState
 
-    private var orderedMapIds: [Int] { active.routeVisitOrder.map { Int(truncating: $0) } }
+    private var currentMapId: Int? {
+        guard let r = active.currentRoute else { return nil }
+        return Int(r.mapLayoutId)
+    }
+
+    private var orderedMapIds: [Int] {
+        var ids: [Int] = []
+        if let cur = currentMapId { ids.append(cur) }
+        let others = active.routeVisitOrder.map { Int(truncating: $0) }
+            .filter { $0 != currentMapId }
+            .sorted()
+        ids.append(contentsOf: others)
+        return ids
+    }
 
     var body: some View {
         let isHoenn = TrackerStateSwift.shared.isHoenn(active: active)
-        if orderedMapIds.isEmpty {
+        let ids = orderedMapIds
+        if ids.isEmpty {
             Text("No encounters recorded yet.").font(.footnote).foregroundColor(TrackerTheme.textSecondary)
                 .frame(maxWidth: .infinity).padding(.top, 20)
         } else {
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(orderedMapIds, id: \.self) { mapId in
+                ForEach(ids, id: \.self) { mapId in
                     let species = TrackerStateSwift.shared.encountersForRoute(active: active, mapId: Int32(mapId)).map { Int(truncating: $0) }
-                    if !species.isEmpty {
-                        TrackerCard {
-                            Text(RouteNames.shared.get(mapLayoutId: Int32(mapId), isHoenn: isHoenn))
-                                .font(.system(size: 12, weight: .semibold)).foregroundColor(TrackerTheme.accentBlue)
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 46), spacing: 4)], spacing: 6) {
-                                ForEach(species, id: \.self) { sid in
-                                    VStack(spacing: 1) {
-                                        PokemonSprite(natDexId: Int(TrackerStateSwift.shared.natDexId(active: active, speciesId: Int32(sid))), size: 34)
-                                        Text(TrackerStateSwift.shared.speciesName(active: active, speciesId: Int32(sid)))
-                                            .font(.system(size: 8)).lineLimit(1)
-                                    }
-                                }
+                    let hasTrainers = TrackerStateSwift.shared.routeHasTrainers(active: active, mapId: Int32(mapId))
+                    let isCurrent = mapId == currentMapId
+                    if isCurrent || !species.isEmpty || hasTrainers {
+                        RouteRow(active: active, mapId: mapId, isHoenn: isHoenn, isCurrent: isCurrent,
+                                 species: species, hasTrainers: hasTrainers,
+                                 slots: Int(RouteEncounterSlots.shared.get(mapLayoutId: Int32(mapId), isHoenn: isHoenn)))
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct RouteRow: View {
+    let active: ActiveState
+    let mapId: Int
+    let isHoenn: Bool
+    let isCurrent: Bool
+    let species: [Int]
+    let hasTrainers: Bool
+    let slots: Int
+
+    var body: some View {
+        TrackerCard {
+            HStack {
+                Text((isCurrent ? "◄ " : "") + RouteNames.shared.get(mapLayoutId: Int32(mapId), isHoenn: isHoenn))
+                    .font(.system(size: 12, weight: isCurrent ? .bold : .semibold))
+                    .foregroundColor(TrackerTheme.accentBlue).lineLimit(1)
+                Spacer()
+                if hasTrainers {
+                    let d = Int(TrackerStateSwift.shared.trainerDefeated(active: active, mapId: Int32(mapId)))
+                    let t = Int(TrackerStateSwift.shared.trainerTotal(active: active, mapId: Int32(mapId)))
+                    Text("\(d)/\(t)").font(.system(size: 10))
+                        .foregroundColor(d >= t && t > 0 ? TrackerTheme.hpHigh : TrackerTheme.textSecondary)
+                }
+            }
+            if slots <= 0 {
+                if hasTrainers {
+                    Text("── no wild Pokémon ──").font(.system(size: 9)).foregroundColor(TrackerTheme.textSecondary)
+                }
+            } else {
+                let cellCount = Swift.max(slots, species.count)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 46), spacing: 4)], spacing: 6) {
+                    ForEach(0..<cellCount, id: \.self) { i in
+                        if i < species.count {
+                            VStack(spacing: 1) {
+                                PokemonSprite(natDexId: Int(TrackerStateSwift.shared.natDexId(active: active, speciesId: Int32(species[i]))), size: 34)
+                                Text(TrackerStateSwift.shared.speciesName(active: active, speciesId: Int32(species[i])))
+                                    .font(.system(size: 8)).lineLimit(1)
+                            }
+                        } else {
+                            VStack(spacing: 1) {
+                                Text("?").font(.system(size: 18)).foregroundColor(TrackerTheme.textSecondary)
+                                    .frame(width: 34, height: 34)
+                                Text("???").font(.system(size: 8)).foregroundColor(TrackerTheme.textSecondary)
                             }
                         }
                     }
