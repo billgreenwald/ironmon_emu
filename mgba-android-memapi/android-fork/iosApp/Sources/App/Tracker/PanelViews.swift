@@ -8,22 +8,32 @@ import TrackerCore
 
 struct MainView: View {
     let active: ActiveState
+    @EnvironmentObject var router: SheetRouter
 
     var body: some View {
         if let mon = active.leadPokemon {
             TrackerCard {
                 header(mon)
                 if Int(mon.starRating) > 0 { StarRatingRow(rating: Int(mon.starRating), score: Int(mon.ratingScore)) }
-                TypeChips(type1: Int(mon.type1), type2: Int(mon.type2))
+                HStack {
+                    TypeChips(type1: Int(mon.type1), type2: Int(mon.type2))
+                        .onTapGesture { router.present(.typeDefense(Int(mon.type1), Int(mon.type2), active.isNatDex)) }
+                    Spacer()
+                    Button { router.present(.coverage(mon, active.isNatDex)) } label: {
+                        Text("Coverage ›").font(.system(size: 10)).foregroundColor(TrackerTheme.accentBlue)
+                    }.buttonStyle(.plain)
+                }
                 HpBar(percent: mon.hpPercent, cur: Int(mon.currentHp), maxHp: Int(mon.maxHp))
                 if let bag = active.bagDetail, Int(bag.hpHealCount) > 0 {
                     InfoRow(label: "Heals",
                             value: "\(Int(bag.hpHealPercent))% HP (\(Int(bag.hpHealCount)))",
                             valueColor: TrackerTheme.hpHigh)
+                        .onTapGesture { router.present(.bag(bag)) }
                 }
                 Divider().background(Color.white.opacity(0.1))
                 gameStatsRow
                 InfoRow(label: "Ability", value: AbilityTable.shared.name(abilityId: mon.abilityId, isMaxFr: active.isMaxFr))
+                    .onTapGesture { router.present(.ability(Int(mon.abilityId), active.isMaxFr)) }
                 InfoRow(label: "Nature",
                         value: "\(NatureTable.shared.get(natureId: mon.nature).name) \(NatureTable.shared.modifier(natureId: mon.nature))")
                 InfoRow(label: "Item", value: Int(mon.heldItemId) == 0 ? "None" : ItemTable.shared.get(itemId: mon.heldItemId))
@@ -32,11 +42,9 @@ struct MainView: View {
                 if active.battle.isActive, let stages = TrackerStateSwift.shared.playerStatStages(battle: active.battle), stages.anyChanged {
                     StatStagesRow(stages: stages)
                 }
-                StatsTableView(mon: mon)
+                StatsTableView(mon: mon).onTapGesture { router.present(.ivStat(mon)) }
                 MoveTableView(moves: Array(mon.moves), monType1: Int(mon.type1), monType2: Int(mon.type2), active: active)
-                if let note = TrackerStateSwift.shared.note(active: active, speciesId: mon.speciesId), !note.isEmpty {
-                    Text("📝 \(note)").font(.system(size: 10)).foregroundColor(TrackerTheme.noteYellow)
-                }
+                noteRow(mon)
             }
         } else {
             Text("No Pokémon yet").font(.footnote).foregroundColor(TrackerTheme.textSecondary)
@@ -70,6 +78,18 @@ struct MainView: View {
             }
         }
     }
+
+    private func noteRow(_ mon: PokemonData) -> some View {
+        let note = TrackerStateSwift.shared.note(active: active, speciesId: mon.speciesId) ?? ""
+        return Button {
+            router.present(.note(Int(mon.speciesId), note))
+        } label: {
+            Text(note.isEmpty ? "📝 Add note…" : "📝 \(note)")
+                .font(.system(size: 10))
+                .foregroundColor(note.isEmpty ? TrackerTheme.textSecondary : TrackerTheme.noteYellow)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }.buttonStyle(.plain)
+    }
 }
 
 struct StarRatingRow: View {
@@ -95,6 +115,7 @@ struct StarRatingRow: View {
 
 struct EnemyView: View {
     let active: ActiveState
+    @EnvironmentObject var router: SheetRouter
 
     var body: some View {
         if active.battle.isActive, let enemy = active.battle.enemy {
@@ -108,6 +129,7 @@ struct EnemyView: View {
                     Spacer()
                 }
                 TypeChips(type1: Int(enemy.type1), type2: Int(enemy.type2))
+                    .onTapGesture { router.present(.typeDefense(Int(enemy.type1), Int(enemy.type2), active.isNatDex)) }
                 HpBar(percent: enemy.hpPercent, showNumbers: false)
                 LearnsetRowView(info: active.enemyLearnset, speciesId: Int(enemy.speciesId), level: Int(enemy.level),
                                 bst: Int(enemy.bst), isMaxFr: active.isMaxFr)
@@ -116,7 +138,7 @@ struct EnemyView: View {
                 if let stages = TrackerStateSwift.shared.enemyStatStages(enemy: enemy), stages.anyChanged {
                     StatStagesRow(stages: stages)
                 }
-                Text("Revealed Moves:").font(.system(size: 10, weight: .semibold)).foregroundColor(TrackerTheme.textSecondary)
+                revealedMovesHeader(enemy)
                 EnemyMoveTableView(enemy: enemy, playerType1: playerType1, playerType2: playerType2, active: active)
             }
         } else {
@@ -127,6 +149,20 @@ struct EnemyView: View {
 
     private var playerType1: Int { Int(active.leadPokemon?.type1 ?? -1) }
     private var playerType2: Int { Int(active.leadPokemon?.type2 ?? -1) }
+
+    @ViewBuilder private func revealedMovesHeader(_ enemy: EnemyData) -> some View {
+        let total = Int(enemy.totalTrackedMoveCount)
+        if total > 4 {
+            Text("Revealed Moves* (\(total))")
+                .font(.system(size: 10, weight: .semibold)).foregroundColor(TrackerTheme.noteYellow)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onTapGesture { router.present(.moveHistory(Array(enemy.allTrackedMoves), active.isMaxFr)) }
+        } else {
+            Text("Revealed Moves:")
+                .font(.system(size: 10, weight: .semibold)).foregroundColor(TrackerTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
 
     private var battleInfo: some View {
         let b = active.battle
@@ -209,6 +245,7 @@ private struct RouteRow: View {
     let species: [Int]
     let hasTrainers: Bool
     let slots: Int
+    @EnvironmentObject var router: SheetRouter
 
     var body: some View {
         TrackerCard {
@@ -238,6 +275,8 @@ private struct RouteRow: View {
                                 Text(TrackerStateSwift.shared.speciesName(active: active, speciesId: Int32(species[i])))
                                     .font(.system(size: 8)).lineLimit(1)
                             }
+                            .contentShape(Rectangle())
+                            .onTapGesture { router.present(.routeMon(species[i], active)) }
                         } else {
                             VStack(spacing: 1) {
                                 Text("?").font(.system(size: 18)).foregroundColor(TrackerTheme.textSecondary)
@@ -260,6 +299,7 @@ struct LearnsetRowView: View {
     let level: Int
     let bst: Int
     let isMaxFr: Bool
+    @EnvironmentObject var router: SheetRouter
 
     var body: some View {
         HStack(spacing: 8) {
@@ -267,15 +307,18 @@ struct LearnsetRowView: View {
                 let soon = !info.allLearned && Int(info.nextMoveLevel) <= level + 1
                 Text("Moves \(Int(info.learnedCount))/\(Int(info.totalCount))")
                     .font(.system(size: 10)).foregroundColor(TrackerTheme.textSecondary)
+                    .onTapGesture { router.present(.learnset(info, level)) }
                 if !info.allLearned {
                     Text("(Lv.\(Int(info.nextMoveLevel)))")
                         .font(.system(size: 10)).foregroundColor(soon ? TrackerTheme.noteYellow : TrackerTheme.textSecondary)
+                        .onTapGesture { router.present(.learnset(info, level)) }
                 }
             }
             let evo = Int(EvolutionLevel.shared.get(speciesId: Int32(speciesId), isMaxFr: isMaxFr))
             if evo > 0 {
                 Text("Evo Lv.\(evo)")
                     .font(.system(size: 10)).foregroundColor(level >= evo - 2 ? TrackerTheme.noteYellow : TrackerTheme.textSecondary)
+                    .onTapGesture { router.present(.evo(speciesId, isMaxFr)) }
             }
             Spacer()
             Text("BST \(bst)").font(.system(size: 10)).foregroundColor(TrackerTheme.textSecondary)
@@ -337,6 +380,7 @@ struct MoveTableView: View {
     let monType1: Int
     let monType2: Int
     let active: ActiveState
+    @EnvironmentObject var router: SheetRouter
 
     private var enemy: EnemyData? { active.battle.isActive ? active.battle.enemy : nil }
 
@@ -368,6 +412,8 @@ struct MoveTableView: View {
             }
             Text("\(Int(m.pp))").font(.system(size: 9)).foregroundColor(TrackerTheme.textSecondary).frame(width: 18, alignment: .trailing)
         }
+        .contentShape(Rectangle())
+        .onTapGesture { router.present(.move(m, cat)) }
     }
 }
 
@@ -376,6 +422,7 @@ struct EnemyMoveTableView: View {
     let playerType1: Int
     let playerType2: Int
     let active: ActiveState
+    @EnvironmentObject var router: SheetRouter
 
     private var moveIds: [Int] {
         (enemy.fourConfirmedThisBattle ?? enemy.revealedMoveIds).map { Int(truncating: $0) }
@@ -413,5 +460,7 @@ struct EnemyMoveTableView: View {
             }
             Text(pp >= 0 ? "\(pp)" : "—").font(.system(size: 9)).foregroundColor(TrackerTheme.textSecondary).frame(width: 18, alignment: .trailing)
         }
+        .contentShape(Rectangle())
+        .onTapGesture { router.present(.moveById(Int(moveId), active.isMaxFr, active.isNatDex)) }
     }
 }

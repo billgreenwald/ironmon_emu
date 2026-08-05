@@ -6,6 +6,7 @@ import hh.game.mgba_android.tracker.models.Gender
 import hh.game.mgba_android.tracker.models.GameVersion
 import hh.game.mgba_android.tracker.models.PokemonData
 import hh.game.mgba_android.tracker.models.TrackerState
+import hh.game.mgba_android.tracker.tables.TypeChart
 
 /**
  * Swift-friendly bridge for the shared tracker models.
@@ -51,6 +52,13 @@ object TrackerStateSwift {
     /** Hoenn games use a different route-name/encounter-slot table. Avoids Swift enum comparison. */
     fun isHoenn(active: TrackerState.Active): Boolean = active.game == GameVersion.RUBY ||
         active.game == GameVersion.SAPPHIRE || active.game == GameVersion.EMERALD
+
+    /** Defensive type chart as a Swift-friendly sorted list of non-1× multipliers. */
+    fun defenseChart(type1: Int, type2: Int, isNatDex: Boolean): List<TypeMultiplier> =
+        TypeChart.defenseChart(type1, type2, isNatDex).entries
+            .filter { it.value != 1f }
+            .sortedBy { it.value }
+            .map { TypeMultiplier(it.key, it.value) }
 
     fun enemyPp(enemy: EnemyData, moveId: Int): Int = enemy.ppByMoveId[moveId] ?: -1
 
@@ -111,3 +119,6 @@ data class StatStages(
 }
 
 data class StatDelta(val label: String, val delta: Int)
+
+/** A defender-type effectiveness multiplier (for the type-defense sheet). */
+data class TypeMultiplier(val typeId: Int, val mult: Float)

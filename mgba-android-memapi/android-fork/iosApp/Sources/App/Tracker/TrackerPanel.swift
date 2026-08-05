@@ -42,10 +42,17 @@ struct StatusView: View {
 private struct ActivePanel: View {
     let active: ActiveState
     @Binding var tab: Int
+    @StateObject private var router = SheetRouter()
 
     private var doubles: Bool { active.battle.isDoubles && active.battle.enemy2 != nil }
 
     var body: some View {
+        panel
+            .environmentObject(router)
+            .sheet(item: $router.current) { sheet in sheetContent(for: sheet) }
+    }
+
+    private var panel: some View {
         VStack(spacing: 0) {
             PanelHeader(active: active)
             if active.isGameOver { GameOverBanner(runAttempts: Int(active.runAttempts)) }
