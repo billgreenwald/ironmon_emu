@@ -1,9 +1,9 @@
 import SwiftUI
 import TrackerCore
 
-/// Kotlin's nested `TrackerState.Active` is exported to Swift under a flattened name. Alias it once
-/// so every view can name the type — and if the interop name differs, this is the only line to fix.
-typealias ActiveState = TrackerStateActive
+/// Kotlin/Native preserves nesting for Swift, so `TrackerState.Active` is the correct Swift name.
+/// Aliased once so every view names it consistently (and any interop-name change is a one-line fix).
+typealias ActiveState = TrackerState.Active
 
 // Reusable tracker UI atoms. All values coming from the shared Kotlin models arrive as Int32 —
 // convert to Int at the point of Swift use.
