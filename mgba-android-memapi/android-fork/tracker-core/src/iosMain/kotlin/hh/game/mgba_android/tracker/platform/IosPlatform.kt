@@ -172,5 +172,6 @@ object IosTracker {
     // Passthroughs for UI actions the SwiftUI layer may trigger.
     fun rerollBall() = TrackerPoller.rerollBall()
     fun manualNextRun() = TrackerPoller.manualNextRun()
+    fun saveNote(speciesId: Int, note: String) = TrackerPoller.saveNote(speciesId, note)
     fun romFileName(): String = TrackerPoller.getRomFileName()
 }

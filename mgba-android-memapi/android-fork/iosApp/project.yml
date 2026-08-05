@@ -48,9 +48,13 @@ targets:
       # System frameworks (Swift auto-links on import, listed for clarity/safety).
       - sdk: MetalKit.framework
       - sdk: AVFoundation.framework
-    # Bundle the maxData assets (JSON + Lua) as a folder reference so the "maxdata/" path prefix
-    # the shared AssetReader expects is preserved. Vanilla FR/LG/Emerald works without it.
-    # Uncomment once confirmed the folder copies into the bundle:
-    # resources:
-    #   - path: ../app/src/main/assets/maxdata
-    #     type: folder
+    # Bundled asset folders (blue folder references — preserve the path prefix the shared readers
+    # expect: sprites/N.png|gif for PokemonSprite, maxdata/ for BundleAssetReader (MaxFR/NatDex),
+    # maps/ for the Gallery overlay).
+    resources:
+      - path: ../app/src/main/assets/sprites
+        type: folder
+      - path: ../app/src/main/assets/maxdata
+        type: folder
+      - path: ../app/src/main/assets/maps
+        type: folder
