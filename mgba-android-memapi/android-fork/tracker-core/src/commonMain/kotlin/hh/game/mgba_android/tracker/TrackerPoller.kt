@@ -60,8 +60,6 @@ object TrackerPoller {
     // Ephemeral per-battle notes: key = speciesId*1000+level (Lua: Tracker.BattleNotes)
     private val battleRevealedByKey = mutableMapOf<Long, MutableList<Int>>()
     private var battleFourConfirmedKey: Long? = null  // set when all 4 confirmed this battle
-    // Starting enemy moveset snapshot at battle open — guards Sketch/Mimic (Lua BattleParties)
-    private var enemyStartingMoveset: Set<Int> = emptySet()
     private var lastEnemyMoveId: Int = 0     // last value of gBattleResults+0x24 (shared between both enemies)
     private var lastKnownEnemySpeciesId: Int = 0  // detects mid-battle trainer switches
     private var battleJustStarted: Boolean = false
@@ -69,7 +67,6 @@ object TrackerPoller {
     // ── Doubles: enemy2 (gBattleMons slot 3) tracking ─────────────────────────
     private val battleRevealedByKey2 = mutableMapOf<Long, MutableList<Int>>()
     private var battleFourConfirmedKey2: Long? = null
-    private var enemy2StartingMoveset: Set<Int> = emptySet()
     private var lastKnownEnemy2SpeciesId: Int = 0
 
     // Route encounter tracking: mapLayoutId → species IDs seen (wild battles only)
@@ -121,12 +118,10 @@ object TrackerPoller {
         revealedBySpecies.clear()
         battleRevealedByKey.clear()
         battleFourConfirmedKey = null
-        enemyStartingMoveset = emptySet()
         lastEnemyMoveId = 0
         lastKnownEnemySpeciesId = 0
         battleRevealedByKey2.clear()
         battleFourConfirmedKey2 = null
-        enemy2StartingMoveset = emptySet()
         lastKnownEnemy2SpeciesId = 0
         encountersByRoute.clear()
         routeVisitOrder.clear()
@@ -226,12 +221,10 @@ object TrackerPoller {
         revealedBySpecies.clear()
         battleRevealedByKey.clear()
         battleFourConfirmedKey = null
-        enemyStartingMoveset = emptySet()
         lastEnemyMoveId = 0
         lastKnownEnemySpeciesId = 0
         battleRevealedByKey2.clear()
         battleFourConfirmedKey2 = null
-        enemy2StartingMoveset = emptySet()
         lastKnownEnemy2SpeciesId = 0
         encountersByRoute.clear()
         routeVisitOrder.clear()
@@ -506,12 +499,10 @@ object TrackerPoller {
             revealedBySpecies.clear()
             battleRevealedByKey.clear()
             battleFourConfirmedKey = null
-            enemyStartingMoveset = emptySet()
             lastEnemyMoveId = 0
             lastKnownEnemySpeciesId = 0
             battleRevealedByKey2.clear()
             battleFourConfirmedKey2 = null
-            enemy2StartingMoveset = emptySet()
             lastKnownEnemy2SpeciesId = 0
             // Do NOT clear encountersByRoute or visitedRoutes here — party is transiently empty at
             // ROM load, which would wipe restored data. resetGameOver() handles clearing on new run.
@@ -625,6 +616,15 @@ object TrackerPoller {
         )
     }
 
+    /** Current move IDs held in a gBattleMons slot (offsets BMON_MOVE1..4), zeros dropped. */
+    private fun movesOf(mon: ByteArray): Set<Int> = buildSet {
+        for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
+                                  DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
+            val m = mon.u16(offset)
+            if (m != 0) add(m)
+        }
+    }
+
     private fun pollBattle(game: GameVersion, addresses: GameAddresses): BattleState {
         val battlersCount = MemoryBridge.readU8(addresses.battlersCount) ?: return BattleState.NONE
         // gBattleOutcome: 0 = battle ongoing, non-zero = battle ended
@@ -697,63 +697,40 @@ object TrackerPoller {
 
                 // ── Move revelation via gBattleResults ─────────────────────────────
                 // In doubles, gBattleResults.enemyUsedMove reflects the last move from EITHER enemy.
-                // We validate against each enemy's starting moveset to attribute moves correctly.
+                // We validate against each enemy's CURRENT gBattleMons moveset — read fresh every
+                // poll, never a battle-start snapshot. The old snapshot was captured on a single
+                // emulator frame whose timing varied by device (CPU/frame pacing): on slower/faster
+                // phones that frame could catch slot 1 still holding the previous battle's moves,
+                // poisoning the gate so real moves never revealed. Reading fresh each poll uses the
+                // same slot-1 data that already renders the enemy panel correctly on every device.
                 val currentEnemyMoveId = MemoryBridge.readU16(
                     addresses.battleResults + DataHelper.BATTLE_RESULTS_ENEMY_MOVE_OFFSET
                 ) ?: 0
+                val enemyMovesetNow = movesOf(enemyMon)
+                val enemy2MovesetNow = if (isDoubles && enemy2Mon != null) movesOf(enemy2Mon) else emptySet()
 
                 if (battleJustStarted) {
-                    // Snapshot enemy1 starting moveset (Lua BattleParties snapshot)
-                    val startMoves = mutableSetOf<Int>()
-                    for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
-                                              DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
-                        val m = enemyMon.u16(offset)
-                        if (m != 0) startMoves.add(m)
-                    }
-                    enemyStartingMoveset = startMoves
                     lastKnownEnemySpeciesId = speciesId
                     lastEnemyMoveId = 0
-                    // Snapshot enemy2 starting moveset (doubles)
-                    if (isDoubles && enemy2Mon != null && speciesId2 > 0) {
-                        val startMoves2 = mutableSetOf<Int>()
-                        for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
-                                                  DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
-                            val m = enemy2Mon.u16(offset)
-                            if (m != 0) startMoves2.add(m)
-                        }
-                        enemy2StartingMoveset = startMoves2
-                        lastKnownEnemy2SpeciesId = speciesId2
-                    }
+                    if (isDoubles && speciesId2 > 0) lastKnownEnemy2SpeciesId = speciesId2
                     battleRevealedByKey.clear()
                     battleFourConfirmedKey = null
                     battleRevealedByKey2.clear()
                     battleFourConfirmedKey2 = null
                     battleJustStarted = false
                 } else {
-                    // Enemy1 species change — trainer sent out a new Pokémon
+                    // Enemy1 species change — trainer sent out a new Pokémon. Advance lastEnemyMoveId
+                    // so the stale gBattleResults value isn't attributed to the newly sent-out mon.
                     if (speciesId != lastKnownEnemySpeciesId) {
-                        val switchMoves = mutableSetOf<Int>()
-                        for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
-                                                  DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
-                            val m = enemyMon.u16(offset)
-                            if (m != 0) switchMoves.add(m)
-                        }
-                        enemyStartingMoveset = switchMoves
                         lastKnownEnemySpeciesId = speciesId
                         lastEnemyMoveId = currentEnemyMoveId
                     }
                     // Enemy2 species change (doubles)
-                    if (isDoubles && enemy2Mon != null && speciesId2 > 0 && speciesId2 != lastKnownEnemy2SpeciesId) {
-                        val switchMoves2 = mutableSetOf<Int>()
-                        for (offset in intArrayOf(DataHelper.BMON_MOVE1, DataHelper.BMON_MOVE2,
-                                                  DataHelper.BMON_MOVE3, DataHelper.BMON_MOVE4)) {
-                            val m = enemy2Mon.u16(offset)
-                            if (m != 0) switchMoves2.add(m)
-                        }
-                        enemy2StartingMoveset = switchMoves2
+                    if (isDoubles && speciesId2 > 0 && speciesId2 != lastKnownEnemy2SpeciesId) {
                         lastKnownEnemy2SpeciesId = speciesId2
                     }
-                    // New move detected — attribute to enemy1, enemy2, or both based on starting moveset
+                    // New move detected — attribute to enemy1, enemy2, or both using each enemy's
+                    // current moveset (disambiguates doubles; rejects stale cross-battle values).
                     if (currentEnemyMoveId != 0 && currentEnemyMoveId != lastEnemyMoveId) {
                         // Skip if HITMARKER_UNABLE_TO_USE_MOVE is set (Truant, full paralysis, etc.)
                         // Mirrors Lua Battle.lua hitmarkerFlag80000 check.
@@ -767,7 +744,7 @@ object TrackerPoller {
                         lastEnemyMoveId = currentEnemyMoveId
                         if (!moveBlocked && !enemyFainted) {
                             // Track for enemy1
-                            if (currentEnemyMoveId in enemyStartingMoveset || enemyStartingMoveset.isEmpty()) {
+                            if (currentEnemyMoveId in enemyMovesetNow || enemyMovesetNow.isEmpty()) {
                                 val persistent = revealedBySpecies.getOrPut(speciesId) { mutableListOf() }
                                 val existingIdx = persistent.indexOfFirst { it.id == currentEnemyMoveId }
                                 if (existingIdx == -1) {
@@ -790,7 +767,7 @@ object TrackerPoller {
                             }
                             // Track for enemy2 (doubles)
                             if (isDoubles && speciesId2 > 0 &&
-                                (currentEnemyMoveId in enemy2StartingMoveset || enemy2StartingMoveset.isEmpty())) {
+                                (currentEnemyMoveId in enemy2MovesetNow || enemy2MovesetNow.isEmpty())) {
                                 val persistent2 = revealedBySpecies.getOrPut(speciesId2) { mutableListOf() }
                                 val existingIdx2 = persistent2.indexOfFirst { it.id == currentEnemyMoveId }
                                 if (existingIdx2 == -1) {
