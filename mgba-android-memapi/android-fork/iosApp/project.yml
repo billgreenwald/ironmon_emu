@@ -7,7 +7,7 @@
 #                    -> ../tracker-core/build/XCFrameworks/release/TrackerCore.xcframework
 name: IronmonTracker
 options:
-  bundleIdPrefix: com.example.ironmon      # ← CHANGE to your own reverse-DNS prefix
+  bundleIdPrefix: com.dnacollc.ironmon      # ← CHANGE to your own reverse-DNS prefix
   deploymentTarget:
     iOS: "15.0"
   createIntermediateGroups: true
@@ -32,7 +32,7 @@ targets:
       path: Sources/App/Info.plist
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ironmon.tracker   # ← CHANGE to match your prefix
+        PRODUCT_BUNDLE_IDENTIFIER: com.dnacollc.ironmon.tracker   # ← CHANGE to match your prefix
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_OBJC_BRIDGING_HEADER: Sources/App/Bridging-Header.h
         # So the bridging header's `#import "EmulatorCore.h"` resolves.
