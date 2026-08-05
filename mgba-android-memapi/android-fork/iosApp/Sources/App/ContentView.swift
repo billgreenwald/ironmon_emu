@@ -8,6 +8,31 @@ import TrackerCore
 struct ContentView: View {
     @StateObject private var controller = EmulatorController()
     @State private var showImporter = false
+    @State private var showLogImporter = false
+    @State private var logData: LogData?
+    @State private var showLogViewer = false
+
+    private var activeState: ActiveState? {
+        guard let s = controller.trackerState else { return nil }
+        return TrackerStateSwift.shared.active(state: s)
+    }
+
+    private func importLog(_ url: URL) {
+        guard url.startAccessingSecurityScopedResource() else { return }
+        defer { url.stopAccessingSecurityScopedResource() }
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else {
+            controller.errorMessage = "Couldn't read the log file."; return
+        }
+        guard let active = activeState else {
+            controller.errorMessage = "Load a ROM first so the log can be matched to the game."; return
+        }
+        let lines = content.components(separatedBy: .newlines)
+        if let parsed = LogDataSwift.shared.parse(active: active, lines: lines) {
+            logData = parsed; showLogViewer = true
+        } else {
+            controller.errorMessage = "Couldn't parse that randomizer log."
+        }
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -40,8 +65,9 @@ struct ContentView: View {
         .background(Color(.systemBackground))
         .overlay(alignment: .topTrailing) {
             if controller.romLoaded {
-                Button { showImporter = true } label: {
-                    Image(systemName: "arrow.triangle.2.circlepath").padding(10)
+                HStack(spacing: 2) {
+                    Button { showLogImporter = true } label: { Image(systemName: "book").padding(8) }
+                    Button { showImporter = true } label: { Image(systemName: "arrow.triangle.2.circlepath").padding(8) }
                 }
             }
         }
@@ -50,6 +76,18 @@ struct ContentView: View {
                       allowsMultipleSelection: false) { result in
             if case .success(let urls) = result, let url = urls.first {
                 controller.loadROM(url: url)
+            }
+        }
+        .fileImporter(isPresented: $showLogImporter,
+                      allowedContentTypes: [.data],
+                      allowsMultipleSelection: false) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                importLog(url)
+            }
+        }
+        .fullScreenCover(isPresented: $showLogViewer) {
+            if let d = logData, let active = activeState {
+                LogViewerOverlay(data: d, active: active)
             }
         }
         .alert("Error", isPresented: Binding(
