@@ -144,12 +144,18 @@ private struct GameOverBanner: View {
 
 private struct RouteStrip: View {
     let active: ActiveState
+    @EnvironmentObject var router: SheetRouter
     var body: some View {
         if let route = active.currentRoute, !route.name.isEmpty {
             let mapId = Int(route.mapLayoutId)
             HStack {
                 Text(route.name).font(.system(size: 11, weight: .semibold)).foregroundColor(TrackerTheme.accentBlue)
                     .lineLimit(1)
+                if GallerySwift.shared.hasImages(routeName: route.name) {
+                    Button { router.present(.gallery(route.name)) } label: {
+                        Text("↗").font(.system(size: 11, weight: .bold)).foregroundColor(TrackerTheme.accentBlue)
+                    }.buttonStyle(.plain)
+                }
                 Spacer()
                 if TrackerStateSwift.shared.routeHasTrainers(active: active, mapId: Int32(mapId)) {
                     let d = Int(TrackerStateSwift.shared.trainerDefeated(active: active, mapId: Int32(mapId)))

@@ -22,6 +22,7 @@ enum TrackerSheet: Identifiable {
     case moveHistory([TrackedMove], Bool)    // tracked moves, isMaxFr
     case routeMon(Int, ActiveState)          // speciesId, active
     case coverage(PokemonData, Bool)         // mon, isNatDex
+    case gallery(String)                     // routeName
 
     var id: String {
         switch self {
@@ -37,6 +38,7 @@ enum TrackerSheet: Identifiable {
         case .moveHistory: return "movehistory"
         case .routeMon(let s, _): return "routemon-\(s)"
         case .coverage: return "coverage"
+        case .gallery(let r): return "gallery-\(r)"
         }
     }
 }
@@ -78,6 +80,7 @@ func sheetContent(for sheet: TrackerSheet) -> some View {
     case .moveHistory(let moves, let mx): MoveHistorySheet(moves: moves, isMaxFr: mx)
     case .routeMon(let sid, let active):  RouteMonSheet(speciesId: sid, active: active)
     case .coverage(let mon, let nd):   CoverageSheet(mon: mon, isNatDex: nd)
+    case .gallery(let route):          GalleryView(routeName: route)
     }
 }
 

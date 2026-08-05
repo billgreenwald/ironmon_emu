@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var showLogImporter = false
     @State private var logData: LogData?
     @State private var showLogViewer = false
+    @State private var showNaming = false
 
     private var activeState: ActiveState? {
         guard let s = controller.trackerState else { return nil }
@@ -66,6 +67,7 @@ struct ContentView: View {
         .overlay(alignment: .topTrailing) {
             if controller.romLoaded {
                 HStack(spacing: 2) {
+                    Button { showNaming = true } label: { Image(systemName: "keyboard").padding(8) }
                     Button { showLogImporter = true } label: { Image(systemName: "book").padding(8) }
                     Button { showImporter = true } label: { Image(systemName: "arrow.triangle.2.circlepath").padding(8) }
                 }
@@ -90,6 +92,7 @@ struct ContentView: View {
                 LogViewerOverlay(data: d, active: active)
             }
         }
+        .sheet(isPresented: $showNaming) { NamingOverlay(controller: controller) }
         .alert("Error", isPresented: Binding(
             get: { controller.errorMessage != nil },
             set: { if !$0 { controller.errorMessage = nil } })) {

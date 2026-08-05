@@ -248,11 +248,17 @@ private struct RouteRow: View {
     @EnvironmentObject var router: SheetRouter
 
     var body: some View {
-        TrackerCard {
+        let routeName = RouteNames.shared.get(mapLayoutId: Int32(mapId), isHoenn: isHoenn)
+        return TrackerCard {
             HStack {
-                Text((isCurrent ? "◄ " : "") + RouteNames.shared.get(mapLayoutId: Int32(mapId), isHoenn: isHoenn))
+                Text((isCurrent ? "◄ " : "") + routeName)
                     .font(.system(size: 12, weight: isCurrent ? .bold : .semibold))
                     .foregroundColor(TrackerTheme.accentBlue).lineLimit(1)
+                if GallerySwift.shared.hasImages(routeName: routeName) {
+                    Button { router.present(.gallery(routeName)) } label: {
+                        Text("↗").font(.system(size: 11, weight: .bold)).foregroundColor(TrackerTheme.accentBlue)
+                    }.buttonStyle(.plain)
+                }
                 Spacer()
                 if hasTrainers {
                     let d = Int(TrackerStateSwift.shared.trainerDefeated(active: active, mapId: Int32(mapId)))

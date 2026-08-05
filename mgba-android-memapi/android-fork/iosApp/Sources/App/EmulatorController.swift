@@ -53,6 +53,22 @@ final class EmulatorController: ObservableObject {
     func press(_ b: GBAButton) { keyMask |= b.rawValue; core.setKeys(keyMask) }
     func release(_ b: GBAButton) { keyMask &= ~b.rawValue; core.setKeys(keyMask) }
 
+    /// Auto-type [name] on the Gen III naming screen by replaying the shared key sequence.
+    /// Assumes the naming screen is open with the cursor at page 0 / row 0 / col 0.
+    /// NOTE: press/settle timings are best-guesses — may need on-device tuning.
+    func typeName(_ name: String) {
+        let keys = NamingSequence.shared.keysFor(name: name)
+        Task { @MainActor in
+            for k in keys {
+                core.setKeys(UInt32(1) << UInt32(k.code))
+                try? await Task.sleep(nanoseconds: 90_000_000)                       // hold ~90ms
+                core.setKeys(0)
+                try? await Task.sleep(nanoseconds: k.longDelay ? 550_000_000 : 60_000_000)
+            }
+            core.setKeys(keyMask)   // restore any held gamepad input
+        }
+    }
+
     func shutdown() {
         core.stop()
         audio.stop()
