@@ -171,6 +171,25 @@ struct InfoRow: View {
     }
 }
 
+/// A drawn Poké Ball (top-half red / bottom-half white, black band, center button).
+struct PokeBallView: View {
+    var size: CGFloat = 34
+    var dimmed: Bool = false
+    var body: some View {
+        ZStack {
+            Circle().fill(Color.white)
+            Circle().fill(Color.red)
+                .mask(VStack(spacing: 0) { Rectangle(); Color.clear })   // top half only
+            Rectangle().fill(Color.black).frame(height: Swift.max(2, size * 0.11))
+            Circle().fill(Color.white).frame(width: size * 0.34, height: size * 0.34)
+                .overlay(Circle().stroke(Color.black, lineWidth: Swift.max(1, size * 0.06)))
+            Circle().stroke(Color.black, lineWidth: Swift.max(1, size * 0.05))
+        }
+        .frame(width: size, height: size)
+        .opacity(dimmed ? 0.35 : 1)
+    }
+}
+
 /// Card container matching Android CardBg.
 struct TrackerCard<Content: View>: View {
     @ViewBuilder let content: Content

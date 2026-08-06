@@ -83,11 +83,7 @@ private struct BallPickerView: View {
                 ForEach(1...3, id: \.self) { i in
                     VStack(spacing: 4) {
                         Text(chosen == i ? "▼" : " ").foregroundColor(TrackerTheme.accentRed)
-                        ZStack {
-                            Circle().fill(chosen == i ? TrackerTheme.accentRed : Color.gray.opacity(0.5))
-                            Circle().stroke(Color.white.opacity(0.7), lineWidth: 1)
-                        }
-                        .frame(width: 34, height: 34)
+                        PokeBallView(size: 40, dimmed: chosen != 0 && chosen != i)
                         Text(labels[i - 1]).font(.system(size: 9)).foregroundColor(TrackerTheme.textSecondary)
                     }
                 }

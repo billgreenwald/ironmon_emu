@@ -36,6 +36,7 @@ struct ContentView: View {
     }
 
     var body: some View {
+        GeometryReader { geo in
         HStack(spacing: 0) {
             // Left — game + controls
             VStack(spacing: 0) {
@@ -56,12 +57,12 @@ struct ContentView: View {
                 GamepadView(controller: controller)
                     .frame(height: 190)
             }
-            .frame(maxWidth: .infinity)
+            .frame(width: geo.size.width * 0.7)
 
             Divider()
 
             TrackerPanel(state: controller.trackerState)
-                .frame(width: 280)
+                .frame(width: geo.size.width * 0.3)
         }
         .background(Color(.systemBackground))
         .overlay(alignment: .topTrailing) {
@@ -99,6 +100,7 @@ struct ContentView: View {
             Button("OK", role: .cancel) { controller.errorMessage = nil }
         } message: {
             Text(controller.errorMessage ?? "")
+        }
         }
     }
 }
