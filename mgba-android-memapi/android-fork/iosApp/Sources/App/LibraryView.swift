@@ -9,6 +9,7 @@ struct LibraryView: View {
     let onPlay: (RomFamilyGroup) -> Void
     @State private var showFolderPicker = false
     @State private var showRomPicker = false
+    @State private var showSettings = false
     let onPlayFile: (URL) -> Void
 
     var body: some View {
@@ -16,6 +17,9 @@ struct LibraryView: View {
             content
                 .navigationTitle("ROM Library")
                 .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button { showSettings = true } label: { Image(systemName: "gearshape") }
+                    }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         HStack(spacing: 14) {
                             Button { library.scan() } label: { Image(systemName: "arrow.clockwise") }
@@ -32,6 +36,7 @@ struct LibraryView: View {
         .fileImporter(isPresented: $showRomPicker, allowedContentTypes: [.data]) { result in
             if case .success(let url) = result { onPlayFile(url) }
         }
+        .sheet(isPresented: $showSettings) { SettingsView() }
     }
 
     @ViewBuilder private var content: some View {

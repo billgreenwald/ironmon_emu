@@ -16,19 +16,35 @@ struct IronmonTrackerApp: App {
 struct RootView: View {
     @StateObject private var controller = EmulatorController()
     @StateObject private var library = RomLibrary()
+    @State private var activeGroup: RomFamilyGroup?
 
     var body: some View {
         if controller.romLoaded {
-            EmulatorView(controller: controller, onExit: { controller.closeROM() })
+            EmulatorView(
+                controller: controller,
+                onExit: { controller.closeROM(); activeGroup = nil },
+                onQuickload: activeGroup == nil ? nil : { next in quickload(next: next) }
+            )
         } else {
             LibraryView(
                 library: library,
                 onPlay: { group in
+                    activeGroup = group
                     if let path = library.prepareROM(for: group) { controller.openROM(path: path) }
                 },
-                onPlayFile: { url in controller.loadROM(url: url) }
+                onPlayFile: { url in activeGroup = nil; controller.loadROM(url: url) }
             )
         }
+    }
+
+    /// Quickload: switch to the next/previous ROM in the active family.
+    private func quickload(next: Bool) {
+        guard let group = activeGroup else { return }
+        let numbers = library.memberNumbers(for: group)
+        guard !numbers.isEmpty else { return }
+        let idx = numbers.firstIndex(of: library.lastPlayed(group.prefix)) ?? 0
+        let target = next ? numbers[min(idx + 1, numbers.count - 1)] : numbers[max(idx - 1, 0)]
+        if let path = library.prepareROM(for: group, number: target) { controller.openROM(path: path) }
     }
 }
 

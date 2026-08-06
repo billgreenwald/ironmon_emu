@@ -8,7 +8,10 @@ import TrackerCore
 struct EmulatorView: View {
     @ObservedObject var controller: EmulatorController
     let onExit: () -> Void
+    var onQuickload: ((Bool) -> Void)? = nil
     @State private var showImporter = false
+    @State private var showSettings = false
+    @AppStorage("split_fraction") private var split = 0.7
     @State private var showLogImporter = false
     @State private var logData: LogData?
     @State private var showLogViewer = false
@@ -58,20 +61,25 @@ struct EmulatorView: View {
                 GamepadView(controller: controller)
                     .frame(height: 190)
             }
-            .frame(width: geo.size.width * 0.7)
+            .frame(width: geo.size.width * CGFloat(split))
 
             Divider()
 
             TrackerPanel(state: controller.trackerState)
-                .frame(width: geo.size.width * 0.3)
+                .frame(width: geo.size.width * CGFloat(1 - split))
         }
         .background(Color(.systemBackground))
         .overlay(alignment: .topTrailing) {
             if controller.romLoaded {
                 HStack(spacing: 2) {
                     Button { onExit() } label: { Image(systemName: "chevron.left.circle").padding(8) }
+                    if let q = onQuickload {
+                        Button { q(false) } label: { Image(systemName: "backward.end").padding(8) }
+                        Button { q(true) } label: { Image(systemName: "forward.end").padding(8) }
+                    }
                     Button { showNaming = true } label: { Image(systemName: "keyboard").padding(8) }
                     Button { showLogImporter = true } label: { Image(systemName: "book").padding(8) }
+                    Button { showSettings = true } label: { Image(systemName: "gearshape").padding(8) }
                     Button { showImporter = true } label: { Image(systemName: "arrow.triangle.2.circlepath").padding(8) }
                 }
             }
@@ -96,6 +104,7 @@ struct EmulatorView: View {
             }
         }
         .sheet(isPresented: $showNaming) { NamingOverlay(controller: controller) }
+        .sheet(isPresented: $showSettings) { SettingsView() }
         .alert("Error", isPresented: Binding(
             get: { controller.errorMessage != nil },
             set: { if !$0 { controller.errorMessage = nil } })) {
