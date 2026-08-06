@@ -33,10 +33,33 @@ data class RomFamilyGroup(
     val allMemberPaths: List<String>,   // absolute paths, sorted ascending by number
 )
 
+/** A discovered ROM file (name + full path), fed into [RomFamilyUtils.buildFamilies]. */
+data class RomFileEntry(val name: String, val path: String)
+
 object RomFamilyUtils {
 
     // Matches: <prefix><digits>.<gba|gb>  — prefix is non-greedy so digits are captured last
     private val REGEX = Regex("""^(.*?)(\d+)\.(gba|gb)$""", RegexOption.IGNORE_CASE)
+
+    /**
+     * Groups discovered ROM files into families by (prefix, extension), sorted by trailing number.
+     * Shared by Android (SAF scan) and iOS (folder enumeration). `lastPlayedNumber` is left 0 for
+     * the caller to fill from its own per-prefix store.
+     */
+    fun buildFamilies(files: List<RomFileEntry>): List<RomFamilyGroup> =
+        files.map { parseFamily(it.name, it.path) }
+            .groupBy { it.prefix to it.extension }
+            .map { (key, members) ->
+                val sorted = members.sortedBy { it.number ?: 0 }
+                RomFamilyGroup(
+                    prefix = key.first,
+                    extension = key.second,
+                    totalCount = sorted.size,
+                    lastPlayedNumber = 0,
+                    allMemberPaths = sorted.map { it.absolutePath },
+                )
+            }
+            .sortedBy { it.prefix }
 
     fun parseFamily(fileName: String, absolutePath: String): RomFamily {
         val m = REGEX.matchEntire(fileName)

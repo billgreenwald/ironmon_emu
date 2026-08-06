@@ -5,8 +5,9 @@ import TrackerCore
 /// Landscape split: game + touch controls on the left (~70%), the tracker panel on the right
 /// (~30%) — mirroring the Android layout. The tracker side is a thin renderer of the shared
 /// `TrackerState`; all logic lives in :tracker-core.
-struct ContentView: View {
-    @StateObject private var controller = EmulatorController()
+struct EmulatorView: View {
+    @ObservedObject var controller: EmulatorController
+    let onExit: () -> Void
     @State private var showImporter = false
     @State private var showLogImporter = false
     @State private var logData: LogData?
@@ -68,6 +69,7 @@ struct ContentView: View {
         .overlay(alignment: .topTrailing) {
             if controller.romLoaded {
                 HStack(spacing: 2) {
+                    Button { onExit() } label: { Image(systemName: "chevron.left.circle").padding(8) }
                     Button { showNaming = true } label: { Image(systemName: "keyboard").padding(8) }
                     Button { showLogImporter = true } label: { Image(systemName: "book").padding(8) }
                     Button { showImporter = true } label: { Image(systemName: "arrow.triangle.2.circlepath").padding(8) }

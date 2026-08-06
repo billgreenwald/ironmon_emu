@@ -7,7 +7,27 @@ struct IronmonTrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+        }
+    }
+}
+
+/// Routes between the ROM library (home) and the running game. Owns the shared controller + library.
+struct RootView: View {
+    @StateObject private var controller = EmulatorController()
+    @StateObject private var library = RomLibrary()
+
+    var body: some View {
+        if controller.romLoaded {
+            EmulatorView(controller: controller, onExit: { controller.closeROM() })
+        } else {
+            LibraryView(
+                library: library,
+                onPlay: { group in
+                    if let path = library.prepareROM(for: group) { controller.openROM(path: path) }
+                },
+                onPlayFile: { url in controller.loadROM(url: url) }
+            )
         }
     }
 }

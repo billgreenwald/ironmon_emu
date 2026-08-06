@@ -14,7 +14,7 @@ final class EmulatorController: ObservableObject {
     private var observer: Kotlinx_coroutines_coreJob?
     private var keyMask: UInt32 = 0
 
-    /// Import a picked ROM into the sandbox, boot the core, wire the tracker, and start audio.
+    /// Import a picked ROM from outside the sandbox, then open it.
     func loadROM(url: URL) {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -30,24 +30,42 @@ final class EmulatorController: ObservableObject {
             errorMessage = "Couldn't import ROM: \(error.localizedDescription)"
             return
         }
+        openROM(path: dest.path)
+    }
 
-        guard core.loadROM(atPath: dest.path) else {
+    /// Open a ROM already at an accessible local path (e.g. copied into the sandbox by the library).
+    /// Safe to call when another ROM is loaded — switches ROMs in place.
+    func openROM(path: String) {
+        if romLoaded { teardown() }
+        guard core.loadROM(atPath: path) else {
             errorMessage = "mGBA couldn't load this ROM."
             return
         }
-
-        // Wire the shared tracker to read from the live core.
         let env = IosTracker.shared.install()
         MemoryBridgeInstaller.install(MgbaMemoryProvider(core: core))
-        IosTracker.shared.start(environment: env, romPath: dest.path)
+        IosTracker.shared.start(environment: env, romPath: path)
         observer = IosTracker.shared.observeState { [weak self] state in
             Task { @MainActor in self?.trackerState = state }
         }
-
         audio.start()
         core.start()
         romLoaded = true
         errorMessage = nil
+    }
+
+    /// Stop the current game and return to the library.
+    func closeROM() {
+        teardown()
+        romLoaded = false
+        trackerState = nil
+    }
+
+    private func teardown() {
+        core.stop()
+        audio.stop()
+        observer?.cancel(cause: nil)
+        observer = nil
+        IosTracker.shared.stop()
     }
 
     func press(_ b: GBAButton) { keyMask |= b.rawValue; core.setKeys(keyMask) }
@@ -69,11 +87,5 @@ final class EmulatorController: ObservableObject {
         }
     }
 
-    func shutdown() {
-        core.stop()
-        audio.stop()
-        observer?.cancel(cause: nil)
-        observer = nil
-        IosTracker.shared.stop()
-    }
+    func shutdown() { teardown() }
 }
