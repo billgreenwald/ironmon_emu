@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import TrackerCore
 
 @main
 struct IronmonTrackerApp: App {
