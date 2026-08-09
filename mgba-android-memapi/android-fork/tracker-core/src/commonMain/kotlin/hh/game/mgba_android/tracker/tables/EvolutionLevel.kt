@@ -104,7 +104,7 @@ object EvolutionLevel {
         298 to 14,              // Seedot → Nuzleaf
         304 to 22,              // Taillow → Swellow
         309 to 25,              // Wingull → Pelipper
-        392 to 16,  393 to 30,  // Ralts → Kirlia → Gardevoir
+        392 to 20,  393 to 30,  // Ralts → Kirlia → Gardevoir
         311 to 22,              // Surskit → Masquerain
         306 to 23,              // Shroomish → Breloom
         364 to 18,  365 to 36,  // Slakoth → Vigoroth → Slaking
@@ -133,7 +133,7 @@ object EvolutionLevel {
         360 to 15,              // Wynaut → Wobbuffet
         346 to 42,              // Snorunt → Glalie
         341 to 32,  342 to 44,  // Spheal → Sealeo → Walrein
-        381 to 30,  325 to 50,  // Bagon → Shelgon → Salamence
+        395 to 30,  396 to 50,  // Bagon → Shelgon → Salamence
         398 to 20,  399 to 45,  // Beldum → Metang → Metagross
     )
 
