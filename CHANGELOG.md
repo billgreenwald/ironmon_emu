@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.6.11] - 2026-08-09
+
+### Fixed
+- **Evolution info now shows correctly for the Ralts and Bagon lines in Emerald** — Shelgon showed no evolution info at all, and Ralts listed the wrong level (16 instead of 20). The evolution table held incorrect internal species indices for the Bagon → Shelgon → Salamence line (they were pointing at Luvdisc and Relicanth, which don't evolve) plus a wrong level for Ralts. Now corrected: Ralts → Kirlia at Lv. 20, Kirlia → Gardevoir at Lv. 30, Bagon → Shelgon at Lv. 30, and Shelgon → Salamence at Lv. 50.
+
 ## [3.6.10] - 2026-08-04
 
 ### Fixed
