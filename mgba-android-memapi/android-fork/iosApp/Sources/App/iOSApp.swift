@@ -48,7 +48,7 @@ struct RootView: View {
         .onAppear {
             OrientationLocker.lock(controller.romLoaded ? .landscape : .portrait,
                                    rotateTo: controller.romLoaded ? .landscapeRight : .portrait)
-            pads.attach { mask in controller.setPadKeys(mask) }
+            pads.attach { mask in Task { @MainActor in controller.setPadKeys(mask) } }
         }
     }
 

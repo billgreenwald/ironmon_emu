@@ -87,7 +87,11 @@ struct ControllerBindings {
 /// Bridges MFi / Bluetooth controllers (Xbox, DualShock/DualSense, MFi pads) to the emulator.
 /// Observes connect/disconnect, installs a `valueChangedHandler` that rebuilds the full GBA key
 /// mask on every input event, and forwards it to `EmulatorController.setPadKeys`.
-@MainActor
+///
+/// Deliberately *not* `@MainActor`: `valueChangedHandler` and the GameController notifications are
+/// delivered on the main queue in practice, but the compiler sees the handler as nonisolated, so
+/// keeping the class nonisolated lets it touch `bindings`/`forward` directly. The `forward` closure
+/// hops to the main actor for the actual (main-actor) emulator call.
 final class GameControllerManager: ObservableObject {
     @Published private(set) var connectedName: String?
 
