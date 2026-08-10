@@ -9,7 +9,8 @@ struct SettingsView: View {
     @AppStorage("game_over_condition") private var gameOver = "LEAD_FAINTS"
     @AppStorage("split_fraction") private var split = 0.7
     // Emulator
-    @AppStorage("ff_speed") private var ffSpeed = 2.0
+    @AppStorage("default_speed") private var defaultSpeed = 1.0   // baseline (Android defaultFps)
+    @AppStorage("ff_speed") private var ffSpeed = 2.0             // what the trigger switches to
     @AppStorage("speed_toggle_mode") private var speedToggle = false
     @AppStorage("l_as_speed") private var lAsSpeed = false
     // On-screen controls (read by GamepadView)
@@ -34,16 +35,20 @@ struct SettingsView: View {
                     }
                 }
                 Section {
+                    Picker("Default speed", selection: $defaultSpeed) {
+                        Text("1×").tag(1.0); Text("2×").tag(2.0); Text("3×").tag(3.0); Text("4×").tag(4.0)
+                    }
                     Picker("Fast-forward speed", selection: $ffSpeed) {
-                        Text("2×").tag(2.0); Text("3×").tag(3.0); Text("4×").tag(4.0)
+                        Text("1×").tag(1.0); Text("2×").tag(2.0); Text("3×").tag(3.0); Text("4×").tag(4.0)
                     }
                     Toggle("Fast-forward is a toggle (off = hold)", isOn: $speedToggle)
                     Toggle("Use on-screen L for fast-forward", isOn: $lAsSpeed)
                 } header: {
-                    Text("Fast-forward")
+                    Text("Speed")
                 } footer: {
-                    Text("Bind a controller button to fast-forward in Controller → Button mapping. "
-                       + "Audio mutes above 1.5×.")
+                    Text("The trigger switches between Default and Fast-forward speed — set Default 3× "
+                       + "and Fast-forward 1× to make it a slow-mo button. Bind a controller button in "
+                       + "Controller → Button mapping. Audio mutes above 1.5×.")
                 }
                 Section("Controller") {
                     NavigationLink {

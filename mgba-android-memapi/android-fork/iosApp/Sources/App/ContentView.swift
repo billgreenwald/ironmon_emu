@@ -81,7 +81,7 @@ struct EmulatorView: View {
                 }
             }
             .sheet(isPresented: $showNaming) { NamingOverlay(controller: controller) }
-            .sheet(isPresented: $showSettings) { SettingsView() }
+            .sheet(isPresented: $showSettings, onDismiss: { controller.applyBaselineSpeed() }) { SettingsView() }
             .alert("Error", isPresented: Binding(
                 get: { controller.errorMessage != nil },
                 set: { if !$0 { controller.errorMessage = nil } })) {
