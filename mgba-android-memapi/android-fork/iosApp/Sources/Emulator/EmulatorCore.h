@@ -36,6 +36,10 @@ typedef NS_OPTIONS(uint32_t, GBAKeyMask) {
 /// Current pressed-key bitmask (GBAKeyMask), applied each frame.
 - (void)setKeys:(uint32_t)mask;
 
+/// Wall-clock pacing multiplier: 1.0 = normal speed, >1.0 fast-forwards. Clamped to >= 0.25.
+/// Read fresh each frame on the emulation thread, so it can be flipped live from any thread.
+- (void)setSpeedMultiplier:(float)mult;
+
 /// Copy the latest complete frame (RGBA8, videoWidth*videoHeight*4 bytes) into `dst`.
 /// Returns NO if no frame is available or capacity is too small.
 - (BOOL)copyFrameInto:(void *)dst capacity:(NSInteger)capacityBytes;

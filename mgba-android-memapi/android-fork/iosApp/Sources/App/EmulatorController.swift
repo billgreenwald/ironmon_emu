@@ -8,6 +8,7 @@ final class EmulatorController: ObservableObject {
     @Published private(set) var trackerState: TrackerState?   // nil until the first poll emits
     @Published private(set) var romLoaded = false
     @Published var errorMessage: String?
+    @Published private(set) var fastForward = false
 
     let core = EmulatorCore()
     private lazy var audio = EmulatorAudio(core: core)
@@ -70,6 +71,14 @@ final class EmulatorController: ObservableObject {
 
     func press(_ b: GBAButton) { keyMask |= b.rawValue; core.setKeys(keyMask) }
     func release(_ b: GBAButton) { keyMask &= ~b.rawValue; core.setKeys(keyMask) }
+
+    /// Fast-forward toggle. The multiplier comes from Settings ("ff_speed", default 2×).
+    func toggleFastForward() {
+        fastForward.toggle()
+        let stored = UserDefaults.standard.double(forKey: "ff_speed")
+        let mult = Float(stored >= 1 ? stored : 2)   // 0 = key never set → default 2×
+        core.setSpeedMultiplier(fastForward ? mult : 1)
+    }
 
     /// Auto-type [name] on the Gen III naming screen by replaying the shared key sequence.
     /// Assumes the naming screen is open with the cursor at page 0 / row 0 / col 0.

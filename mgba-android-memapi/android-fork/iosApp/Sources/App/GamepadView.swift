@@ -27,54 +27,74 @@ private struct HoldButton<Label: View>: View {
     }
 }
 
-/// On-screen GBA controls: D-pad, A/B, Start/Select, L/R. Presses drive EmulatorController.
+/// On-screen GBA controls, drawn as a transparent OVERLAY over the game (not a bar beneath it):
+/// shoulders top, D-pad + A/B at the bottom corners, Start/Select bottom-center. Opacity, scale, and
+/// left/right inversion are user-configurable (Settings).
 struct GamepadView: View {
     @ObservedObject var controller: EmulatorController
+    @AppStorage("controls_alpha") private var alpha = 0.5
+    @AppStorage("controls_scale") private var scale = 1.0
+    @AppStorage("invert_layout") private var invert = false
 
     private func key(_ b: GBAButton, _ shape: some View) -> some View {
         HoldButton(onDown: { controller.press(b) }, onUp: { controller.release(b) }) { shape }
     }
-
-    private func round(_ text: String) -> some View {
-        Text(text)
-            .font(.headline).frame(width: 52, height: 52)
-            .background(Circle().fill(Color.gray.opacity(0.3)))
+    private func round(_ text: String, _ s: CGFloat) -> some View {
+        Text(text).font(.system(size: 20 * s, weight: .bold))
+            .frame(width: 52 * s, height: 52 * s)
+            .background(Circle().fill(Color.gray.opacity(0.55)))
+            .foregroundColor(.white)
+    }
+    private func dpad(_ text: String, _ s: CGFloat) -> some View {
+        Text(text).font(.system(size: 18 * s))
+            .frame(width: 44 * s, height: 44 * s)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.55)))
+            .foregroundColor(.white)
+    }
+    private func shoulder(_ text: String, _ s: CGFloat) -> some View {
+        Text(text).font(.system(size: 14 * s))
+            .frame(width: 66 * s, height: 34 * s)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.55)))
+            .foregroundColor(.white)
     }
 
-    private func dpad(_ text: String) -> some View {
-        Text(text).font(.headline).frame(width: 44, height: 44)
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.3)))
+    private func dpadCluster(_ s: CGFloat) -> some View {
+        VStack(spacing: 2) {
+            key(.up, dpad("▲", s))
+            HStack(spacing: 2) { key(.left, dpad("◀", s)); Spacer().frame(width: 44 * s); key(.right, dpad("▶", s)) }
+            key(.down, dpad("▼", s))
+        }
     }
-
-    private func shoulder(_ text: String) -> some View {
-        Text(text).font(.subheadline).frame(width: 70, height: 34)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.3)))
+    private func abCluster(_ s: CGFloat) -> some View {
+        HStack(spacing: 14 * s) {
+            key(.b, round("B", s))
+            key(.a, round("A", s))
+        }
     }
 
     var body: some View {
-        VStack(spacing: 10) {
-            HStack {
-                key(.l, shoulder("L")); Spacer(); key(.r, shoulder("R"))
-            }
-            HStack(alignment: .center) {
-                // D-pad
-                VStack(spacing: 2) {
-                    key(.up, dpad("▲"))
-                    HStack(spacing: 2) { key(.left, dpad("◀")); Spacer().frame(width: 44); key(.right, dpad("▶")) }
-                    key(.down, dpad("▼"))
-                }
+        let s = CGFloat(scale)
+        ZStack {
+            // Shoulders — top corners
+            VStack {
+                HStack { key(.l, shoulder("L", s)); Spacer(); key(.r, shoulder("R", s)) }
                 Spacer()
-                // A/B
-                VStack(spacing: 14) {
-                    key(.a, round("A"))
-                    key(.b, round("B"))
-                }
             }
-            HStack(spacing: 24) {
-                key(.select, shoulder("Select"))
-                key(.start, shoulder("Start"))
+            // Bottom row: D-pad and A/B at the corners, Start/Select centered
+            VStack {
+                Spacer()
+                HStack(alignment: .bottom) {
+                    (invert ? AnyView(abCluster(s)) : AnyView(dpadCluster(s)))
+                    Spacer()
+                    HStack(spacing: 12 * s) { key(.select, shoulder("Sel", s)); key(.start, shoulder("Start", s)) }
+                    Spacer()
+                    (invert ? AnyView(dpadCluster(s)) : AnyView(abCluster(s)))
+                }
+                .padding(.bottom, 10)
             }
         }
-        .padding(8)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .opacity(alpha)
     }
 }

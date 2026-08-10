@@ -63,6 +63,7 @@ struct AudioRing {
 
     // input
     std::atomic<uint32_t> _keys;
+    std::atomic<float> _speed;      // wall-clock pacing multiplier (1.0 = normal)
 
     // thread
     std::atomic<bool> _running;
@@ -73,6 +74,7 @@ struct AudioRing {
     if ((self = [super init])) {
         _videoLock = OS_UNFAIR_LOCK_INIT;
         _keys.store(0);
+        _speed.store(1.0f);
         _running.store(false);
         _backIndex = 0;
         _frontIndex = 0;
@@ -136,6 +138,11 @@ struct AudioRing {
 
 - (void)setKeys:(uint32_t)mask { _keys.store(mask, std::memory_order_relaxed); }
 
+- (void)setSpeedMultiplier:(float)mult {
+    if (mult < 0.25f) mult = 0.25f;
+    _speed.store(mult, std::memory_order_relaxed);
+}
+
 - (BOOL)isRunning { return _running.load(); }
 
 - (void)start {
@@ -159,11 +166,12 @@ static void* EmulatorCore_run(void* ctx) {
 - (void)emulationLoop {
     pthread_setname_np("mgba-emulation");
     mach_timebase_info_data_t tb; mach_timebase_info(&tb);
-    const double nanosPerFrame = 1e9 / kFrameHz;
     uint64_t nextDeadline = mach_absolute_time();
     int16_t temp[4096];
 
     while (_running.load()) {
+        float speed = _speed.load(std::memory_order_relaxed);
+        const double nanosPerFrame = 1e9 / (kFrameHz * speed);
         _core->setKeys(_core, _keys.load(std::memory_order_relaxed));
         _core->runFrame(_core);
 
@@ -182,12 +190,15 @@ static void* EmulatorCore_run(void* ctx) {
         double clock = (double)_core->frequency(_core);
         blip_set_rates(left,  clock, kOutSampleRate);
         blip_set_rates(right, clock, kOutSampleRate);
+        // Always drain the blip buffers so they don't back up, but only forward samples to the
+        // output ring near normal speed — fast-forward would otherwise overflow it into garble.
+        BOOL audible = (speed <= 1.5f);
         int avail = blip_samples_avail(left);
         while (avail > 0) {
             int n = avail < 2048 ? avail : 2048;   // n stereo frames
             blip_read_samples(left,  temp,     n, 1);
             blip_read_samples(right, temp + 1, n, 1);
-            _audio.push(temp, (uint32_t)(n * 2));
+            if (audible) _audio.push(temp, (uint32_t)(n * 2));
             avail = blip_samples_avail(left);
         }
 
