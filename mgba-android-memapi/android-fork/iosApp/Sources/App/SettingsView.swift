@@ -10,6 +10,8 @@ struct SettingsView: View {
     @AppStorage("split_fraction") private var split = 0.7
     // Emulator
     @AppStorage("ff_speed") private var ffSpeed = 2.0
+    @AppStorage("speed_toggle_mode") private var speedToggle = false
+    @AppStorage("l_as_speed") private var lAsSpeed = false
     // On-screen controls (read by GamepadView)
     @AppStorage("controls_alpha") private var controlsAlpha = 0.5
     @AppStorage("controls_scale") private var controlsScale = 1.0
@@ -31,12 +33,17 @@ struct SettingsView: View {
                         }
                     }
                 }
-                Section("Emulator") {
-                    VStack(alignment: .leading) {
-                        Text("Fast-forward speed — \(ffSpeed, specifier: "%.0f")×")
-                            .font(.footnote).foregroundColor(.secondary)
-                        Slider(value: $ffSpeed, in: 2...8, step: 1)
+                Section {
+                    Picker("Fast-forward speed", selection: $ffSpeed) {
+                        Text("2×").tag(2.0); Text("3×").tag(3.0); Text("4×").tag(4.0)
                     }
+                    Toggle("Fast-forward is a toggle (off = hold)", isOn: $speedToggle)
+                    Toggle("Use on-screen L for fast-forward", isOn: $lAsSpeed)
+                } header: {
+                    Text("Fast-forward")
+                } footer: {
+                    Text("Bind a controller button to fast-forward in Controller → Button mapping. "
+                       + "Audio mutes above 1.5×.")
                 }
                 Section("Controller") {
                     NavigationLink {

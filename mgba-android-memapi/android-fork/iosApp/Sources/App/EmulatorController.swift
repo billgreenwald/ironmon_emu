@@ -79,12 +79,29 @@ final class EmulatorController: ObservableObject {
     /// Full GBA key bitmask from a hardware gamepad (rebuilt each input event by the controller layer).
     func setPadKeys(_ mask: UInt32) { padMask = mask; applyKeys() }
 
-    /// Fast-forward toggle. The multiplier comes from Settings ("ff_speed", default 2×).
-    func toggleFastForward() {
-        fastForward.toggle()
+    // Fast-forward. `fastForward` is the single source of truth; the speed target ("ff_speed",
+    // default 2×, Android's secondaryFps) and toggle-vs-hold mode ("speed_toggle_mode") live in
+    // Settings. All triggers (toolbar, on-screen L, controller binding) route through here.
+    private func ffMultiplier() -> Float {
         let stored = UserDefaults.standard.double(forKey: "ff_speed")
-        let mult = Float(stored >= 1 ? stored : 2)   // 0 = key never set → default 2×
-        core.setSpeedMultiplier(fastForward ? mult : 1)
+        return Float(stored >= 1 ? stored : 2)       // 0 = key never set → default 2×
+    }
+    private var ffToggleMode: Bool { UserDefaults.standard.bool(forKey: "speed_toggle_mode") }
+
+    func setFastForward(_ on: Bool) {
+        guard on != fastForward else { return }
+        fastForward = on
+        core.setSpeedMultiplier(on ? ffMultiplier() : 1)
+    }
+
+    /// Toolbar tap — always toggles, regardless of the hold/toggle preference.
+    func toggleFastForward() { setFastForward(!fastForward) }
+
+    /// A down/up edge from a held trigger (on-screen L or a controller button bound to Fast-forward).
+    /// Hold mode: speed follows the button. Toggle mode: each press flips it, release is ignored.
+    func speedTrigger(pressed: Bool) {
+        if ffToggleMode { if pressed { setFastForward(!fastForward) } }
+        else { setFastForward(pressed) }
     }
 
     /// Auto-type [name] on the Gen III naming screen by replaying the shared key sequence.

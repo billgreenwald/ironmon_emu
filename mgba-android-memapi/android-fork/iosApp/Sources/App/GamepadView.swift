@@ -35,9 +35,20 @@ struct GamepadView: View {
     @AppStorage("controls_alpha") private var alpha = 0.5
     @AppStorage("controls_scale") private var scale = 1.0
     @AppStorage("invert_layout") private var invert = false
+    @AppStorage("l_as_speed") private var lAsSpeed = false
 
     private func key(_ b: GBAButton, _ shape: some View) -> some View {
         HoldButton(onDown: { controller.press(b) }, onUp: { controller.release(b) }) { shape }
+    }
+    /// The L shoulder: normally GBA L, but when "L as speed" is on it's consumed as the fast-forward
+    /// trigger and never sends GBA L (mirrors Android's lAsSpeed touch behavior).
+    @ViewBuilder private func lButton(_ s: CGFloat) -> some View {
+        if lAsSpeed {
+            HoldButton(onDown: { controller.speedTrigger(pressed: true) },
+                       onUp: { controller.speedTrigger(pressed: false) }) { shoulder("L»", s) }
+        } else {
+            key(.l, shoulder("L", s))
+        }
     }
     private func round(_ text: String, _ s: CGFloat) -> some View {
         Text(text).font(.system(size: 20 * s, weight: .bold))
@@ -77,7 +88,7 @@ struct GamepadView: View {
         ZStack {
             // Shoulders — top corners
             VStack {
-                HStack { key(.l, shoulder("L", s)); Spacer(); key(.r, shoulder("R", s)) }
+                HStack { lButton(s); Spacer(); key(.r, shoulder("R", s)) }
                 Spacer()
             }
             // Bottom row: D-pad and A/B at the corners, Start/Select centered

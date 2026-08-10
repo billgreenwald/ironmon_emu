@@ -42,15 +42,18 @@ enum PadInput: String, CaseIterable, Identifiable {
     }
 }
 
-/// A bindable GBA target (the on/off buttons a physical input can map to, plus "unbound").
+/// A bindable target: a GBA button, the special Fast-forward action (Android's speed button), or
+/// "unbound". `fastForward` never contributes to the GBA key mask — the controller layer detects it
+/// and drives the emulator speed instead.
 enum GBATarget: String, CaseIterable, Identifiable {
-    case a, b, l, r, start, select, none
+    case a, b, l, r, start, select, fastForward, none
 
     var id: String { rawValue }
     var label: String {
         switch self {
         case .a: return "A"; case .b: return "B"; case .l: return "L"; case .r: return "R"
-        case .start: return "Start"; case .select: return "Select"; case .none: return "— Unbound"
+        case .start: return "Start"; case .select: return "Select"
+        case .fastForward: return "⏩ Fast-forward"; case .none: return "— Unbound"
         }
     }
     var mask: UInt32 {
@@ -61,7 +64,7 @@ enum GBATarget: String, CaseIterable, Identifiable {
         case .r: return GBAButton.r.rawValue
         case .start: return GBAButton.start.rawValue
         case .select: return GBAButton.select.rawValue
-        case .none: return 0
+        case .fastForward, .none: return 0
         }
     }
 }
@@ -96,11 +99,15 @@ final class GameControllerManager: ObservableObject {
     @Published private(set) var connectedName: String?
 
     private var forward: ((UInt32) -> Void)?
+    private var onSpeed: ((Bool) -> Void)?
+    private var speedHeld = false            // last edge of the Fast-forward binding
     private var bindings = ControllerBindings()
 
     /// Wire up forwarding + start listening. Call once (e.g. from RootView.onAppear).
-    func attach(forward: @escaping (UInt32) -> Void) {
+    /// `onSpeed` receives the down/up edge of any input bound to Fast-forward.
+    func attach(forward: @escaping (UInt32) -> Void, onSpeed: @escaping (Bool) -> Void) {
         self.forward = forward
+        self.onSpeed = onSpeed
         NotificationCenter.default.addObserver(
             self, selector: #selector(didConnect), name: .GCControllerDidConnect, object: nil)
         NotificationCenter.default.addObserver(
@@ -121,6 +128,7 @@ final class GameControllerManager: ObservableObject {
     @objc private func didDisconnect(_ note: Notification) {
         connectedName = nil
         forward?(0)   // drop any keys the departing pad was holding
+        if speedHeld { speedHeld = false; onSpeed?(false) }  // and release fast-forward
     }
 
     private func bind(_ controller: GCController) {
@@ -129,8 +137,12 @@ final class GameControllerManager: ObservableObject {
         pad.valueChangedHandler = { [weak self] pad, _ in
             guard let self else { return }
             var mask: UInt32 = 0
+            var ff = false
             func add(_ input: PadInput, _ pressed: Bool) {
-                if pressed { mask |= self.bindings.target(input).mask }
+                guard pressed else { return }
+                let target = self.bindings.target(input)
+                if target == .fastForward { ff = true }     // speed trigger, not a GBA button
+                else { mask |= target.mask }
             }
             add(.buttonA, pad.buttonA.isPressed)
             add(.buttonB, pad.buttonB.isPressed)
@@ -150,6 +162,7 @@ final class GameControllerManager: ObservableObject {
             if pad.dpad.right.isPressed || pad.leftThumbstick.right.isPressed { mask |= GBAButton.right.rawValue }
 
             self.forward?(mask)
+            if ff != self.speedHeld { self.speedHeld = ff; self.onSpeed?(ff) }  // down/up edge only
         }
     }
 }
