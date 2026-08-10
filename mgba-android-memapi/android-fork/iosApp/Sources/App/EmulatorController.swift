@@ -13,7 +13,11 @@ final class EmulatorController: ObservableObject {
     let core = EmulatorCore()
     private lazy var audio = EmulatorAudio(core: core)
     private var observer: Kotlinx_coroutines_coreJob?
-    private var keyMask: UInt32 = 0
+    // Touch controls and a hardware gamepad each own a mask; the core sees their union, so a
+    // physical button and an on-screen button never clobber each other's held state.
+    private var touchMask: UInt32 = 0
+    private var padMask: UInt32 = 0
+    private func applyKeys() { core.setKeys(touchMask | padMask) }
 
     /// Import a picked ROM from outside the sandbox, then open it.
     func loadROM(url: URL) {
@@ -69,8 +73,11 @@ final class EmulatorController: ObservableObject {
         IosTracker.shared.stop()
     }
 
-    func press(_ b: GBAButton) { keyMask |= b.rawValue; core.setKeys(keyMask) }
-    func release(_ b: GBAButton) { keyMask &= ~b.rawValue; core.setKeys(keyMask) }
+    func press(_ b: GBAButton) { touchMask |= b.rawValue; applyKeys() }
+    func release(_ b: GBAButton) { touchMask &= ~b.rawValue; applyKeys() }
+
+    /// Full GBA key bitmask from a hardware gamepad (rebuilt each input event by the controller layer).
+    func setPadKeys(_ mask: UInt32) { padMask = mask; applyKeys() }
 
     /// Fast-forward toggle. The multiplier comes from Settings ("ff_speed", default 2×).
     func toggleFastForward() {
@@ -92,7 +99,7 @@ final class EmulatorController: ObservableObject {
                 core.setKeys(0)
                 try? await Task.sleep(nanoseconds: k.longDelay ? 550_000_000 : 60_000_000)
             }
-            core.setKeys(keyMask)   // restore any held gamepad input
+            applyKeys()   // restore any held touch / gamepad input
         }
     }
 

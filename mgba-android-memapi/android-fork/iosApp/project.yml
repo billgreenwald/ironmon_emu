@@ -48,6 +48,7 @@ targets:
       # System frameworks (Swift auto-links on import, listed for clarity/safety).
       - sdk: MetalKit.framework
       - sdk: AVFoundation.framework
+      - sdk: GameController.framework
     # Bundled asset folders (blue folder references — preserve the path prefix the shared readers
     # expect: sprites/N.png|gif for PokemonSprite, maxdata/ for BundleAssetReader (MaxFR/NatDex),
     # maps/ for the Gallery overlay).

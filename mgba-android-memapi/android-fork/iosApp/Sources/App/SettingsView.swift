@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage("controls_alpha") private var controlsAlpha = 0.5
     @AppStorage("controls_scale") private var controlsScale = 1.0
     @AppStorage("invert_layout") private var invertLayout = false
+    @AppStorage("hide_touch_when_pad") private var hideTouchWhenPad = true
 
     var body: some View {
         NavigationView {
@@ -36,6 +37,14 @@ struct SettingsView: View {
                             .font(.footnote).foregroundColor(.secondary)
                         Slider(value: $ffSpeed, in: 2...8, step: 1)
                     }
+                }
+                Section("Controller") {
+                    NavigationLink {
+                        KeybindingsView()
+                    } label: {
+                        Label("Button mapping", systemImage: "gamecontroller")
+                    }
+                    Toggle("Hide on-screen buttons when connected", isOn: $hideTouchWhenPad)
                 }
                 Section("On-screen controls") {
                     VStack(alignment: .leading) {

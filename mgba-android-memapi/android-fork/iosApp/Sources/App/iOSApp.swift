@@ -17,6 +17,7 @@ struct IronmonTrackerApp: App {
 struct RootView: View {
     @StateObject private var controller = EmulatorController()
     @StateObject private var library = RomLibrary()
+    @StateObject private var pads = GameControllerManager()
     @State private var activeGroup: RomFamilyGroup?
 
     var body: some View {
@@ -24,6 +25,7 @@ struct RootView: View {
             if controller.romLoaded {
                 EmulatorView(
                     controller: controller,
+                    pads: pads,
                     onExit: { controller.closeROM(); activeGroup = nil },
                     onQuickload: activeGroup == nil ? nil : { next in quickload(next: next) }
                 )
@@ -46,6 +48,7 @@ struct RootView: View {
         .onAppear {
             OrientationLocker.lock(controller.romLoaded ? .landscape : .portrait,
                                    rotateTo: controller.romLoaded ? .landscapeRight : .portrait)
+            pads.attach { mask in controller.setPadKeys(mask) }
         }
     }
 

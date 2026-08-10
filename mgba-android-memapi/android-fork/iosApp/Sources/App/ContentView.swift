@@ -7,10 +7,12 @@ import TrackerCore
 /// `TrackerState`; all logic lives in :tracker-core.
 struct EmulatorView: View {
     @ObservedObject var controller: EmulatorController
+    @ObservedObject var pads: GameControllerManager
     let onExit: () -> Void
     var onQuickload: ((Bool) -> Void)? = nil
     @State private var showSettings = false
     @AppStorage("split_fraction") private var split = 0.7
+    @AppStorage("hide_touch_when_pad") private var hideTouchWhenPad = true
     @State private var logData: LogData?
     @State private var showLogViewer = false
     @State private var showNaming = false
@@ -48,7 +50,10 @@ struct EmulatorView: View {
                     Color.black
                     GameMetalView(core: controller.core)
                         .aspectRatio(240.0 / 160.0, contentMode: .fit)
-                    GamepadView(controller: controller)
+                    // Hide the on-screen pad when a hardware controller is driving input (opt-out in Settings).
+                    if !(hideTouchWhenPad && pads.connectedName != nil) {
+                        GamepadView(controller: controller)
+                    }
                 }
                 .frame(width: geo.size.width * CGFloat(split))
                 .clipped()
