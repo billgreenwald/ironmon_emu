@@ -18,8 +18,11 @@
     <string>1</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
-    <key>UILaunchScreen</key>
-    <dict/>
+    <!-- A real launch storyboard is required for the app to run at native full-screen size.
+         The empty UILaunchScreen dict was NOT honored on device (app rendered letterboxed with
+         uniform black borders), so we reference an explicit storyboard instead. -->
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
     <!-- Master allow-list must be the SUPERSET of every orientation the app locks to at runtime
          (portrait for the library, landscape for the emulator). AppDelegate.orientationLock
          restricts per screen; anything it requests must appear here or the rotation can't take. -->
