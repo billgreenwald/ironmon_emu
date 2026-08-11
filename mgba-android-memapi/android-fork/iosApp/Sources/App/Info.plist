@@ -20,13 +20,19 @@
     <true/>
     <key>UILaunchScreen</key>
     <dict/>
+    <!-- Master allow-list must be the SUPERSET of every orientation the app locks to at runtime
+         (portrait for the library, landscape for the emulator). AppDelegate.orientationLock
+         restricts per screen; anything it requests must appear here or the rotation can't take. -->
     <key>UISupportedInterfaceOrientations</key>
     <array>
+        <string>UIInterfaceOrientationPortrait</string>
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>UISupportedInterfaceOrientations~ipad</key>
     <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
