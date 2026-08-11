@@ -27,6 +27,15 @@ struct EmulatorView: View {
         return TrackerStateSwift.shared.active(state: s)
     }
 
+    /// Largest rect of the given aspect ratio (w/h) that fits inside `container`.
+    private func fittedSize(_ container: CGSize, ratio: CGFloat) -> CGSize {
+        guard container.width > 0, container.height > 0 else { return .zero }
+        let byWidth = CGSize(width: container.width, height: container.width / ratio)
+        return byWidth.height <= container.height
+            ? byWidth
+            : CGSize(width: container.height * ratio, height: container.height)
+    }
+
     private func importLog(_ url: URL) {
         guard url.startAccessingSecurityScopedResource() else { return }
         defer { url.stopAccessingSecurityScopedResource() }
@@ -50,15 +59,21 @@ struct EmulatorView: View {
             let collapsed = trackerCollapsible && trackerCollapsed
             let gameFraction = collapsed ? 1.0 : split
             HStack(spacing: 0) {
-                // Left — game fills the area, touch controls OVERLAID on top (transparent).
-                ZStack {
-                    Color.black
-                    GameMetalView(core: controller.core)
-                        .aspectRatio(240.0 / 160.0, contentMode: .fit)
-                    // Hide the on-screen pad when a hardware controller is driving input (opt-out in Settings).
-                    if !(hideTouchWhenPad && pads.connectedName != nil) {
-                        GamepadView(controller: controller)
+                // Left — game fills the zone, touch controls OVERLAID on top (transparent).
+                // Size the Metal view explicitly to the largest 3:2 rect that fits the zone;
+                // `.aspectRatio` on a UIViewRepresentable doesn't size reliably (game came out tiny).
+                GeometryReader { zone in
+                    let fit = fittedSize(zone.size, ratio: 240.0 / 160.0)
+                    ZStack {
+                        Color.black
+                        GameMetalView(core: controller.core)
+                            .frame(width: fit.width, height: fit.height)
+                        // Hide the on-screen pad when a hardware controller drives input (opt-out in Settings).
+                        if !(hideTouchWhenPad && pads.connectedName != nil) {
+                            GamepadView(controller: controller)
+                        }
                     }
+                    .frame(width: zone.size.width, height: zone.size.height)
                 }
                 .frame(width: geo.size.width * CGFloat(gameFraction))
                 .clipped()
