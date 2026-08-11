@@ -13,6 +13,8 @@ struct EmulatorView: View {
     @State private var showSettings = false
     @AppStorage("split_fraction") private var split = 0.7
     @AppStorage("hide_touch_when_pad") private var hideTouchWhenPad = true
+    @AppStorage("tracker_collapsible") private var trackerCollapsible = false
+    @State private var trackerCollapsed = false
     @State private var logData: LogData?
     @State private var showLogViewer = false
     @State private var showNaming = false
@@ -44,6 +46,9 @@ struct EmulatorView: View {
 
     var body: some View {
         GeometryReader { geo in
+            // When the tracker is collapsible and collapsed, the game takes the full width.
+            let collapsed = trackerCollapsible && trackerCollapsed
+            let gameFraction = collapsed ? 1.0 : split
             HStack(spacing: 0) {
                 // Left — game fills the area, touch controls OVERLAID on top (transparent).
                 ZStack {
@@ -55,11 +60,13 @@ struct EmulatorView: View {
                         GamepadView(controller: controller)
                     }
                 }
-                .frame(width: geo.size.width * CGFloat(split))
+                .frame(width: geo.size.width * CGFloat(gameFraction))
                 .clipped()
 
-                TrackerPanel(state: controller.trackerState)
-                    .frame(width: geo.size.width * CGFloat(1 - split))
+                if !collapsed {
+                    TrackerPanel(state: controller.trackerState)
+                        .frame(width: geo.size.width * CGFloat(1 - gameFraction))
+                }
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .background(Color.black)
@@ -109,6 +116,11 @@ struct EmulatorView: View {
             Button { importKind = .log } label: { Image(systemName: "book").padding(6) }
             Button { showSettings = true } label: { Image(systemName: "gearshape").padding(6) }
             Button { importKind = .rom } label: { Image(systemName: "arrow.triangle.2.circlepath").padding(6) }
+            if trackerCollapsible {
+                Button { trackerCollapsed.toggle() } label: {
+                    Image(systemName: trackerCollapsed ? "sidebar.right" : "arrow.right.to.line").padding(6)
+                }
+            }
         }
         .font(.system(size: 15))
         .foregroundColor(.white)

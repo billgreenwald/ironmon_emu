@@ -32,11 +32,18 @@ struct RootView: View {
             } else {
                 LibraryView(
                     library: library,
+                    controller: controller,
                     onPlay: { group in
                         activeGroup = group
                         if let path = library.prepareROM(for: group) { controller.openROM(path: path) }
+                        else { controller.errorMessage = "Couldn't prepare that ROM." }
                     },
-                    onPlayFile: { url in activeGroup = nil; controller.loadROM(url: url) }
+                    // Single ROM: add to the library (so it stays on the home list) AND launch it.
+                    onPlayFile: { url in
+                        activeGroup = nil
+                        if let path = library.addLooseROM(url: url) { controller.openROM(path: path) }
+                        else { controller.errorMessage = "Couldn't import that ROM." }
+                    }
                 )
             }
         }

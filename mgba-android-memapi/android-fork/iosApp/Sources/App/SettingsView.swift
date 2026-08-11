@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("rating_ruleset") private var ruleset = "STANDARD"
     @AppStorage("game_over_condition") private var gameOver = "LEAD_FAINTS"
     @AppStorage("split_fraction") private var split = 0.7
+    @AppStorage("tracker_collapsible") private var trackerCollapsible = false
     // Emulator
     @AppStorage("default_speed") private var defaultSpeed = 1.0   // baseline (Android defaultFps)
     @AppStorage("ff_speed") private var ffSpeed = 2.0             // what the trigger switches to
@@ -73,10 +74,12 @@ struct SettingsView: View {
                 }
                 Section("Layout") {
                     VStack(alignment: .leading) {
-                        Text("Game / Tracker split — \(Int(split * 100)) / \(Int((1 - split) * 100))")
+                        let gamePct = Int((split * 100).rounded())
+                        Text("Game / Tracker split — \(gamePct) / \(100 - gamePct)")
                             .font(.footnote).foregroundColor(.secondary)
                         Slider(value: $split, in: 0.5...0.85)
                     }
+                    Toggle("Collapsible tracker panel", isOn: $trackerCollapsible)
                 }
             }
             .navigationTitle("Settings")

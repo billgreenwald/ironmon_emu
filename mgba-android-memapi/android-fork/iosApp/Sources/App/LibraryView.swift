@@ -3,17 +3,19 @@ import UniformTypeIdentifiers
 import TrackerCore
 
 /// ROM library home screen (Android GameListMaterialActivity, BATCH mode). Lists ROM families;
-/// tap one to play. Folder is picked once and remembered via a security-scoped bookmark.
+/// tap one to play. Folder is picked once and remembered via a security-scoped bookmark; single
+/// ROMs can also be added and are remembered on the list.
 struct LibraryView: View {
     @ObservedObject var library: RomLibrary
+    @ObservedObject var controller: EmulatorController
     let onPlay: (RomFamilyGroup) -> Void
-    @State private var pick: PickKind?
-    @State private var showSettings = false
     let onPlayFile: (URL) -> Void
-
-    // A single `.fileImporter` per view: two of them on one view is a SwiftUI bug where only one
-    // ever fires (that's why the folder button "did nothing"). One importer, mode chosen by `pick`.
-    private enum PickKind { case folder, rom }
+    // Two importers on SEPARATE views: two .fileImporter on the *same* view is a SwiftUI bug where
+    // only one fires. Keeping them on different views (see .background below) makes both reliable.
+    @State private var showFolderPicker = false
+    @State private var showRomPicker = false
+    @State private var showSettings = false
+    @State private var showShare = false
 
     var body: some View {
         NavigationView {
@@ -25,36 +27,40 @@ struct LibraryView: View {
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         HStack(spacing: 14) {
+                            Button { showShare = true } label: { Image(systemName: "square.and.arrow.up") }
                             Button { library.scan() } label: { Image(systemName: "arrow.clockwise") }
-                            Button { pick = .rom } label: { Image(systemName: "doc.badge.plus") }
-                            Button { pick = .folder } label: { Image(systemName: "folder") }
+                            Button { showRomPicker = true } label: { Image(systemName: "doc.badge.plus") }
+                            Button { showFolderPicker = true } label: { Image(systemName: "folder") }
                         }
                     }
+                }
+                // Folder importer — lives on this view.
+                .fileImporter(isPresented: $showFolderPicker, allowedContentTypes: [.folder]) { result in
+                    if case .success(let url) = result { library.setFolder(url) }
+                    else if case .failure(let e) = result { DebugLog.log("folder pick failed: \(e.localizedDescription)") }
                 }
         }
         .navigationViewStyle(.stack)
         .preferredColorScheme(.light)   // Android home is a light/white screen
-        .fileImporter(isPresented: Binding(get: { pick != nil },
-                                           set: { if !$0 { pick = nil } }),
-                      allowedContentTypes: pick == .folder ? [.folder] : [.data]) { result in
-            guard case .success(let url) = result else { return }
-            switch pick {
-            case .folder: library.setFolder(url)
-            case .rom:    onPlayFile(url)
-            case .none:   break
+        // ROM importer — deliberately on a DIFFERENT view than the folder importer.
+        .background(
+            Color.clear.fileImporter(isPresented: $showRomPicker, allowedContentTypes: [.data]) { result in
+                if case .success(let url) = result { onPlayFile(url) }
+                else if case .failure(let e) = result { DebugLog.log("rom pick failed: \(e.localizedDescription)") }
             }
-        }
+        )
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showShare) { ShareSheet(items: [DebugLog.fileURL]) }
+        .alert("Couldn't open ROM", isPresented: Binding(
+            get: { controller.errorMessage != nil },
+            set: { if !$0 { controller.errorMessage = nil } })) {
+            Button("OK", role: .cancel) { controller.errorMessage = nil }
+        } message: { Text(controller.errorMessage ?? "") }
     }
 
     @ViewBuilder private var content: some View {
-        if !library.hasFolder {
+        if library.families.isEmpty {
             emptyState
-        } else if library.families.isEmpty {
-            VStack(spacing: 8) {
-                Text("No .gba/.gb ROMs found in this folder.").foregroundColor(.secondary)
-                Button("Choose a different folder") { pick = .folder }
-            }
         } else {
             List {
                 if let name = library.folderName {
@@ -74,10 +80,10 @@ struct LibraryView: View {
             Image(systemName: "folder.badge.plus").font(.largeTitle).foregroundColor(.secondary)
             Text("Pick a folder of GBA ROMs to build your library, or open a single ROM.")
                 .multilineTextAlignment(.center).foregroundColor(.secondary).padding(.horizontal)
-            Button("Choose ROM Folder") { pick = .folder }
+            Button("Choose ROM Folder") { showFolderPicker = true }
                 .padding(.horizontal, 20).padding(.vertical, 10)
                 .background(TrackerTheme.accentBlue, in: Capsule()).foregroundColor(.white)
-            Button("Open a single ROM") { pick = .rom }.font(.footnote)
+            Button("Open a single ROM") { showRomPicker = true }.font(.footnote)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)

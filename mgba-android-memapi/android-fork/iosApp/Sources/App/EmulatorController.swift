@@ -41,11 +41,14 @@ final class EmulatorController: ObservableObject {
     /// Open a ROM already at an accessible local path (e.g. copied into the sandbox by the library).
     /// Safe to call when another ROM is loaded — switches ROMs in place.
     func openROM(path: String) {
+        DebugLog.log("openROM: \(path) exists=\(FileManager.default.fileExists(atPath: path))")
         if romLoaded { teardown() }
         guard core.loadROM(atPath: path) else {
+            DebugLog.log("openROM: core.loadROM returned false")
             errorMessage = "mGBA couldn't load this ROM."
             return
         }
+        DebugLog.log("openROM: core loaded, starting tracker + core")
         let env = IosTracker.shared.install()
         MemoryBridgeInstaller.install(MgbaMemoryProvider(core: core))
         IosTracker.shared.start(environment: env, romPath: path)
