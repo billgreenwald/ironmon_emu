@@ -28,8 +28,23 @@ targets:
     sources:
       - path: Sources/App          # SwiftUI + Metal shader + bridging header
       - path: Sources/Emulator     # EmulatorCore.{h,mm} (Obj-C++ over libmgba)
+    # XcodeGen GENERATES this plist from `properties` (it overwrites any file at `path`), so every
+    # key we need must live here — a hand-edited Sources/App/Info.plist is ignored. Missing
+    # UILaunchStoryboardName is what made the app render letterboxed at the legacy 16:9 size.
     info:
       path: Sources/App/Info.plist
+      properties:
+        LSRequiresIPhoneOS: true
+        UILaunchStoryboardName: LaunchScreen
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.dnacollc.ironmon.tracker   # ← CHANGE to match your prefix
