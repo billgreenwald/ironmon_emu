@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.7.0] - 2026-08-14
+
+### Added
+- **New 0.5× slow-down speed** — the speed picker now offers 0.5× alongside 1–4×, so you can step through fast or fiddly moments at half pace. Audio pitch is corrected so it still sounds right.
+- **"Add a Flag to Logs" tool** — a new item in the in-game Tools menu drops a marker into the logs, letting you flag a moment (e.g. "I was standing here") when reporting a bug so issues are far easier to track down.
+
+### Fixed
+- **Ice is now correctly shown as resisted by Fire-types** — on a Fire-type's defense breakdown, Ice attacks were listed as neutral; they now correctly appear as ½× (Fire resists Ice), matching the games.
+- **Amnesia's description now reads "Sp. Def"** — it previously said Amnesia raises Sp. Atk, but the move raises Special Defense.
+
 ## [3.6.11] - 2026-08-09
 
 ### Fixed
