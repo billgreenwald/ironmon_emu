@@ -22,17 +22,6 @@ using namespace oboe;
 static sonicStream gSonicStream = nullptr;
 static bool gPrevUsedSonic = false;
 
-// ---- TEMP fast-forward ceiling diagnostics (remove once 3x/4x is fixed) -------------------
-// Once per real second, log whether the audio callback is draining a full burst or starving
-// (blip running dry = emulator can't produce fast enough → CPU/production-bound ceiling).
-// achievedSpeed compares samples actually drained/sec against the fauxClock-implied target.
-static std::chrono::steady_clock::time_point gDiagLast = std::chrono::steady_clock::now();
-static long gDiagCallbacks = 0;
-static long gDiagFrames = 0;
-static long gDiagBlipAvail = 0;
-static long gDiagAvailable = 0;
-static long gDiagStarved = 0;
-
 // Temp buffers for interleaving blip mono channels before feeding Sonic
 static int16_t gTempLeft[4096];
 static int16_t gTempRight[4096];
@@ -89,34 +78,8 @@ public:
         blip_set_rates(left,  clockRate, sampleRate * fauxClock);
         blip_set_rates(right, clockRate, sampleRate * fauxClock);
 
-        int blipAvailRaw = blip_samples_avail(left);
-        int available = blipAvailRaw;
+        int available = blip_samples_avail(left);
         if (available > numFrames) available = numFrames;
-
-        // ---- TEMP diagnostics: aggregate per second, log starvation vs saturation ----
-        gDiagCallbacks++;
-        gDiagFrames     += numFrames;
-        gDiagBlipAvail  += blipAvailRaw;
-        gDiagAvailable  += available;
-        if (blipAvailRaw < numFrames) gDiagStarved++;
-        {
-            auto nowT = std::chrono::steady_clock::now();
-            double secs = std::chrono::duration<double>(nowT - gDiagLast).count();
-            if (secs >= 1.0 && gDiagCallbacks > 0) {
-                double drainedPerSec = gDiagAvailable / secs;
-                double achieved = drainedPerSec / (48000.0 * fauxClock);
-                LOGD("FFDIAG fpsTarget=%.0f speed=%.2f fauxClock=%.3f cbs=%ld avgFrames=%.0f "
-                     "avgBlipAvail=%.0f avgAvail=%.0f starved=%ld/%ld achievedSpeed=%.2fx",
-                     sync ? sync->fpsTarget : 0.0f, speed, fauxClock, gDiagCallbacks,
-                     (double) gDiagFrames / gDiagCallbacks,
-                     (double) gDiagBlipAvail / gDiagCallbacks,
-                     (double) gDiagAvailable / gDiagCallbacks,
-                     gDiagStarved, gDiagCallbacks, achieved);
-                gDiagLast = nowT;
-                gDiagCallbacks = 0; gDiagFrames = 0; gDiagBlipAvail = 0;
-                gDiagAvailable = 0; gDiagStarved = 0;
-            }
-        }
 
         if (useSonic && gSonicStream) {
             // Read blip samples (at Nx pitch due to fauxClock) into temp mono buffers.
