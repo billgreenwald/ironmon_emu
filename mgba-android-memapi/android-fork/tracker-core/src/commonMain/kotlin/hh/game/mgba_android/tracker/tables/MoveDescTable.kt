@@ -135,7 +135,7 @@ object MoveDescTable {
         "Charges 1 turn, then rams; raises Defense.",                               // 130 Skull Bash
         "Fires sharp spikes 2–5 times.",                                             // 131 Spike Cannon
         "Squeezes foe. May lower Speed.",                                            // 132 Constrict
-        "Raises Sp. Atk sharply twice.",                                             // 133 Amnesia
+        "Raises Sp. Def sharply twice.",                                             // 133 Amnesia
         "Bends spoons at foe to lower accuracy.",                                   // 134 Kinesis
         "Restores up to half max HP.",                                               // 135 Soft-Boiled
         "Leaps and kicks powerfully. May crash.",                                    // 136 High Jump Kick

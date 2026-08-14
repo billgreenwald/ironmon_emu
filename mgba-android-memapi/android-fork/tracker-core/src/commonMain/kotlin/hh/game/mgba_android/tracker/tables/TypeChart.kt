@@ -125,10 +125,10 @@ object TypeChart {
             8 to 0.5f, 14 to 0.5f,
             17 to 0.0f,
         ),
-        // Ice (15) — 2x vs Flying, Ground, Grass, Dragon; 0.5x vs Steel, Water, Ice
+        // Ice (15) — 2x vs Flying, Ground, Grass, Dragon; 0.5x vs Fire, Steel, Water, Ice
         15 to mapOf(
             2 to 2.0f, 4 to 2.0f, 12 to 2.0f, 16 to 2.0f,
-            8 to 0.5f, 11 to 0.5f, 15 to 0.5f,
+            8 to 0.5f, 10 to 0.5f, 11 to 0.5f, 15 to 0.5f,
         ),
         // Dragon
         16 to mapOf(
