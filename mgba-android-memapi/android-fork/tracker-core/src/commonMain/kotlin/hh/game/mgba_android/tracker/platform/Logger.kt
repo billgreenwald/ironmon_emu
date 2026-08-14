@@ -27,3 +27,13 @@ object TrackerLog {
     fun w(tag: String, msg: String) = impl.w(tag, msg)
     fun e(tag: String, msg: String, throwable: Throwable? = null) = impl.e(tag, msg, throwable)
 }
+
+/**
+ * Emits a generic, greppable demarcation marker into the log stream. Triggered by the
+ * "Add a Flag to Logs" tools-menu button so a user can flag a moment ("I'm here now") for a
+ * developer to find in an exported log. Intentionally carries NO game/route context so it stays
+ * reusable for any future debugging; correlate it with the surrounding ROUTE_CHANGE lines etc.
+ */
+fun logUserFlag() {
+    TrackerLog.d("USER_FLAG", "===== USER LOG FLAG @ ${nowMillis()} =====")
+}

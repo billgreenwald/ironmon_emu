@@ -76,6 +76,9 @@ object TrackerPoller {
     private val encountersByRoute = mutableMapOf<Int, MutableList<Int>>()
     private val routeVisitOrder = mutableListOf<Int>()  // insertion-ordered unique mapLayoutIds
     private val visitedRoutes = mutableSetOf<Int>()  // every map the player has stepped onto
+    // Last mapLayoutId we logged, so ROUTE_CHANGE fires only when the map actually changes
+    // (not every 250ms poll). Aids debugging "Unknown Location" — correlate with USER_FLAG lines.
+    private var lastLoggedMapId: Int? = null
     // Whether the current wild battle has already been recorded (reset when battle ends)
     private var currentWildBattleRecorded = false
 
@@ -371,6 +374,12 @@ object TrackerPoller {
 
         // Track visited routes — record the moment the player steps onto a new map
         val mapId = route?.mapLayoutId
+        // Log every map transition (raw layout id + resolved name) so a developer can pin down
+        // "Unknown Location" ids from an exported log — correlate with USER_FLAG demarcations.
+        if (mapId != lastLoggedMapId) {
+            lastLoggedMapId = mapId
+            TrackerLog.d("ROUTE_CHANGE", "mapLayoutId=$mapId name=${route?.name} game=$game")
+        }
         if (mapId != null && mapId !in visitedRoutes) {
             visitedRoutes.add(mapId)
             env?.let { ctx ->

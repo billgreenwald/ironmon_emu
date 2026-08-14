@@ -491,7 +491,7 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
 
         // Initialize Tools Button
         findViewById<View>(R.id.tools_btn).setOnClickListener {
-            val options = arrayOf("Shaders", "Memory Tools", "Close ROM", "Save State", "Load State", "Cheats", "Sound", "Next Run →", "Tracker Size", "Settings", "Name Entry Keyboard")
+            val options = arrayOf("Shaders", "Memory Tools", "Close ROM", "Save State", "Load State", "Cheats", "Sound", "Next Run →", "Tracker Size", "Settings", "Name Entry Keyboard", "Add a Flag to Logs")
             AlertDialog.Builder(this)
                 .setTitle("Tools")
                 .setItems(options) { _, which ->
@@ -574,6 +574,12 @@ open class GameActivity : SDLActivity(), InputManager.InputDeviceListener {
                         8 -> showTrackerSizeDialog()
                         9 -> showSettingsDialog()
                         10 -> openNameEntryKeyboard()
+                        11 -> {
+                            // Drop a generic demarcation marker into the log stream (captured by
+                            // exportLogs' `logcat -d` dump) so users can flag a moment for debugging.
+                            hh.game.mgba_android.tracker.platform.logUserFlag()
+                            Toast.makeText(this, "Flag added to logs", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
                 .show()
