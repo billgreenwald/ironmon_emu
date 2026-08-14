@@ -28,7 +28,9 @@ object EmulatorPreferences {
     private const val KEY_RIVAL_NAME         = "pref_rival_name"
     private const val KEY_LAST_SHADER        = "pref_last_shader"
 
-    val speedOptions = listOf(1 to 60f, 2 to 120f, 3 to 180f, 4 to 240f)
+    // label → target FPS (60 = 1x). 0.5x (30fps) is a slow-down; the native audio path
+    // engages Sonic pitch correction for sub-1x just as it does for fast-forward.
+    val speedOptions = listOf("0.5" to 30f, "1" to 60f, "2" to 120f, "3" to 180f, "4" to 240f)
     // All mappable GBA inputs (matches getKey() string names)
     val buttonOptions = listOf("none", "A", "B", "L", "R", "start", "select", "up", "down", "left", "right")
 
