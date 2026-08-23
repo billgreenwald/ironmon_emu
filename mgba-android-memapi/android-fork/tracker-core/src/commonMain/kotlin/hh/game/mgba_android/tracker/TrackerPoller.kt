@@ -13,6 +13,8 @@ import hh.game.mgba_android.tracker.data.GameAddresses
 import hh.game.mgba_android.tracker.data.GameSettings
 import hh.game.mgba_android.tracker.data.MaxFrAddressLoader
 import hh.game.mgba_android.tracker.data.MaxFrVariant
+import hh.game.mgba_android.tracker.data.NatDexEra
+import hh.game.mgba_android.tracker.data.NatDexMetaAddressReader
 import hh.game.mgba_android.tracker.data.LearnsetReader
 import hh.game.mgba_android.tracker.data.PokemonDecoder
 import hh.game.mgba_android.tracker.data.RouteReader
@@ -51,6 +53,9 @@ object TrackerPoller {
     @Volatile var currentAddresses: GameAddresses? = null
         private set
     @Volatile private var isNatDex: Boolean = false
+    @Volatile private var natDexEra: NatDexEra = NatDexEra.NONE
+    // NatDex 1.2.x+ addresses read from the ROM meta-table (null for 1.1.x / non-NatDex).
+    @Volatile private var cachedNatDexAddresses: GameAddresses? = null
     @Volatile private var maxFrVariant: MaxFrVariant = MaxFrVariant.NONE
     // Cached MaxFR GameAddresses — loaded once per ROM via JSON asset, cleared on game code change.
     @Volatile private var cachedMaxFrAddresses: GameAddresses? = null
@@ -243,6 +248,8 @@ object TrackerPoller {
         pokemonNotesCache.clear()
         lastGameCode = ""  // force restore from disk on next game load
         isNatDex = false
+        natDexEra = NatDexEra.NONE
+        cachedNatDexAddresses = null
         maxFrVariant = MaxFrVariant.NONE
         cachedMaxFrAddresses = null
         hh.game.mgba_android.tracker.data.MaxExtDataStore.clear()
@@ -267,7 +274,12 @@ object TrackerPoller {
 
         // ── NatDex / MaxFR detection: run once per ROM load (game code change) ─────────────────────
         if (gameCode != lastGameCode) {
-            isNatDex = GameSettings.isNatDex { addr, len -> MemoryBridge.readBytes(addr, len) }
+            natDexEra = GameSettings.detectNatDexEra { addr, len -> MemoryBridge.readBytes(addr, len) }
+            isNatDex = natDexEra != NatDexEra.NONE
+            // 1.2.x+: addresses come from the ROM meta-table (version-proof). 1.1.x uses DataHelper.
+            cachedNatDexAddresses = if (natDexEra == NatDexEra.V12) {
+                NatDexMetaAddressReader.read { addr, len -> MemoryBridge.readBytes(addr, len) }
+            } else null
             val environment = env
             if (!isNatDex && environment != null && game in setOf(
                     GameVersion.EMERALD, GameVersion.FIRE_RED, GameVersion.LEAF_GREEN)) {
@@ -278,12 +290,22 @@ object TrackerPoller {
                 maxFrVariant = MaxFrVariant.NONE
                 cachedMaxFrAddresses = null
             }
-            TrackerLog.d(TAG, "isNatDex=$isNatDex maxFrVariant=$maxFrVariant for gameCode=$gameCode")
+            TrackerLog.d(TAG, "natDexEra=$natDexEra isNatDex=$isNatDex maxFrVariant=$maxFrVariant for gameCode=$gameCode")
         }
 
-        val addresses = cachedMaxFrAddresses
-            ?: DataHelper.addressesFor(game, romVersion, gameCode, isNatDex)
-            ?: return TrackerState.NoGameLoaded
+        // V12 meta-table may not be readable on the very first tick (core not ready); retry until it is.
+        if (natDexEra == NatDexEra.V12 && cachedNatDexAddresses == null) {
+            cachedNatDexAddresses = NatDexMetaAddressReader.read { addr, len -> MemoryBridge.readBytes(addr, len) }
+        }
+
+        val addresses = when {
+            cachedMaxFrAddresses != null  -> cachedMaxFrAddresses!!
+            cachedNatDexAddresses != null -> cachedNatDexAddresses!!
+            // V12 but the meta-table isn't readable yet — wait rather than fall back to wrong (1.1.x) addresses.
+            natDexEra == NatDexEra.V12    -> return TrackerState.NoGameLoaded
+            else -> DataHelper.addressesFor(game, romVersion, gameCode, isNatDex)
+                ?: return TrackerState.NoGameLoaded
+        }
         currentAddresses = addresses
 
         // ── Run persistence: load attempt count + route encounters when game code changes ─────────

@@ -6,6 +6,12 @@ import hh.game.mgba_android.tracker.models.GameVersion
 // Not described by any of the 3 bundled JSON files — uses hardcoded addresses from ROM git source.
 enum class MaxFrVariant { NONE, MAX_FR, MAX_FR_GEN4, MAX_EM, MAX_FR_GEN5_FR }
 
+// NatDex ROM hack era (CyanSMP64/NatDexExtension):
+//   V11 — 1.1.x: fixed national-dex count 1210; addresses are per-version hardcodes (DataHelper).
+//   V12 — 1.2.x+: addresses are exported by the ROM itself in a metadata table
+//         (NatDexMetaAddressReader). Version-proof — read the table instead of porting.
+enum class NatDexEra { NONE, V11, V12 }
+
 object GameSettings {
 
     const val ROM_GAME_CODE_ADDR: Long    = 0x080000ACL
@@ -50,18 +56,28 @@ object GameSettings {
     }
 
     // NatDex ROM hack detection (CyanSMP64/NatDexExtension)
-    // The NatDex ROM stores the total Pokémon count (1210) as a u32 at 0x08000170.
+    // 1.1.x stores the total Pokémon count (1210) as a u32 at 0x08000170. 1.2.x+ keeps changing that
+    // count as mons are added (e.g. 1258 in 1.2.x), so V12 is detected by validating the ROM
+    // metadata table instead — see NatDexMetaAddressReader.
     const val NATDEX_MON_COUNT_ADDR: Long = 0x08000170L
     const val NATDEX_MON_COUNT: Int = 1210
 
-    fun isNatDex(reader: (Long, Int) -> ByteArray?): Boolean {
-        val b = reader(NATDEX_MON_COUNT_ADDR, 4) ?: return false
-        val count = (b[0].toInt() and 0xFF) or
-                    ((b[1].toInt() and 0xFF) shl 8) or
-                    ((b[2].toInt() and 0xFF) shl 16) or
-                    ((b[3].toInt() and 0xFF) shl 24)
-        return count == NATDEX_MON_COUNT
+    /** Which NatDex era this ROM is (or NONE). V11 → hardcoded addresses; V12 → ROM meta-table. */
+    fun detectNatDexEra(reader: (Long, Int) -> ByteArray?): NatDexEra {
+        val b = reader(NATDEX_MON_COUNT_ADDR, 4)
+        if (b != null) {
+            val count = (b[0].toInt() and 0xFF) or
+                        ((b[1].toInt() and 0xFF) shl 8) or
+                        ((b[2].toInt() and 0xFF) shl 16) or
+                        ((b[3].toInt() and 0xFF) shl 24)
+            if (count == NATDEX_MON_COUNT) return NatDexEra.V11
+        }
+        if (NatDexMetaAddressReader.isValidMetaTable(reader)) return NatDexEra.V12
+        return NatDexEra.NONE
     }
+
+    fun isNatDex(reader: (Long, Int) -> ByteArray?): Boolean =
+        detectNatDexEra(reader) != NatDexEra.NONE
 
     // MaxFR/MaxEM ROM hack detection.
     // Detection: read Move 1 (Pound) at each candidate gBattleMoves address;
