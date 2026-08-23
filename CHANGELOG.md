@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.8.0] - 2026-08-23
+
+### Fixed
+- **National Dex 1.2.x ROMs no longer show a blank tracker** — the newer Nat. Dex releases (1.2.0 / 1.2.1) reorganized their internal layout, which older builds didn't recognize, leaving the whole tracker blank. The tracker now detects them and reads the game's addresses directly from the ROM, so it keeps working across future Nat. Dex patches without needing an app update. Earlier Nat. Dex (1.1.x) ROMs continue to work as before.
+
+### Added
+- **Names for the 48 new National Dex 1.2.x Pokémon** — the mons added in 1.2.x now display their names instead of a number.
+
 ## [3.7.0] - 2026-08-14
 
 ### Added
