@@ -40,6 +40,7 @@ import com.skydoves.landscapist.glide.GlideImage
 import hh.game.mgba_android.tracker.data.BagDetailInfo
 import hh.game.mgba_android.tracker.data.BattlePowerCalc
 import hh.game.mgba_android.tracker.data.DataHelper
+import hh.game.mgba_android.tracker.data.MonLayout
 import hh.game.mgba_android.tracker.data.GameStats
 import hh.game.mgba_android.tracker.data.LearnsetInfo
 import hh.game.mgba_android.tracker.models.*
@@ -1914,17 +1915,18 @@ private fun RouteMonSheet(
     var showMoveSheet by remember { mutableStateOf<MoveData?>(null) }
     var showEvoSheet by remember { mutableStateOf(false) }
 
+    val layout = TrackerPoller.currentAddresses?.monLayout ?: MonLayout()
     LaunchedEffect(speciesId) {
         val addr = TrackerPoller.currentAddresses ?: return@LaunchedEffect
         baseStatBytes = MemoryBridge.readBytes(
-            addr.baseStatsTable + speciesId * DataHelper.BASE_STATS_ENTRY_SIZE,
-            DataHelper.BASE_STATS_ENTRY_SIZE,
+            addr.baseStatsTable + speciesId * addr.monLayout.baseStatsEntrySize,
+            addr.monLayout.baseStatsEntrySize,
         )
     }
 
     val bytes = baseStatBytes
-    val type1 = bytes?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0
-    val type2 = bytes?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: type1
+    val type1 = bytes?.getOrNull(layout.bsType1)?.toInt()?.and(0xFF) ?: 0
+    val type2 = bytes?.getOrNull(layout.bsType2)?.toInt()?.and(0xFF) ?: type1
     val bst   = BstTable.bst(speciesId)
 
     TrackerBottomSheet(onDismiss = onDismiss) {

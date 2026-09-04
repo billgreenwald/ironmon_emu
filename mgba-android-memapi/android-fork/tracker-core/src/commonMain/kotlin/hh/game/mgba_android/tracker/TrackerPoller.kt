@@ -346,8 +346,9 @@ object TrackerPoller {
 
         val party = buildList {
             for (slot in 0 until count) {
-                val slotAddr = addresses.partyBase + slot * DataHelper.POKEMON_STRUCT_SIZE
-                val raw = MemoryBridge.readBytes(slotAddr, DataHelper.POKEMON_STRUCT_SIZE)
+                val layout = addresses.monLayout
+                val slotAddr = addresses.partyBase + slot * layout.structSize
+                val raw = MemoryBridge.readBytes(slotAddr, layout.structSize)
                     ?: continue
                 val pokemon = PokemonDecoder.decode(
                     slot      = slot,
@@ -356,8 +357,8 @@ object TrackerPoller {
                     moveTable = { id -> MoveNames.get(id, maxFrVariant != MaxFrVariant.NONE) },
                     baseStatsReader = { speciesId ->
                         val addr = addresses.baseStatsTable +
-                            speciesId * DataHelper.BASE_STATS_ENTRY_SIZE
-                        MemoryBridge.readBytes(addr, DataHelper.BASE_STATS_ENTRY_SIZE)
+                            speciesId * layout.baseStatsEntrySize
+                        MemoryBridge.readBytes(addr, layout.baseStatsEntrySize)
                     },
                     bstLookup = { id -> addresses.extPokemonMap[id]?.bst ?: BstTable.bst(id) },
                     isMaxFr = maxFrVariant != MaxFrVariant.NONE,
@@ -369,6 +370,7 @@ object TrackerPoller {
                             moveId,
                         )
                     } else null,
+                    layout    = layout,
                 )
                 if (pokemon != null) {
                     val spriteId = addresses.extPokemonMap[pokemon.speciesId]?.spriteId ?: pokemon.speciesId
@@ -657,6 +659,7 @@ object TrackerPoller {
     }
 
     private fun pollBattle(game: GameVersion, addresses: GameAddresses): BattleState {
+        val layout = addresses.monLayout
         val battlersCount = MemoryBridge.readU8(addresses.battlersCount) ?: return BattleState.NONE
         // gBattleOutcome: 0 = battle ongoing, non-zero = battle ended
         val battleOutcome = MemoryBridge.readU8(addresses.battleOutcome) ?: return BattleState.NONE
@@ -702,10 +705,10 @@ object TrackerPoller {
         } else 0
         val enemy2Raw: ByteArray? = if (speciesId2 > 0)
             MemoryBridge.readBytes(
-                addresses.enemyParty + activeEnemy2Slot * DataHelper.POKEMON_STRUCT_SIZE,
-                DataHelper.POKEMON_STRUCT_SIZE
+                addresses.enemyParty + activeEnemy2Slot * layout.structSize,
+                layout.structSize
             ) else null
-        val level2: Int = if (enemy2Raw != null) enemy2Raw[DataHelper.OFF_LEVEL].toInt() and 0xFF else 0
+        val level2: Int = if (enemy2Raw != null) enemy2Raw[layout.level].toInt() and 0xFF else 0
 
         // ── Enemy gBattleMons slot 1 (LeftOther) ────────────────────────────────
         val enemyMonAddr = addresses.battleMons + DataHelper.BATTLE_MON_SIZE
@@ -720,11 +723,11 @@ object TrackerPoller {
                     idx.coerceIn(0, 5)
                 } else 0
                 val enemyRaw = MemoryBridge.readBytes(
-                    addresses.enemyParty + activeEnemySlot * DataHelper.POKEMON_STRUCT_SIZE,
-                    DataHelper.POKEMON_STRUCT_SIZE
+                    addresses.enemyParty + activeEnemySlot * layout.structSize,
+                    layout.structSize
                 )
 
-                val level = if (enemyRaw != null) enemyRaw[DataHelper.OFF_LEVEL].toInt() and 0xFF else 0
+                val level = if (enemyRaw != null) enemyRaw[layout.level].toInt() and 0xFF else 0
 
                 // ── Move revelation via gBattleResults ─────────────────────────────
                 // In doubles, gBattleResults.enemyUsedMove reflects the last move from EITHER enemy.
@@ -793,7 +796,7 @@ object TrackerPoller {
                         val moveBlocked = (hitMarker and DataHelper.HITMARKER_UNABLE_TO_USE) != 0L
                         // Skip if enemy already fainted this turn (player KO'd them before they acted).
                         val enemyFainted = enemyRaw != null && level > 0 &&
-                            enemyRaw.u16(DataHelper.OFF_CURRENT_HP) == 0
+                            enemyRaw.u16(layout.currentHp) == 0
                         // Always advance lastEnemyMoveId so a blocked value doesn't re-trigger next poll.
                         lastEnemyMoveId = currentEnemyMoveId
                         if (!moveBlocked && !enemyFainted) {
@@ -848,30 +851,30 @@ object TrackerPoller {
 
                 var ability1Id = 0; var ability2Id = 0
                 val baseStats = MemoryBridge.readBytes(
-                    addresses.baseStatsTable + speciesId * DataHelper.BASE_STATS_ENTRY_SIZE,
-                    DataHelper.BASE_STATS_ENTRY_SIZE
+                    addresses.baseStatsTable + speciesId * layout.baseStatsEntrySize,
+                    layout.baseStatsEntrySize
                 )
                 if (baseStats != null) {
-                    ability1Id = baseStats[DataHelper.BASE_STATS_ABILITY1].toInt() and 0xFF
-                    ability2Id = baseStats[DataHelper.BASE_STATS_ABILITY2].toInt() and 0xFF
+                    ability1Id = baseStats.abilityAt(layout.bsAbility1, layout.abilitySize)
+                    ability2Id = baseStats.abilityAt(layout.bsAbility2, layout.abilitySize)
                 }
 
                 val type1 = (enemyMon[DataHelper.BMON_TYPE1].toInt() and 0xFF)
-                    .let { if (it <= 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0 }
+                    .let { if (it <= 18) it else baseStats?.getOrNull(layout.bsType1)?.toInt()?.and(0xFF) ?: 0 }
                 val type2 = (enemyMon[DataHelper.BMON_TYPE2].toInt() and 0xFF)
-                    .let { if (it <= 18) it else baseStats?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: 0 }
+                    .let { if (it <= 18) it else baseStats?.getOrNull(layout.bsType2)?.toInt()?.and(0xFF) ?: 0 }
                 val bst = addresses.extPokemonMap[speciesId]?.bst ?: BstTable.bst(speciesId)
 
-                val currentHp = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_CURRENT_HP) else 0
-                val maxHpRaw = if (enemyRaw != null) enemyRaw.u16(DataHelper.OFF_MAX_HP) else 0
+                val currentHp = if (enemyRaw != null) enemyRaw.u16(layout.currentHp) else 0
+                val maxHpRaw = if (enemyRaw != null) enemyRaw.u16(layout.maxHp) else 0
 
-                val enemyPpByMoveId: Map<Int, Int> = if (enemyRaw != null && enemyRaw.size >= 100) {
+                val enemyPpByMoveId: Map<Int, Int> = if (enemyRaw != null && enemyRaw.size >= layout.structSize) {
                     val ePers = enemyRaw.u32(DataHelper.OFF_PERSONALITY)
                     val eOt   = enemyRaw.u32(DataHelper.OFF_OT_ID)
                     val eKey  = ePers xor eOt
                     val eDec  = ByteArray(48)
                     for (wi in 0 until 12) {
-                        val w = enemyRaw.u32(DataHelper.OFF_ENCRYPTED + wi * 4) xor eKey
+                        val w = enemyRaw.u32(layout.substruct + wi * 4) xor eKey
                         eDec[wi*4+0] = (w and 0xFF).toByte()
                         eDec[wi*4+1] = ((w shr 8) and 0xFF).toByte()
                         eDec[wi*4+2] = ((w shr 16) and 0xFF).toByte()
@@ -923,27 +926,27 @@ object TrackerPoller {
         val enemy2: EnemyData? = if (isDoubles && enemy2Mon != null && speciesId2 > 0) {
             var ability1Id2 = 0; var ability2Id2 = 0
             val baseStats2 = MemoryBridge.readBytes(
-                addresses.baseStatsTable + speciesId2 * DataHelper.BASE_STATS_ENTRY_SIZE,
-                DataHelper.BASE_STATS_ENTRY_SIZE
+                addresses.baseStatsTable + speciesId2 * layout.baseStatsEntrySize,
+                layout.baseStatsEntrySize
             )
             if (baseStats2 != null) {
-                ability1Id2 = baseStats2[DataHelper.BASE_STATS_ABILITY1].toInt() and 0xFF
-                ability2Id2 = baseStats2[DataHelper.BASE_STATS_ABILITY2].toInt() and 0xFF
+                ability1Id2 = baseStats2.abilityAt(layout.bsAbility1, layout.abilitySize)
+                ability2Id2 = baseStats2.abilityAt(layout.bsAbility2, layout.abilitySize)
             }
             val type1_2 = (enemy2Mon[DataHelper.BMON_TYPE1].toInt() and 0xFF)
-                .let { if (it <= 18) it else baseStats2?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0 }
+                .let { if (it <= 18) it else baseStats2?.getOrNull(layout.bsType1)?.toInt()?.and(0xFF) ?: 0 }
             val type2_2 = (enemy2Mon[DataHelper.BMON_TYPE2].toInt() and 0xFF)
-                .let { if (it <= 18) it else baseStats2?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: 0 }
+                .let { if (it <= 18) it else baseStats2?.getOrNull(layout.bsType2)?.toInt()?.and(0xFF) ?: 0 }
             val bst2 = addresses.extPokemonMap[speciesId2]?.bst ?: BstTable.bst(speciesId2)
-            val currentHp2 = if (enemy2Raw != null) enemy2Raw.u16(DataHelper.OFF_CURRENT_HP) else 0
-            val maxHpRaw2  = if (enemy2Raw != null) enemy2Raw.u16(DataHelper.OFF_MAX_HP) else 0
-            val enemyPpByMoveId2: Map<Int, Int> = if (enemy2Raw != null && enemy2Raw.size >= 100) {
+            val currentHp2 = if (enemy2Raw != null) enemy2Raw.u16(layout.currentHp) else 0
+            val maxHpRaw2  = if (enemy2Raw != null) enemy2Raw.u16(layout.maxHp) else 0
+            val enemyPpByMoveId2: Map<Int, Int> = if (enemy2Raw != null && enemy2Raw.size >= layout.structSize) {
                 val ePers = enemy2Raw.u32(DataHelper.OFF_PERSONALITY)
                 val eOt   = enemy2Raw.u32(DataHelper.OFF_OT_ID)
                 val eKey  = ePers xor eOt
                 val eDec  = ByteArray(48)
                 for (wi in 0 until 12) {
-                    val w = enemy2Raw.u32(DataHelper.OFF_ENCRYPTED + wi * 4) xor eKey
+                    val w = enemy2Raw.u32(layout.substruct + wi * 4) xor eKey
                     eDec[wi*4+0] = (w and 0xFF).toByte()
                     eDec[wi*4+1] = ((w shr 8) and 0xFF).toByte()
                     eDec[wi*4+2] = ((w shr 16) and 0xFF).toByte()
@@ -1107,6 +1110,12 @@ object TrackerPoller {
 
     private fun ByteArray.u16(offset: Int): Int =
         (this[offset].toInt() and 0xFF) or ((this[offset + 1].toInt() and 0xFF) shl 8)
+
+    // Ability id from a gSpeciesInfo entry: u8 in vanilla, u16 in the expansion (abilitySize).
+    private fun ByteArray.abilityAt(offset: Int, abilitySize: Int): Int {
+        val lo = getOrNull(offset)?.toInt()?.and(0xFF) ?: return 0
+        return if (abilitySize >= 2) lo or ((getOrNull(offset + 1)?.toInt()?.and(0xFF) ?: 0) shl 8) else lo
+    }
 
     private fun ByteArray.u32(offset: Int): Long =
         (this[offset].toLong() and 0xFF) or

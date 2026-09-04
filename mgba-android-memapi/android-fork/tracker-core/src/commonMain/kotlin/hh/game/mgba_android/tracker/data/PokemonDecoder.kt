@@ -49,8 +49,9 @@ object PokemonDecoder {
         isMaxFr: Boolean = false,
         isNatDex: Boolean = false,
         moveStatsReader: ((moveId: Int) -> DataHelper.RomMoveStats?)? = null,
+        layout: MonLayout = MonLayout(),
     ): PokemonData? {
-        require(raw.size >= 100) { "Raw bytes must be at least 100, got ${raw.size}" }
+        require(raw.size >= layout.structSize) { "Raw bytes must be at least ${layout.structSize}, got ${raw.size}" }
 
         val personality = raw.u32(DataHelper.OFF_PERSONALITY)
         val otId        = raw.u32(DataHelper.OFF_OT_ID)
@@ -58,7 +59,7 @@ object PokemonDecoder {
         val xorKey = personality xor otId
         val decrypted = ByteArray(48)
         for (i in 0 until 12) {
-            val word = raw.u32(DataHelper.OFF_ENCRYPTED + i * 4) xor xorKey
+            val word = raw.u32(layout.substruct + i * 4) xor xorKey
             decrypted[i * 4 + 0] = (word and 0xFF).toByte()
             decrypted[i * 4 + 1] = ((word shr 8) and 0xFF).toByte()
             decrypted[i * 4 + 2] = ((word shr 16) and 0xFF).toByte()
@@ -135,18 +136,18 @@ object PokemonDecoder {
             }
         }.trim()
 
-        // ── Status condition — unencrypted u32 at raw[0x50] ──────────────────
-        val statusCondition = raw[DataHelper.OFF_STATUS].toInt() and 0xFF
+        // ── Status condition — unencrypted u32 ───────────────────────────────
+        val statusCondition = raw[layout.status].toInt() and 0xFF
 
         // ── Unencrypted in-battle stats ───────────────────────────────────────
-        val level     = raw[DataHelper.OFF_LEVEL].toInt() and 0xFF
-        val currentHp = raw.u16(DataHelper.OFF_CURRENT_HP)
-        val maxHp     = raw.u16(DataHelper.OFF_MAX_HP)
-        val attack    = raw.u16(DataHelper.OFF_ATTACK)
-        val defense   = raw.u16(DataHelper.OFF_DEFENSE)
-        val speed     = raw.u16(DataHelper.OFF_SPEED)
-        val spAtk     = raw.u16(DataHelper.OFF_SP_ATK)
-        val spDef     = raw.u16(DataHelper.OFF_SP_DEF)
+        val level     = raw[layout.level].toInt() and 0xFF
+        val currentHp = raw.u16(layout.currentHp)
+        val maxHp     = raw.u16(layout.maxHp)
+        val attack    = raw.u16(layout.attack)
+        val defense   = raw.u16(layout.defense)
+        val speed     = raw.u16(layout.speed)
+        val spAtk     = raw.u16(layout.spAtk)
+        val spDef     = raw.u16(layout.spDef)
 
         // ── Computed fields ───────────────────────────────────────────────────
         val nature = (personality % 25).toInt()
@@ -158,18 +159,24 @@ object PokemonDecoder {
         val baseStats = baseStatsReader?.invoke(speciesId)
 
         val bst = bstLookup?.invoke(speciesId) ?: BstTable.bst(speciesId)
-        val type1      = baseStats?.get(DataHelper.BASE_STATS_TYPE1)?.toInt()?.and(0xFF) ?: 0
-        val type2      = baseStats?.get(DataHelper.BASE_STATS_TYPE2)?.toInt()?.and(0xFF) ?: type1
-        val genderRatio = baseStats?.get(DataHelper.BASE_STATS_GENDER_RATIO)?.toInt()?.and(0xFF) ?: 0xFF
-        val expGroup   = baseStats?.get(DataHelper.BASE_STATS_EXP_GROUP)?.toInt()?.and(0xFF) ?: 0
-        val ability1Id = baseStats?.get(DataHelper.BASE_STATS_ABILITY1)?.toInt()?.and(0xFF) ?: 0
-        val ability2Id = baseStats?.get(DataHelper.BASE_STATS_ABILITY2)?.toInt()?.and(0xFF) ?: 0
-        val baseHp     = baseStats?.get(DataHelper.BASE_STATS_HP)?.toInt()?.and(0xFF) ?: 0
-        val baseAtk    = baseStats?.get(DataHelper.BASE_STATS_ATK)?.toInt()?.and(0xFF) ?: 0
-        val baseDef    = baseStats?.get(DataHelper.BASE_STATS_DEF)?.toInt()?.and(0xFF) ?: 0
-        val baseSpa    = baseStats?.get(DataHelper.BASE_STATS_SPA)?.toInt()?.and(0xFF) ?: 0
-        val baseSpd    = baseStats?.get(DataHelper.BASE_STATS_SPD)?.toInt()?.and(0xFF) ?: 0
-        val baseSpe    = baseStats?.get(DataHelper.BASE_STATS_SPE)?.toInt()?.and(0xFF) ?: 0
+        // Ability IDs are u8 in vanilla but u16 in the expansion (layout.abilitySize) — read LE.
+        fun bsByte(off: Int): Int? = baseStats?.getOrNull(off)?.toInt()?.and(0xFF)
+        fun bsAbility(off: Int): Int {
+            val lo = bsByte(off) ?: return 0
+            return if (layout.abilitySize >= 2) lo or ((bsByte(off + 1) ?: 0) shl 8) else lo
+        }
+        val type1      = bsByte(layout.bsType1) ?: 0
+        val type2      = bsByte(layout.bsType2) ?: type1
+        val genderRatio = bsByte(layout.bsGenderRatio) ?: 0xFF
+        val expGroup   = bsByte(layout.bsGrowthRate) ?: 0
+        val ability1Id = bsAbility(layout.bsAbility1)
+        val ability2Id = bsAbility(layout.bsAbility2)
+        val baseHp     = bsByte(layout.bsHp) ?: 0
+        val baseAtk    = bsByte(layout.bsAtk) ?: 0
+        val baseDef    = bsByte(layout.bsDef) ?: 0
+        val baseSpa    = bsByte(layout.bsSpa) ?: 0
+        val baseSpd    = bsByte(layout.bsSpd) ?: 0
+        val baseSpe    = bsByte(layout.bsSpe) ?: 0
 
         val gender: Gender = when {
             genderRatio == 0xFF -> Gender.NONE

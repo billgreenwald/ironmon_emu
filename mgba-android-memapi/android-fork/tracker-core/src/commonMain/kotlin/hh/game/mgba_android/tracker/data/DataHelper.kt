@@ -51,7 +51,59 @@ data class GameAddresses(
     val hasFairy: Boolean = false,
     // Gen4/Gen5 Pokemon data loaded from Lua for MaxFR variants; empty for vanilla games
     val extPokemonMap: Map<Int, MaxExtPokemon> = emptyMap(),
+    // Per-mon memory layout (party struct + base-stats field offsets). Vanilla Gen III by
+    // default; NatDex 1.2.x relocates these and exports the new values in its ROM meta-table
+    // (read via NatDexMetaAddressReader). Everything that decodes a mon reads offsets from here.
+    val monLayout: MonLayout = MonLayout(),
 )
+
+/**
+ * Per-mon memory layout. Defaults are the vanilla Gen III layout (matches the [DataHelper]
+ * `OFF_*` / `BASE_STATS_*` constants). NatDex 1.2.x (a pokeemerald-expansion base) expands the
+ * Pokémon struct — the encrypted substructures and the appended battle-stats block shift, and
+ * `gSpeciesInfo` grows — so 1.2.x exports every relocated offset in a ROM meta-table. We read
+ * them at runtime (see [NatDexMetaAddressReader]) rather than porting per-version, exactly as
+ * upstream NatDexExtension.lua `updateProgramAddresses()` does. Substructure INTERNAL offsets
+ * (growth species@+0, exp@+4, moves, IV word, …) are unchanged — only the substruct START moves.
+ */
+data class MonLayout(
+    val structSize: Int = 100,        // sizeofPokemonStruct (vanilla 0x64)
+    val substruct: Int = 0x20,        // offsetPokemonSubstruct — start of the 48-byte encrypted block
+    val status: Int = 0x50,           // offsetPokemonStatus (u32, unencrypted)
+    val statsLvCurHp: Int = 0x54,     // level @+0 (u8), currentHp @+2 (u16)
+    val statsMaxHpAtk: Int = 0x58,    // maxHp @+0 (u16), attack @+2 (u16)
+    val statsDefSpe: Int = 0x5C,      // defense @+0 (u16), speed @+2 (u16)
+    val statsSpaSpd: Int = 0x60,      // spAtk @+0 (u16), spDef @+2 (u16)
+    // gSpeciesInfo entry layout
+    val baseStatsEntrySize: Int = 28, // sizeofBaseStatsPokemon (vanilla 0x1C)
+    val bsBaseStats: Int = 0,         // offsetBaseStats: HP,Atk,Def,Spe,SpA,SpD (6×u8, this order)
+    val bsTypes: Int = 6,             // offsetTypes: type1 @+0, type2 @+1
+    val bsGenderRatio: Int = 16,      // offsetGenderRatio (vanilla 0x10)
+    val bsGrowthRate: Int = 19,       // offsetGrowthRateIndex (vanilla 0x13) — exp group
+    val bsAbilities: Int = 22,        // offsetAbilities: ability1 @+0, ability2 @+abilitySize
+    val abilitySize: Int = 1,         // sizeofAbilityInBytes (u16 in the expansion → 2)
+) {
+    // Party-stat byte offsets derived from the packed pair offsets above.
+    val level: Int      get() = statsLvCurHp
+    val currentHp: Int  get() = statsLvCurHp + 2
+    val maxHp: Int      get() = statsMaxHpAtk
+    val attack: Int     get() = statsMaxHpAtk + 2
+    val defense: Int    get() = statsDefSpe
+    val speed: Int      get() = statsDefSpe + 2
+    val spAtk: Int      get() = statsSpaSpd
+    val spDef: Int      get() = statsSpaSpd + 2
+    // gSpeciesInfo field byte offsets.
+    val bsHp: Int    get() = bsBaseStats + 0
+    val bsAtk: Int   get() = bsBaseStats + 1
+    val bsDef: Int   get() = bsBaseStats + 2
+    val bsSpe: Int   get() = bsBaseStats + 3
+    val bsSpa: Int   get() = bsBaseStats + 4
+    val bsSpd: Int   get() = bsBaseStats + 5
+    val bsType1: Int get() = bsTypes + 0
+    val bsType2: Int get() = bsTypes + 1
+    val bsAbility1: Int get() = bsAbilities
+    val bsAbility2: Int get() = bsAbilities + abilitySize
+}
 
 object DataHelper {
 

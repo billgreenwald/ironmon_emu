@@ -50,6 +50,24 @@ object NatDexMetaAddressReader {
     private const val M_BAG_ITEMS_SIZE   = 0x080001E4L
     private const val M_BAG_BERRIES_SIZE = 0x080001E8L
 
+    // ── read16 meta-offsets: per-mon struct + gSpeciesInfo layout ─────────────────────────────────
+    // The expansion relocates these vs vanilla Gen III, so 1.2.x exports them too. Mirrors
+    // NatDexExtension.lua v1.2.1 updateProgramAddresses(). See [MonLayout] for what each replaces.
+    private const val M_OFF_GROWTH_RATE      = 0x080003F0L  // offsetGrowthRateIndex (exp group)
+    private const val M_OFF_SUBSTRUCT        = 0x08000414L  // offsetPokemonSubstruct
+    private const val M_OFF_STATS_LVCURHP    = 0x08000418L  // offsetPokemonStatsLvCurHp
+    private const val M_OFF_STATS_MAXHPATK   = 0x0800041AL  // offsetPokemonStatsMaxHpAtk
+    private const val M_OFF_STATS_DEFSPE     = 0x0800041CL  // offsetPokemonStatsDefSpe
+    private const val M_OFF_STATS_SPASPD     = 0x0800041EL  // offsetPokemonStatsSpaSpd
+    private const val M_OFF_STATUS           = 0x08000416L  // offsetPokemonStatus
+    private const val M_SIZEOF_BASESTATS     = 0x08000428L  // sizeofBaseStatsPokemon
+    private const val M_SIZEOF_POKEMON       = 0x08000442L  // sizeofPokemonStruct
+    private const val M_BS_OFF_BASESTATS     = 0x08000468L  // PokemonData.offsetBaseStats
+    private const val M_BS_OFF_TYPES         = 0x0800046AL  // PokemonData.offsetTypes
+    private const val M_BS_OFF_GENDER        = 0x08000470L  // PokemonData.offsetGenderRatio
+    private const val M_BS_OFF_ABILITIES     = 0x08000474L  // PokemonData.offsetAbilities
+    private const val M_SIZEOF_ABILITY       = 0x0800047CL  // PokemonData.sizeofAbilityInBytes
+
     // GBA memory regions used to validate the table is really present.
     private val ROM   = 0x08000000L..0x09FFFFFFL
     private val EWRAM = 0x02000000L..0x0203FFFFL
@@ -111,6 +129,22 @@ object NatDexMetaAddressReader {
             gBattleMoves          = u32(reader, M_G_BATTLE_MOVES)          ?: return null,
             hasFairy              = true,
             extPokemonMap         = emptyMap(),
+            monLayout             = MonLayout(
+                structSize         = u16(reader, M_SIZEOF_POKEMON)     ?: return null,
+                substruct          = u16(reader, M_OFF_SUBSTRUCT)      ?: return null,
+                status             = u16(reader, M_OFF_STATUS)         ?: return null,
+                statsLvCurHp       = u16(reader, M_OFF_STATS_LVCURHP)  ?: return null,
+                statsMaxHpAtk      = u16(reader, M_OFF_STATS_MAXHPATK) ?: return null,
+                statsDefSpe        = u16(reader, M_OFF_STATS_DEFSPE)   ?: return null,
+                statsSpaSpd        = u16(reader, M_OFF_STATS_SPASPD)   ?: return null,
+                baseStatsEntrySize = u16(reader, M_SIZEOF_BASESTATS)   ?: return null,
+                bsBaseStats        = u16(reader, M_BS_OFF_BASESTATS)   ?: return null,
+                bsTypes            = u16(reader, M_BS_OFF_TYPES)       ?: return null,
+                bsGenderRatio      = u16(reader, M_BS_OFF_GENDER)      ?: return null,
+                bsGrowthRate       = u16(reader, M_OFF_GROWTH_RATE)    ?: return null,
+                bsAbilities        = u16(reader, M_BS_OFF_ABILITIES)   ?: return null,
+                abilitySize        = u16(reader, M_SIZEOF_ABILITY)     ?: return null,
+            ),
         )
     }
 
@@ -121,6 +155,12 @@ object NatDexMetaAddressReader {
                ((b[1].toInt() and 0xFF).toLong() shl 8) or
                ((b[2].toInt() and 0xFF).toLong() shl 16) or
                ((b[3].toInt() and 0xFF).toLong() shl 24)
+    }
+
+    private fun u16(reader: (Long, Int) -> ByteArray?, addr: Long): Int? {
+        val b = reader(addr, 2) ?: return null
+        if (b.size < 2) return null
+        return (b[0].toInt() and 0xFF) or ((b[1].toInt() and 0xFF) shl 8)
     }
 
     private fun u8(reader: (Long, Int) -> ByteArray?, addr: Long): Int? {

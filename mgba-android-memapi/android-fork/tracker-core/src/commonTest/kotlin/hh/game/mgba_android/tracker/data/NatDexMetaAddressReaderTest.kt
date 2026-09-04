@@ -50,6 +50,21 @@ class NatDexMetaAddressReaderTest {
         0x080002E4L to 0x03004CC0L,   // saveBlock2Ptr
         0x08000308L to 0x0829B5DCL,   // experienceTables
         0x0800030CL to 0x08349750L,   // levelUpLearnsets
+        // ── read16 struct/base-stats layout block (expansion-relocated, +4 shifted struct) ──
+        0x080003F0L to 0x13L,         // offsetGrowthRateIndex (exp group)
+        0x08000414L to 0x24L,         // offsetPokemonSubstruct (vanilla 0x20)
+        0x08000416L to 0x54L,         // offsetPokemonStatus    (vanilla 0x50)
+        0x08000418L to 0x58L,         // offsetPokemonStatsLvCurHp  (vanilla 0x54)
+        0x0800041AL to 0x5CL,         // offsetPokemonStatsMaxHpAtk (vanilla 0x58)
+        0x0800041CL to 0x60L,         // offsetPokemonStatsDefSpe   (vanilla 0x5C)
+        0x0800041EL to 0x64L,         // offsetPokemonStatsSpaSpd   (vanilla 0x60)
+        0x08000428L to 0x3CL,         // sizeofBaseStatsPokemon (expanded)
+        0x08000442L to 0x68L,         // sizeofPokemonStruct (104, vanilla 0x64=100)
+        0x08000468L to 0x00L,         // offsetBaseStats
+        0x0800046AL to 0x06L,         // offsetTypes
+        0x08000470L to 0x10L,         // offsetGenderRatio
+        0x08000474L to 0x18L,         // offsetAbilities
+        0x0800047CL to 0x02L,         // sizeofAbilityInBytes (u16 in expansion)
     )
 
     @Test
@@ -74,6 +89,44 @@ class NatDexMetaAddressReaderTest {
         assertEquals(0x2E, a.bagPocket_Berries_size)
         assertTrue(a.saveBlock1IsPointer)
         assertTrue(a.hasFairy)
+    }
+
+    @Test
+    fun readsRelocatedMonLayoutFromMetaTable() {
+        val a = NatDexMetaAddressReader.read(reader(metaTable))
+        assertNotNull(a)
+        val l = a.monLayout
+        // Struct is the expanded (+4) layout, not vanilla (0x64/0x20/0x54).
+        assertEquals(0x68, l.structSize)
+        assertEquals(0x24, l.substruct)
+        assertEquals(0x54, l.status)
+        // Derived party-stat offsets from the packed pair offsets.
+        assertEquals(0x58, l.level);     assertEquals(0x5A, l.currentHp)
+        assertEquals(0x5C, l.maxHp);     assertEquals(0x5E, l.attack)
+        assertEquals(0x60, l.defense);   assertEquals(0x62, l.speed)
+        assertEquals(0x64, l.spAtk);     assertEquals(0x66, l.spDef)
+        // Base-stats entry layout.
+        assertEquals(0x3C, l.baseStatsEntrySize)
+        assertEquals(6, l.bsType1);      assertEquals(7, l.bsType2)
+        assertEquals(16, l.bsGenderRatio)
+        assertEquals(0x13, l.bsGrowthRate)
+        // Abilities are u16 in the expansion: ability2 sits abilitySize bytes after ability1.
+        assertEquals(2, l.abilitySize)
+        assertEquals(0x18, l.bsAbility1)
+        assertEquals(0x1A, l.bsAbility2)
+    }
+
+    @Test
+    fun nonNatDexAddressesKeepVanillaLayout() {
+        // The default MonLayout (used by vanilla/1.1.x/MaxFR GameAddresses) is the Gen III layout.
+        val v = MonLayout()
+        assertEquals(100, v.structSize)
+        assertEquals(0x20, v.substruct)
+        assertEquals(0x54, v.level)
+        assertEquals(0x58, v.maxHp)
+        assertEquals(28, v.baseStatsEntrySize)
+        assertEquals(1, v.abilitySize)
+        assertEquals(23, v.bsAbility2)
     }
 
     @Test
