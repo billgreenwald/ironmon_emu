@@ -484,7 +484,7 @@ object TrackerPoller {
         if (battleRaw.isActive && battleRaw.isWild && !currentWildBattleRecorded && !isFirstBattleFrame) {
             val encounterMapId = route?.mapLayoutId
             val sid = battleRaw.enemy?.speciesId
-            if (encounterMapId != null && sid != null && sid in 1..1235) {
+            if (encounterMapId != null && sid != null && sid in 1..1283) {
                 currentWildBattleRecorded = true
                 if (encounterMapId !in routeVisitOrder) routeVisitOrder.add(encounterMapId)
                 val list = encountersByRoute.getOrPut(encounterMapId) { mutableListOf() }
@@ -694,11 +694,13 @@ object TrackerPoller {
 
         // ── Pre-read enemy2 slot data (doubles only) ────────────────────────────
         // Slot layout: 0=PlayerLeft, 1=EnemyLeft, 2=PlayerRight, 3=EnemyRight
-        // offsetBattlePokemonDoublesPartner = 0xB0 = 2×BATTLE_MON_SIZE (Lua Program.lua)
+        // Right-side enemy (slot 3) = gBattleMons + battleMonSize + doublesPartner delta (Lua Program.lua).
         val enemy2Mon: ByteArray? = if (isDoubles)
-            MemoryBridge.readBytes(addresses.battleMons + 3L * DataHelper.BATTLE_MON_SIZE, DataHelper.BATTLE_MON_SIZE)
+            MemoryBridge.readBytes(
+                addresses.battleMons + layout.battleMonSize.toLong() + layout.bmonDoublesPartner.toLong(),
+                layout.battleMonSize)
             else null
-        val speciesId2: Int = enemy2Mon?.u16(DataHelper.BMON_SPECIES)?.let { if (it in 1..1235) it else 0 } ?: 0
+        val speciesId2: Int = enemy2Mon?.u16(DataHelper.BMON_SPECIES)?.let { if (it in 1..1283) it else 0 } ?: 0
         // gBattlerPartyIndexes: +6 = RightOther (Lua: gBattlerPartyIndexes + 6)
         val activeEnemy2Slot: Int = if (isDoubles && speciesId2 > 0 && addresses.gBattlerPartyIndexes != 0L) {
             (MemoryBridge.readU8(addresses.gBattlerPartyIndexes + 6L) ?: 0).coerceIn(0, 5)
@@ -711,12 +713,12 @@ object TrackerPoller {
         val level2: Int = if (enemy2Raw != null) enemy2Raw[layout.level].toInt() and 0xFF else 0
 
         // ── Enemy gBattleMons slot 1 (LeftOther) ────────────────────────────────
-        val enemyMonAddr = addresses.battleMons + DataHelper.BATTLE_MON_SIZE
-        val enemyMon = MemoryBridge.readBytes(enemyMonAddr, DataHelper.BATTLE_MON_SIZE)
+        val enemyMonAddr = addresses.battleMons + layout.battleMonSize.toLong()
+        val enemyMon = MemoryBridge.readBytes(enemyMonAddr, layout.battleMonSize)
 
         val enemy: EnemyData? = if (enemyMon != null) {
             val speciesId = enemyMon.u16(DataHelper.BMON_SPECIES)
-            if (speciesId in 1..1235) {
+            if (speciesId in 1..1283) {
                 // gBattlerPartyIndexes[2] = LeftOther party slot (Lua: Battle.Combatants.LeftOther)
                 val activeEnemySlot: Int = if (addresses.gBattlerPartyIndexes != 0L) {
                     val idx = MemoryBridge.readU8(addresses.gBattlerPartyIndexes + 2L) ?: 0
@@ -859,9 +861,9 @@ object TrackerPoller {
                     ability2Id = baseStats.abilityAt(layout.bsAbility2, layout.abilitySize)
                 }
 
-                val type1 = (enemyMon[DataHelper.BMON_TYPE1].toInt() and 0xFF)
+                val type1 = (enemyMon[layout.bmonType1].toInt() and 0xFF)
                     .let { if (it <= 18) it else baseStats?.getOrNull(layout.bsType1)?.toInt()?.and(0xFF) ?: 0 }
-                val type2 = (enemyMon[DataHelper.BMON_TYPE2].toInt() and 0xFF)
+                val type2 = (enemyMon[layout.bmonType2].toInt() and 0xFF)
                     .let { if (it <= 18) it else baseStats?.getOrNull(layout.bsType2)?.toInt()?.and(0xFF) ?: 0 }
                 val bst = addresses.extPokemonMap[speciesId]?.bst ?: BstTable.bst(speciesId)
 
@@ -916,7 +918,7 @@ object TrackerPoller {
                     totalTrackedMoveCount   = persistent?.size ?: 0,
                     fourConfirmedThisBattle = fourConfirmed,
                     allTrackedMoves         = persistent?.toList() ?: emptyList(),
-                    statStages              = statStagesFrom(enemyMon),
+                    statStages              = statStagesFrom(enemyMon, layout.bmonStatStages),
                     // moveStaleFlags populated in poll() after learnset read
                 )
             } else null
@@ -933,9 +935,9 @@ object TrackerPoller {
                 ability1Id2 = baseStats2.abilityAt(layout.bsAbility1, layout.abilitySize)
                 ability2Id2 = baseStats2.abilityAt(layout.bsAbility2, layout.abilitySize)
             }
-            val type1_2 = (enemy2Mon[DataHelper.BMON_TYPE1].toInt() and 0xFF)
+            val type1_2 = (enemy2Mon[layout.bmonType1].toInt() and 0xFF)
                 .let { if (it <= 18) it else baseStats2?.getOrNull(layout.bsType1)?.toInt()?.and(0xFF) ?: 0 }
-            val type2_2 = (enemy2Mon[DataHelper.BMON_TYPE2].toInt() and 0xFF)
+            val type2_2 = (enemy2Mon[layout.bmonType2].toInt() and 0xFF)
                 .let { if (it <= 18) it else baseStats2?.getOrNull(layout.bsType2)?.toInt()?.and(0xFF) ?: 0 }
             val bst2 = addresses.extPokemonMap[speciesId2]?.bst ?: BstTable.bst(speciesId2)
             val currentHp2 = if (enemy2Raw != null) enemy2Raw.u16(layout.currentHp) else 0
@@ -986,20 +988,20 @@ object TrackerPoller {
                 totalTrackedMoveCount   = persistent2?.size ?: 0,
                 fourConfirmedThisBattle = fourConfirmed2,
                 allTrackedMoves         = persistent2?.toList() ?: emptyList(),
-                statStages              = statStagesFrom(enemy2Mon),
+                statStages              = statStagesFrom(enemy2Mon, layout.bmonStatStages),
             )
         } else null
 
         // ── Player live types (gBattleMons slot 0) ──────────────────────────────
         val playerTypeBytes = MemoryBridge.readBytes(
-            addresses.battleMons + DataHelper.BMON_TYPE1.toLong(), 2
+            addresses.battleMons + layout.bmonType1.toLong(), 2
         )
         val playerType1 = playerTypeBytes?.get(0)?.toInt()?.and(0xFF) ?: -1
         val playerType2 = playerTypeBytes?.get(1)?.toInt()?.and(0xFF) ?: -1
 
-        // ── Player stat stages (gBattleMons slot 0, offset 0x18) ────────────────
+        // ── Player stat stages (gBattleMons slot 0) ─────────────────────────────
         // Memory layout: [HP, Atk, Def, Spe, SpA, SpD, Acc, Eva]; display: [Atk,Def,SpA,SpD,Spe,Acc,Eva]
-        val playerStatStages = MemoryBridge.readBytes(addresses.battleMons + 0x18L, 8)
+        val playerStatStages = MemoryBridge.readBytes(addresses.battleMons + layout.bmonStatStages.toLong(), 8)
             ?.let { b ->
                 intArrayOf(
                     b[1].toInt() and 0xFF,  // Atk
@@ -1125,14 +1127,16 @@ object TrackerPoller {
 
     // gBattleMons statStages at offset 0x18; reorder memory
     // [HP,Atk,Def,Spe,SpA,SpD,Acc,Eva] -> display [Atk,Def,SpA,SpD,Spe,Acc,Eva]
-    private fun statStagesFrom(mon: ByteArray): IntArray = intArrayOf(
-        mon[0x19].toInt() and 0xFF, // Atk
-        mon[0x1A].toInt() and 0xFF, // Def
-        mon[0x1C].toInt() and 0xFF, // SpA
-        mon[0x1D].toInt() and 0xFF, // SpD
-        mon[0x1B].toInt() and 0xFF, // Spe
-        mon[0x1E].toInt() and 0xFF, // Acc
-        mon[0x1F].toInt() and 0xFF, // Eva
+    // statStages memory order is [HP,Atk,Def,Spe,SpA,SpD,Acc,Eva] from `base`; display drops HP and
+    // reorders to [Atk,Def,SpA,SpD,Spe,Acc,Eva]. `base` = layout.bmonStatStages (0x18 vanilla).
+    private fun statStagesFrom(mon: ByteArray, base: Int): IntArray = intArrayOf(
+        mon[base + 1].toInt() and 0xFF, // Atk
+        mon[base + 2].toInt() and 0xFF, // Def
+        mon[base + 4].toInt() and 0xFF, // SpA
+        mon[base + 5].toInt() and 0xFF, // SpD
+        mon[base + 3].toInt() and 0xFF, // Spe
+        mon[base + 6].toInt() and 0xFF, // Acc
+        mon[base + 7].toInt() and 0xFF, // Eva
     )
 
     private const val POLL_INTERVAL_MS = 250L

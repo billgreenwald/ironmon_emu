@@ -82,6 +82,21 @@ data class MonLayout(
     val bsGrowthRate: Int = 19,       // offsetGrowthRateIndex (vanilla 0x13) — exp group
     val bsAbilities: Int = 22,        // offsetAbilities: ability1 @+0, ability2 @+abilitySize
     val abilitySize: Int = 1,         // sizeofAbilityInBytes (u16 in the expansion → 2)
+    // gBattleMons (BattlePokemon) layout — species@0x00 and moves@0x0C are stable; the expansion
+    // grows the struct and relocates statStages/types, so the slot stride + those offsets are exported.
+    val battleMonSize: Int = 0x58,        // sizeofBattlePokemon — per-battler stride
+    val bmonStatStages: Int = 0x18,       // offsetBattlePokemonStatStages: [HP,Atk,Def,Spe,SpA,SpD,Acc,Eva]
+    val bmonTypes: Int = 0x21,            // offsetBattlePokemonTypes: type1 @+0, type2 @+1
+    val bmonDoublesPartner: Int = 0xB0,   // offsetBattlePokemonDoublesPartner — left→right battler delta
+    // Level-up learnset layout. Vanilla packs each entry as a 2-byte word ((lvl<<9)|move); the
+    // expansion widens it. moveId/level are BIT offsets+sizes (getbits); entrySize/ptrStride are bytes.
+    val learnsetPtrStride: Int = 4,       // sizeofLevelUpLearnset — pointer-array entry size
+    val learnsetEntrySize: Int = 2,       // sizeofLevelUpMove — bytes per learnset entry
+    val learnsetMoveIdBitOff: Int = 0,    // offsetLevelUpMoveId (bits)
+    val learnsetMoveIdBits: Int = 9,      // sizeofLevelUpMoveId (bits)
+    val learnsetLevelBitOff: Int = 9,     // offsetLevelUpMoveLv (bits)
+    val learnsetLevelBits: Int = 7,       // sizeofLevelUpMoveLv (bits)
+    val learnsetEndFlag: Long = 0xFFFF,   // endFlagLevelUp — sentinel entry value
 ) {
     // Party-stat byte offsets derived from the packed pair offsets above.
     val level: Int      get() = statsLvCurHp
@@ -103,6 +118,9 @@ data class MonLayout(
     val bsType2: Int get() = bsTypes + 1
     val bsAbility1: Int get() = bsAbilities
     val bsAbility2: Int get() = bsAbilities + abilitySize
+    // BattlePokemon derived offsets.
+    val bmonType1: Int get() = bmonTypes + 0
+    val bmonType2: Int get() = bmonTypes + 1
 }
 
 object DataHelper {

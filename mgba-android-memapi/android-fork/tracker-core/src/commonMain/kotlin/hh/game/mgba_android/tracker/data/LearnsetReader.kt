@@ -27,15 +27,15 @@ data class LearnsetInfo(
  */
 object LearnsetReader {
 
-    private const val LEARNSET_END = 0xFFFF
-    private const val MAX_MOVES    = 100   // failsafe, matches Lua tracker
+    private const val MAX_MOVES = 100   // failsafe, matches Lua tracker
 
     fun read(speciesId: Int, currentLevel: Int, addresses: GameAddresses): LearnsetInfo? {
-        if (speciesId !in 1..1235) return null
+        if (speciesId !in 1..1283) return null
+        val layout = addresses.monLayout
 
-        // Step 1: read the 4-byte GBA pointer for this species
+        // Step 1: read the GBA pointer for this species (stride is per-game; vanilla 4 bytes)
         val ptrBytes = MemoryBridge.readBytes(
-            addresses.levelUpLearnsets + speciesId.toLong() * 4L, 4
+            addresses.levelUpLearnsets + speciesId.toLong() * layout.learnsetPtrStride.toLong(), 4
         ) ?: return null
 
         val learnsetPtr =
@@ -46,7 +46,8 @@ object LearnsetReader {
 
         if (learnsetPtr < 0x08000000L || learnsetPtr > 0x0FFFFFFFL) return null
 
-        // Step 2: iterate 2-byte entries until 0xFFFF sentinel
+        // Step 2: iterate entries until the sentinel. Each entry is layout.learnsetEntrySize bytes;
+        // moveId/level are bit fields within it (vanilla: 2-byte word, move=bits0-8, level=bits9-15).
         var learnedCount = 0
         var totalCount   = 0
         var nextMoveLevel = 0
@@ -54,13 +55,18 @@ object LearnsetReader {
         var foundNext     = false
         val allMoveLevels = mutableListOf<Int>()
 
-        for (i in 0 until MAX_MOVES) {
-            val wordBytes = MemoryBridge.readBytes(learnsetPtr + i.toLong() * 2L, 2) ?: break
-            val word = (wordBytes[0].toInt() and 0xFF) or ((wordBytes[1].toInt() and 0xFF) shl 8)
-            if (word == LEARNSET_END) break
+        val entrySize  = layout.learnsetEntrySize
+        val moveMask   = (1L shl layout.learnsetMoveIdBits) - 1L
+        val levelMask  = (1L shl layout.learnsetLevelBits) - 1L
 
-            val moveId = word and 0x1FF
-            val level  = (word ushr 9) and 0x7F
+        for (i in 0 until MAX_MOVES) {
+            val bytes = MemoryBridge.readBytes(learnsetPtr + i.toLong() * entrySize.toLong(), entrySize) ?: break
+            var entry = 0L
+            for (b in 0 until entrySize) entry = entry or ((bytes[b].toLong() and 0xFF) shl (8 * b))
+            if (entry == layout.learnsetEndFlag) break
+
+            val moveId = ((entry ushr layout.learnsetMoveIdBitOff) and moveMask).toInt()
+            val level  = ((entry ushr layout.learnsetLevelBitOff) and levelMask).toInt()
             totalCount++
             allMoveLevels.add(level)
 

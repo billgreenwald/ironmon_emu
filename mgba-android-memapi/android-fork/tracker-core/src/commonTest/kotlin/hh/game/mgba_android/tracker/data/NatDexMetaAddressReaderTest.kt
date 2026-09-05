@@ -65,6 +65,19 @@ class NatDexMetaAddressReaderTest {
         0x08000470L to 0x10L,         // offsetGenderRatio
         0x08000474L to 0x18L,         // offsetAbilities
         0x0800047CL to 0x02L,         // sizeofAbilityInBytes (u16 in expansion)
+        // BattlePokemon (gBattleMons) layout — expansion-relocated
+        0x080003F6L to 0x1CL,         // offsetBattlePokemonStatStages
+        0x080003F8L to 0x25L,         // offsetBattlePokemonTypes
+        0x080003FAL to 0xD8L,         // offsetBattlePokemonDoublesPartner
+        0x08000436L to 0x6CL,         // sizeofBattlePokemon (expanded, vanilla 0x58)
+        // Level-up learnset layout — expansion uses 4-byte entries (u16 move, u16 level)
+        0x08000476L to 0x00L,         // offsetLevelUpMoveId (bit)
+        0x08000478L to 0x10L,         // offsetLevelUpMoveLv (bit) — level in high u16
+        0x0800047EL to 0x04L,         // sizeofLevelUpLearnset (ptr stride)
+        0x08000480L to 0x04L,         // sizeofLevelUpMove (entry bytes)
+        0x08000482L to 0x10L,         // sizeofLevelUpMoveId (bits)
+        0x08000484L to 0x10L,         // sizeofLevelUpMoveLv (bits)
+        0x08000488L to 0xFFFFL,       // endFlagLevelUp
     )
 
     @Test
@@ -114,6 +127,17 @@ class NatDexMetaAddressReaderTest {
         assertEquals(2, l.abilitySize)
         assertEquals(0x18, l.bsAbility1)
         assertEquals(0x1A, l.bsAbility2)
+        // BattlePokemon layout (slot stride + relocated types/statStages).
+        assertEquals(0x6C, l.battleMonSize)
+        assertEquals(0x1C, l.bmonStatStages)
+        assertEquals(0x25, l.bmonType1);  assertEquals(0x26, l.bmonType2)
+        assertEquals(0xD8, l.bmonDoublesPartner)
+        // Learnset: 4-byte entries, move in low u16, level in high u16, 0xFFFF sentinel.
+        assertEquals(4, l.learnsetPtrStride)
+        assertEquals(4, l.learnsetEntrySize)
+        assertEquals(0, l.learnsetMoveIdBitOff);  assertEquals(0x10, l.learnsetMoveIdBits)
+        assertEquals(0x10, l.learnsetLevelBitOff); assertEquals(0x10, l.learnsetLevelBits)
+        assertEquals(0xFFFFL, l.learnsetEndFlag)
     }
 
     @Test

@@ -664,7 +664,11 @@ private fun MainView(pokemon: PokemonData, battle: BattleState, stats: GameStats
             color = TextSecondary, fontSize = ssp(12),
         )
 
-        val itemName = if (pokemon.heldItemId > 0) ItemTable.get(pokemon.heldItemId) else "None"
+        val itemName = when {
+            pokemon.heldItemId <= 0 -> "None"
+            isNatDex -> NatDexItemNames.get(pokemon.heldItemId) ?: ItemTable.get(pokemon.heldItemId)
+            else -> ItemTable.get(pokemon.heldItemId)
+        }
         Text(text = "Item: $itemName", color = TextSecondary, fontSize = ssp(12))
 
         // Learnset row + BST + evo level (Lua: "Moves X/Y (nextLevel)")

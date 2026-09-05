@@ -67,6 +67,19 @@ object NatDexMetaAddressReader {
     private const val M_BS_OFF_GENDER        = 0x08000470L  // PokemonData.offsetGenderRatio
     private const val M_BS_OFF_ABILITIES     = 0x08000474L  // PokemonData.offsetAbilities
     private const val M_SIZEOF_ABILITY       = 0x0800047CL  // PokemonData.sizeofAbilityInBytes
+    // BattlePokemon (gBattleMons) layout
+    private const val M_BMON_STAT_STAGES     = 0x080003F6L  // offsetBattlePokemonStatStages
+    private const val M_BMON_TYPES           = 0x080003F8L  // offsetBattlePokemonTypes
+    private const val M_BMON_DOUBLES_PARTNER = 0x080003FAL  // offsetBattlePokemonDoublesPartner
+    private const val M_SIZEOF_BATTLE_MON    = 0x08000436L  // sizeofBattlePokemon
+    // Level-up learnset layout (moveId/level fields are BIT offsets+sizes)
+    private const val M_LU_MOVE_ID_OFF       = 0x08000476L  // offsetLevelUpMoveId (bits)
+    private const val M_LU_MOVE_LV_OFF       = 0x08000478L  // offsetLevelUpMoveLv (bits)
+    private const val M_LU_LEARNSET_SIZE     = 0x0800047EL  // sizeofLevelUpLearnset (ptr stride, bytes)
+    private const val M_LU_MOVE_SIZE         = 0x08000480L  // sizeofLevelUpMove (entry, bytes)
+    private const val M_LU_MOVE_ID_SIZE      = 0x08000482L  // sizeofLevelUpMoveId (bits)
+    private const val M_LU_MOVE_LV_SIZE      = 0x08000484L  // sizeofLevelUpMoveLv (bits)
+    private const val M_LU_END_FLAG          = 0x08000488L  // endFlagLevelUp (read32 sentinel)
 
     // GBA memory regions used to validate the table is really present.
     private val ROM   = 0x08000000L..0x09FFFFFFL
@@ -144,6 +157,17 @@ object NatDexMetaAddressReader {
                 bsGrowthRate       = u16(reader, M_OFF_GROWTH_RATE)    ?: return null,
                 bsAbilities        = u16(reader, M_BS_OFF_ABILITIES)   ?: return null,
                 abilitySize        = u16(reader, M_SIZEOF_ABILITY)     ?: return null,
+                battleMonSize      = u16(reader, M_SIZEOF_BATTLE_MON)  ?: return null,
+                bmonStatStages     = u16(reader, M_BMON_STAT_STAGES)   ?: return null,
+                bmonTypes          = u16(reader, M_BMON_TYPES)         ?: return null,
+                bmonDoublesPartner = u16(reader, M_BMON_DOUBLES_PARTNER) ?: return null,
+                learnsetPtrStride  = u16(reader, M_LU_LEARNSET_SIZE)   ?: return null,
+                learnsetEntrySize  = u16(reader, M_LU_MOVE_SIZE)       ?: return null,
+                learnsetMoveIdBitOff = u16(reader, M_LU_MOVE_ID_OFF)   ?: return null,
+                learnsetMoveIdBits = u16(reader, M_LU_MOVE_ID_SIZE)    ?: return null,
+                learnsetLevelBitOff = u16(reader, M_LU_MOVE_LV_OFF)    ?: return null,
+                learnsetLevelBits  = u16(reader, M_LU_MOVE_LV_SIZE)    ?: return null,
+                learnsetEndFlag    = u32(reader, M_LU_END_FLAG)        ?: return null,
             ),
         )
     }
